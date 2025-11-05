@@ -1,5 +1,6 @@
 import "./index.css";
 
+import { Analytics } from "@vercel/analytics/react";
 import { HelmetProvider } from "react-helmet-async";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 
@@ -81,6 +82,7 @@ export function App() {
 					<AppRoutes />
 				</ApiProvider>
 			</BrowserRouter>
+			<Analytics />
 		</HelmetProvider>
 	);
 }
