@@ -1,0 +1,31 @@
+{
+	"$schema": "https://openapi.vercel.sh/vercel.json",
+	"bunVersion": "1.x",
+	"framework": null,
+	"buildCommand": "bun install && bun run build",
+	"installCommand": "bun install",
+	"outputDirectory": "dist",
+	"cleanUrls": true,
+	"trailingSlash": false,
+	"rewrites": [
+		{
+			"source": "/api/:path*",
+			"destination": "${API_URL}/:path*"
+		},
+		{
+			"source": "/(.*)",
+			"destination": "/index.html"
+		}
+	],
+	"headers": [
+		{
+			"source": "/assets/(.*)",
+			"headers": [
+				{
+					"key": "Cache-Control",
+					"value": "public, max-age=31536000, immutable"
+				}
+			]
+		}
+	]
+}

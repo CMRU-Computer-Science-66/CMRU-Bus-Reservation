@@ -1,0 +1,22 @@
+{
+	"version": "0.2.0",
+	"configurations": [
+		{
+			"type": "bun",
+			"request": "launch",
+			"name": "Debug Bun",
+			"program": "${workspaceFolder}/src/index.tsx",
+			"args": [],
+			"cwd": "${workspaceFolder}",
+			"env": {},
+			"strictEnv": false,
+			"watchMode": false,
+			"stopOnEntry": false,
+			"noDebug": false,
+			"runtime": "bun",
+			"runtimeArgs": [
+				"--hot"
+			]
+		}
+	]
+}

@@ -1,0 +1,240 @@
+{
+	"name": "@cmru-comsci-66/cmru-bus-reservation",
+	"version": "0.0.0",
+	"type": "module",
+	"module": "src/index.tsx",
+	"scripts": {
+		"build": "bun run build.ts",
+		"dev": "bun --hot src/index.tsx",
+		"fix": "eslint . --fix",
+		"lint": "eslint .",
+		"prettier": "prettier --write . --ignore-unknown",
+		"shadcn:update": "bunx --bun shadcn@latest add --yes --overwrite alert badge button card checkbox dialog dropdown-menu form input label select separator skeleton tabs",
+		"start": "NODE_ENV=production bun src/index.tsx",
+		"vercel:deploy": "vercel",
+		"vercel:deploy:prod": "vercel --prod",
+		"vercel:setup": "tsx scripts/setup-vercel.ts"
+	},
+	"prettier": {
+		"bracketSameLine": true,
+		"bracketSpacing": true,
+		"plugins": [
+			"prettier-plugin-packagejson",
+			"prettier-plugin-tailwindcss"
+		],
+		"printWidth": 180,
+		"semi": true,
+		"singleQuote": false,
+		"tabWidth": 3,
+		"trailingComma": "all",
+		"useTabs": true,
+		"overrides": [
+			{
+				"excludeFiles": [
+					"package.json"
+				],
+				"files": [
+					"*.json",
+					"*.code-workspace"
+				],
+				"options": {
+					"jsonRecursiveSort": true,
+					"parser": "json-stringify",
+					"plugins": [
+						"prettier-plugin-sort-json"
+					]
+				}
+			},
+			{
+				"files": [
+					"*.sql"
+				],
+				"options": {
+					"denseOperators": false,
+					"expressionWidth": 180,
+					"functionCase": "upper",
+					"indentStyle": "standard",
+					"linesBetweenQueries": 1,
+					"newlineBeforeSemicolon": false,
+					"plugins": [
+						"prettier-plugin-sql"
+					]
+				}
+			}
+		]
+	},
+	"eslintConfig": {
+		"env": {
+			"browser": true,
+			"es2024": true,
+			"node": true
+		},
+		"parserOptions": {
+			"ecmaFeatures": {
+				"jsx": true
+			},
+			"ecmaVersion": "latest",
+			"sourceType": "module"
+		},
+		"settings": {
+			"react": {
+				"version": "detect"
+			}
+		},
+		"plugins": [
+			"import",
+			"simple-import-sort",
+			"sort-destructure-keys",
+			"prettier",
+			"react",
+			"react-hooks",
+			"jsx-a11y"
+		],
+		"extends": [
+			"eslint:recommended",
+			"plugin:react/recommended",
+			"plugin:react/jsx-runtime",
+			"plugin:react-hooks/recommended",
+			"plugin:jsx-a11y/recommended",
+			"prettier"
+		],
+		"rules": {
+			"eslint-plugin-unicorn/no-array-reduce": "off",
+			"eslint-plugin-unicorn/no-null": "off",
+			"import/first": "warn",
+			"import/newline-after-import": "warn",
+			"import/no-duplicates": "warn",
+			"prettier/prettier": "warn",
+			"react/prop-types": "off",
+			"simple-import-sort/exports": "warn",
+			"simple-import-sort/imports": "warn",
+			"sort-destructure-keys/sort-destructure-keys": "warn",
+			"unicorn/no-null": "off"
+		},
+		"overrides": [
+			{
+				"files": [
+					"*.ts",
+					"*.d.ts"
+				],
+				"parser": "@typescript-eslint/parser",
+				"plugins": [
+					"@typescript-eslint",
+					"typescript-sort-keys"
+				],
+				"extends": [
+					"plugin:import/typescript",
+					"plugin:@typescript-eslint/recommended",
+					"plugin:typescript-sort-keys/recommended",
+					"plugin:unicorn/all"
+				],
+				"rules": {
+					"typescript-sort-keys/interface": "warn",
+					"typescript-sort-keys/string-enum": "warn",
+					"unicorn/no-array-reduce": "off",
+					"unicorn/no-null": "off",
+					"unicorn/prefer-global-this": "off"
+				}
+			},
+			{
+				"files": [
+					"*.tsx"
+				],
+				"parser": "@typescript-eslint/parser",
+				"parserOptions": {
+					"ecmaFeatures": {
+						"jsx": true
+					}
+				},
+				"plugins": [
+					"@typescript-eslint",
+					"typescript-sort-keys"
+				],
+				"extends": [
+					"plugin:import/typescript",
+					"plugin:@typescript-eslint/recommended",
+					"plugin:typescript-sort-keys/recommended",
+					"plugin:unicorn/all"
+				],
+				"rules": {
+					"eslint-plugin-unicorn/no-array-reduce": "off",
+					"eslint-plugin-unicorn/no-null": "off",
+					"typescript-sort-keys/interface": "warn",
+					"typescript-sort-keys/string-enum": "warn",
+					"unicorn/no-array-reduce": "off",
+					"unicorn/no-null": "off",
+					"unicorn/prefer-global-this": "off"
+				}
+			}
+		],
+		"ignorePatterns": [
+			"dist",
+			"node_modules",
+			"build.ts",
+			"src/components/ui",
+			"bun-env.d.ts"
+		]
+	},
+	"dependencies": {
+		"@cmru-comsci-66/cmru-api": "0.2.2",
+		"@hookform/resolvers": "^5.2.2",
+		"@radix-ui/react-checkbox": "^1.3.3",
+		"@radix-ui/react-dialog": "^1.1.15",
+		"@radix-ui/react-dropdown-menu": "^2.1.16",
+		"@radix-ui/react-label": "^2.1.8",
+		"@radix-ui/react-select": "^2.2.6",
+		"@radix-ui/react-separator": "^1.1.8",
+		"@radix-ui/react-slot": "^1.2.4",
+		"@radix-ui/react-tabs": "^1.1.13",
+		"axios": "^1.13.2",
+		"bump": "^0.2.5",
+		"bun-plugin-tailwind": "^0.1.2",
+		"cheerio": "^1.1.2",
+		"class-variance-authority": "^0.7.1",
+		"clsx": "^2.1.1",
+		"header-generator": "^2.1.76",
+		"lucide-react": "^0.552.0",
+		"react": "^19",
+		"react-dom": "^19",
+		"react-hook-form": "^7.66.0",
+		"react-scripts": "5.0.1",
+		"tailwind-merge": "^3.3.1",
+		"tailwindcss": "^4.1.16",
+		"tailwindcss-animate": "^1.0.7",
+		"tsx": "^4.20.6",
+		"user-agents": "^1.1.669",
+		"zod": "^4.1.12"
+	},
+	"devDependencies": {
+		"@jsdevtools/version-bump-prompt": "6.1.0",
+		"@types/bun": "latest",
+		"@types/react": "^19",
+		"@types/react-dom": "^19",
+		"@typescript-eslint/eslint-plugin": "8.46.3",
+		"@typescript-eslint/parser": "^8.46.3",
+		"eslint": "8.57.1",
+		"eslint-config-prettier": "10.1.8",
+		"eslint-plugin-import": "^2.32.0",
+		"eslint-plugin-jsx-a11y": "^6.10.2",
+		"eslint-plugin-prettier": "5.5.4",
+		"eslint-plugin-react": "^7.37.5",
+		"eslint-plugin-react-hooks": "^7.0.1",
+		"eslint-plugin-simple-import-sort": "^12.1.1",
+		"eslint-plugin-sort-destructure-keys": "^2.0.0",
+		"eslint-plugin-typescript-sort-keys": "^3.3.0",
+		"eslint-plugin-unicorn": "56",
+		"prettier": "^3.6.2",
+		"prettier-plugin-packagejson": "^2.5.19",
+		"prettier-plugin-sort-json": "^4.1.1",
+		"prettier-plugin-sql": "^0.19.2",
+		"prettier-plugin-tailwindcss": "^0.7.1"
+	},
+	"peerDependencies": {
+		"typescript": "^5"
+	},
+	"packageManager": "bun@1.3.1",
+	"engines": {
+		"bun": ">=1",
+		"node": ">=22"
+	}
+}

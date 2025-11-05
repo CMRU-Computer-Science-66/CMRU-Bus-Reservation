@@ -1,0 +1,124 @@
+name: Deploy
+
+env:
+   VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+   VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+on:
+   workflow_dispatch:
+      inputs:
+         version_type:
+            description: "Version bump type"
+            required: true
+            default: "patch"
+            type: choice
+            options:
+               - patch
+               - minor
+               - major
+               - none
+jobs:
+   deploy:
+      runs-on: ubuntu-latest
+      permissions:
+         contents: write
+      steps:
+         - name: Checkout repository
+           uses: actions/checkout@v5
+           with:
+              fetch-depth: 0
+              token: ${{ secrets.GITHUB_TOKEN }}
+
+         - name: Setup Bun
+           uses: oven-sh/setup-bun@v2
+           with:
+              bun-version-file: "package.json"
+
+         - name: Install dependencies
+           run: bun install --frozen-lockfile
+
+         - name: Install Vercel CLI
+           run: bun install --global vercel@latest
+
+         - name: Bump version
+           if: github.event.inputs.version_type != 'none'
+           run: bun bump ${{ github.event.inputs.version_type }}
+
+         - name: Get package version
+           id: package-version
+           run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+
+         - name: Backup vercel.json
+           if: github.event.inputs.version_type != 'none'
+           run: cp vercel.json vercel.json.backup
+
+         - name: Update vercel.json with API_URL
+           run: |
+              sed -i 's|\${API_URL}|${{ secrets.API_URL }}|g' vercel.json
+
+         - name: Build project
+           run: bun run build
+
+         - name: Pull Vercel Environment Information
+           run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+
+         - name: Build Project Artifacts
+           run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+
+         - name: Deploy Project Artifacts to Vercel
+           run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+
+         - name: Generate changelog
+           if: github.event.inputs.version_type != 'none'
+           id: changelog
+           run: |
+              PREVIOUS_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+              if [ -z "$PREVIOUS_TAG" ]; then
+                CHANGELOG="Initial release"
+                echo "previous_tag=" >> $GITHUB_OUTPUT
+              else
+                ALL_COMMITS=$(git log ${PREVIOUS_TAG}..HEAD --pretty=format:"* %s by @%an (%h)" --no-merges | grep -v "^* Release v")
+                ADD_COMMITS=$(echo "$ALL_COMMITS" | grep "^* Add " || true)
+                UPDATE_COMMITS=$(echo "$ALL_COMMITS" | grep "^* Update " || true)
+                FIX_COMMITS=$(echo "$ALL_COMMITS" | grep "^* Fix " || true)
+                OTHER_COMMITS=$(echo "$ALL_COMMITS" | grep -v "^* Add " | grep -v "^* Update " | grep -v "^* Fix " || true)
+                
+                CHANGELOG=""
+                [ -n "$ADD_COMMITS" ] && CHANGELOG="$ADD_COMMITS"
+                [ -n "$UPDATE_COMMITS" ] && CHANGELOG="$CHANGELOG"$'\n'"$UPDATE_COMMITS"
+                [ -n "$FIX_COMMITS" ] && CHANGELOG="$CHANGELOG"$'\n'"$FIX_COMMITS"
+                [ -n "$OTHER_COMMITS" ] && CHANGELOG="$CHANGELOG"$'\n'"$OTHER_COMMITS"
+                
+                CHANGELOG=$(echo "$CHANGELOG" | sed '/^$/d')
+                echo "previous_tag=${PREVIOUS_TAG}" >> $GITHUB_OUTPUT
+              fi
+              echo "changelog<<EOF" >> $GITHUB_OUTPUT
+              echo "$CHANGELOG" >> $GITHUB_OUTPUT
+              echo "EOF" >> $GITHUB_OUTPUT
+
+         - name: Restore vercel.json
+           if: github.event.inputs.version_type != 'none'
+           run: mv vercel.json.backup vercel.json
+
+         - name: Automatically Commit Changes
+           if: github.event.inputs.version_type != 'none'
+           uses: stefanzweifel/git-auto-commit-action@v7
+           with:
+              push_options: "--force"
+              commit_options: "--no-verify"
+              commit_message: "Release v${{ steps.package-version.outputs.version }}"
+              skip_checkout: true
+
+         - name: Create GitHub Release
+           if: github.event.inputs.version_type != 'none'
+           uses: softprops/action-gh-release@v2
+           with:
+              tag_name: v${{ steps.package-version.outputs.version }}
+              name: v${{ steps.package-version.outputs.version }}
+              body: |
+                 ## ✨ What's Changed
+                 ${{ steps.changelog.outputs.changelog }}
+                 ${{ steps.changelog.outputs.previous_tag && format('**Full Changelog**: https://github.com/{0}/compare/{1}...v{2}', github.repository, steps.changelog.outputs.previous_tag, steps.package-version.outputs.version) || '' }}
+              draft: false
+              prerelease: false
+              token: ${{ secrets.GH_TOKEN }}

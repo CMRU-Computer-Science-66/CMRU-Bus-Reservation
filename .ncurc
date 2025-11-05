@@ -1,0 +1,9 @@
+{
+	"install": "always",
+	"packageManager": "bun",
+	"upgrade": true,
+	"reject": [
+		"eslint-plugin-unicorn",
+		"eslint"
+	]
+}

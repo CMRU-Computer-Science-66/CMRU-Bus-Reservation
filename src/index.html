@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<link rel="icon" type="image/svg+xml" href="./logo.svg" />
+		<title>Bun + React</title>
+		<script>
+			if (typeof global === "undefined") {
+				globalThis.global = globalThis;
+			}
+		</script>
+		<script>
+			try {
+				const media = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)");
+				document.documentElement.classList.toggle("dark", !!media && media.matches);
+				media &&
+					media.addEventListener("change", (e) => {
+						document.documentElement.classList.toggle("dark", e.matches);
+					});
+			} catch {}
+		</script>
+		<script type="module" src="./client.tsx" async></script>
+	</head>
+	<body>
+		<div id="root"></div>
+	</body>
+</html>
