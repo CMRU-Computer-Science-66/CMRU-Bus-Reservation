@@ -68,7 +68,7 @@ export function LoginPage() {
 			<Card className="relative z-10 w-full max-w-md border-0 bg-white/95 shadow-2xl backdrop-blur-md dark:bg-gray-900/95">
 				<CardHeader className="space-y-4 pb-6 text-center">
 					<div className="flex justify-center">
-						<div className="animate-float rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 p-4 shadow-2xl">
+						<div className="rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 p-4 shadow-2xl">
 							<Bus className="h-12 w-12 text-white" />
 						</div>
 					</div>
