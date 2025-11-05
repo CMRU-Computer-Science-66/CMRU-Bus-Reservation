@@ -19,9 +19,8 @@ export const formatThaiDateShort = (isoDate: string | Date) => {
 	const dayName = thaiDays[date.getDay()];
 	const day = date.getDate();
 	const month = thaiMonths[date.getMonth()];
-	const year = date.getFullYear() + 543;
 
-	return `${dayName} ${day} ${month} ${year}`;
+	return `${dayName} ${day} ${month}`;
 };
 
 export const formatTime = (date: Date | string) => {

@@ -1,10 +1,30 @@
 <!doctype html>
-<html lang="en">
+<html lang="th">
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<link rel="icon" type="image/svg+xml" href="./logo.svg" />
-		<title>Bun + React</title>
+		<title>ระบบจองรถรับ-ส่ง | มหาวิทยาลัยราชภัฏเชียงใหม่</title>
+		<meta name="description" content="ระบบจองรถรับ-ส่ง มหาวิทยาลัยราชภัฏเชียงใหม่ - จองรถรับส่งนักศึกษาและบุคลากรได้อย่างสะดวกรวดเร็ว พร้อมตรวจสอบตารางเดินรถและประวัติการจอง" />
+		<meta name="keywords" content="CMRU, มหาวิทยาลัยราชภัฏเชียงใหม่, จองรถ, รถรับส่ง, รถบัส, Chiang Mai Rajabhat University, Bus Reservation" />
+		<meta name="author" content="CMRU Computer Science 66" />
+		<meta name="robots" content="index, follow" />
+		<meta name="language" content="Thai" />
+		<meta property="og:type" content="website" />
+		<meta property="og:title" content="ระบบจองรถรับ-ส่ง | มหาวิทยาลัยราชภัฏเชียงใหม่" />
+		<meta property="og:description" content="ระบบจองรถรับ-ส่ง มหาวิทยาลัยราชภัฏเชียงใหม่ - จองรถรับส่งนักศึกษาและบุคลากรได้อย่างสะดวกรวดเร็ว" />
+		<meta property="og:site_name" content="CMRU Bus Reservation" />
+		<meta property="og:locale" content="th_TH" />
+		<meta name="twitter:card" content="summary_large_image" />
+		<meta name="twitter:title" content="ระบบจองรถรับ-ส่ง | มหาวิทยาลัยราชภัฏเชียงใหม่" />
+		<meta name="twitter:description" content="ระบบจองรถรับ-ส่ง มหาวิทยาลัยราชภัฏเชียงใหม่ - จองรถรับส่งนักศึกษาและบุคลากรได้อย่างสะดวกรวดเร็ว" />
+
+		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+		<meta name="apple-mobile-web-app-title" content="CMRU Bus" />
+		<meta name="format-detection" content="telephone=no" />
+		<meta name="theme-color" content="#2563eb" media="(prefers-color-scheme: light)" />
+		<meta name="theme-color" content="#1e40af" media="(prefers-color-scheme: dark)" />
 		<script>
 			if (typeof global === "undefined") {
 				globalThis.global = globalThis;
@@ -15,8 +35,8 @@
 				const media = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)");
 				document.documentElement.classList.toggle("dark", !!media && media.matches);
 				media &&
-					media.addEventListener("change", (e) => {
-						document.documentElement.classList.toggle("dark", e.matches);
+					media.addEventListener("change", (event) => {
+						document.documentElement.classList.toggle("dark", event.matches);
 					});
 			} catch {}
 		</script>

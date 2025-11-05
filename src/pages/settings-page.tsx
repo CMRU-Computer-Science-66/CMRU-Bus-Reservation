@@ -1,4 +1,4 @@
-import { ArrowLeft, Bell, BellOff, Check, Clock, Globe, LogOut, Moon, Palette, Settings, Sun, User } from "lucide-react";
+import { ArrowLeft, Bell, BellOff, Check, ChevronDown, Clock, Github, Globe, LogOut, Moon, Palette, Settings, Sun, Tag, User, UserCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { Badge } from "../components/ui/badge";
@@ -19,6 +19,9 @@ const sessionManager = getSessionManager();
 export function SettingsPage({ onNavigateBack }: SettingsPageProperties) {
 	const { logout } = useApi();
 	const [username, setUsername] = useState<string>("");
+	const [apiVersion, setApiVersion] = useState<string>("loading...");
+	const [contributors, setContributors] = useState<Array<{ avatar_url: string; html_url: string; login: string }>>([]);
+	const [showAllContributors, setShowAllContributors] = useState(false);
 	const [themeMode, setThemeMode] = useState<ThemeMode>(() => {
 		const theme = localStorage.getItem("theme") as ThemeMode | null;
 		return theme || "system";
@@ -40,8 +43,29 @@ export function SettingsPage({ onNavigateBack }: SettingsPageProperties) {
 	useEffect(() => {
 		const session = sessionManager.loadSession();
 		if (session?.username) {
+			// eslint-disable-next-line react-hooks/set-state-in-effect
 			setUsername(session.username);
 		}
+
+		fetch("https://cmru-bus.vercel.app/api")
+			.then((response) => response.json())
+			.then((data) => {
+				if (data.version) {
+					setApiVersion(data.version);
+				}
+			})
+			.catch(() => {
+				setApiVersion("N/A");
+			});
+
+		fetch("https://api.github.com/repos/CMRU-Computer-Science-66/CMRU-Bus-Reservation/contributors")
+			.then((response) => response.json())
+			.then((data) => {
+				if (Array.isArray(data)) {
+					setContributors(data);
+				}
+			})
+			.catch(() => {});
 	}, []);
 
 	useEffect(() => {
@@ -57,9 +81,9 @@ export function SettingsPage({ onNavigateBack }: SettingsPageProperties) {
 	};
 
 	const toggleNotifications = () => {
-		const newValue = !notifications;
-		setNotifications(newValue);
-		localStorage.setItem("notifications", String(newValue));
+		const updatedValue = !notifications;
+		setNotifications(updatedValue);
+		localStorage.setItem("notifications", String(updatedValue));
 	};
 
 	const handleTimeFormatChange = (format: TimeFormat) => {
@@ -105,7 +129,7 @@ export function SettingsPage({ onNavigateBack }: SettingsPageProperties) {
 							</div>
 						</CardHeader>
 						<Separator className="dark:bg-gray-800" />
-						<CardContent className="space-y-4 pt-6">
+						<CardContent className="space-y-3">
 							{username ? (
 								<div className="flex items-center justify-between">
 									<div>
@@ -133,7 +157,7 @@ export function SettingsPage({ onNavigateBack }: SettingsPageProperties) {
 							</div>
 						</CardHeader>
 						<Separator className="dark:bg-gray-800" />
-						<CardContent className="space-y-3 pt-6">
+						<CardContent className="space-y-3">
 							<button
 								type="button"
 								onClick={() => handleTimeFormatChange("thai")}
@@ -195,7 +219,7 @@ export function SettingsPage({ onNavigateBack }: SettingsPageProperties) {
 							</div>
 						</CardHeader>
 						<Separator className="dark:bg-gray-800" />
-						<CardContent className="space-y-3 pt-6">
+						<CardContent className="space-y-3">
 							<button
 								type="button"
 								onClick={() => handleThemeChange("light")}
@@ -308,27 +332,127 @@ export function SettingsPage({ onNavigateBack }: SettingsPageProperties) {
 								</div>
 								<div>
 									<CardTitle className="text-lg">เกี่ยวกับ</CardTitle>
-									<CardDescription>ข้อมูลการพัณนา</CardDescription>
+									<CardDescription>ข้อมูลการพัฒนา</CardDescription>
 								</div>
 							</div>
 						</CardHeader>
 						<Separator className="dark:bg-gray-800" />
-						<CardContent className="space-y-4 pt-6">
-							<div className="flex items-center justify-between">
-								<p className="text-sm font-medium text-gray-600 dark:text-gray-400">ชื่อ Project</p>
+						<CardContent className="space-y-4">
+							{/* <div className="flex items-center justify-between">
+								<div className="flex items-center gap-2">
+									<Briefcase className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+									<p className="text-sm font-medium text-gray-600 dark:text-gray-400">ชื่อ Project</p>
+								</div>
 								<p className="text-base font-semibold text-gray-900 dark:text-white">CMRU Bus Reservation</p>
 							</div>
+							<Separator className="dark:bg-gray-800" /> */}
+
+							<div className="flex items-center justify-between">
+								<div className="flex items-center gap-2">
+									<Github className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+									<p className="text-sm font-medium text-gray-600 dark:text-gray-400">GitHub</p>
+								</div>
+								<a
+									href="https://github.com/CMRU-Computer-Science-66/CMRU-Bus-Reservation"
+									target="_blank"
+									rel="noopener noreferrer"
+									className="font-mono text-sm text-blue-600 hover:underline dark:text-blue-400">
+									CMRU-Bus-Reservation
+								</a>
+							</div>
+							<Separator className="dark:bg-gray-800" />
+							<div>
+								<button onClick={() => setShowAllContributors(!showAllContributors)} className="flex w-full items-center justify-between">
+									<div className="flex items-center gap-2">
+										<UserCheck className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+										<p className="text-sm font-medium text-gray-600 dark:text-gray-400">พัฒนาโดย</p>
+									</div>
+									<div className="flex items-center gap-2">
+										<div className="flex -space-x-2">
+											{contributors.length > 0 ? (
+												contributors
+													.slice(0, 3)
+													.map((contributor) => (
+														<img
+															key={contributor.login}
+															src={contributor.avatar_url}
+															alt={contributor.login}
+															className="h-6 w-6 rounded-full border-2 border-white dark:border-gray-900"
+														/>
+													))
+											) : (
+												<img
+													src="https://avatars.githubusercontent.com/u/191374469?s=200&v=4"
+													alt="CMRU Computer Science 66"
+													className="h-6 w-6 rounded-full border-2 border-white dark:border-gray-900"
+												/>
+											)}
+										</div>
+										{contributors.length > 3 && <span className="text-xs font-medium text-gray-600 dark:text-gray-400">+{contributors.length - 3}</span>}
+										<ChevronDown className={`h-4 w-4 text-gray-600 transition-transform dark:text-gray-400 ${showAllContributors ? "rotate-180" : ""}`} />
+									</div>
+								</button>
+								{showAllContributors && (
+									<div className="animate-in slide-in-from-top-2 fade-in-0 mt-3 border-t pt-3 duration-200 dark:border-gray-800">
+										<div className="space-y-2">
+											{contributors.length > 0 ? (
+												contributors.map((contributor) => (
+													<a
+														key={contributor.login}
+														href={contributor.html_url}
+														target="_blank"
+														rel="noopener noreferrer"
+														className="flex items-center gap-3 rounded-lg p-2 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800">
+														<img
+															src={contributor.avatar_url}
+															alt={contributor.login}
+															className="h-8 w-8 rounded-full border-2 border-gray-200 dark:border-gray-700"
+														/>
+														<span className="text-sm font-medium text-gray-900 dark:text-white">{contributor.login}</span>
+													</a>
+												))
+											) : (
+												<a
+													href="https://github.com/CMRU-Computer-Science-66"
+													target="_blank"
+													rel="noopener noreferrer"
+													className="flex items-center gap-3 rounded-lg p-2 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800">
+													<img
+														src="https://avatars.githubusercontent.com/u/191374469?s=200&v=4"
+														alt="CMRU Computer Science 66"
+														className="h-8 w-8 rounded-full border-2 border-gray-200 dark:border-gray-700"
+													/>
+													<span className="text-sm font-medium text-gray-900 dark:text-white">CMRU Computer Science 66</span>
+												</a>
+											)}
+										</div>
+									</div>
+								)}
+							</div>
+
 							<Separator className="dark:bg-gray-800" />
 							<div className="flex items-center justify-between">
-								<p className="text-sm font-medium text-gray-600 dark:text-gray-400">พัฒนาโดย</p>
-								<p className="text-base font-semibold text-gray-900 dark:text-white">CMRU Computer Science 66</p>
+								<div className="flex items-center gap-2">
+									<Tag className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+									<p className="text-sm font-medium text-gray-600 dark:text-gray-400">เวอร์ชัน API</p>
+								</div>
+								<a href="https://github.com/CMRU-Computer-Science-66/CMRU-API" target="_blank" rel="noopener noreferrer">
+									<Badge variant="outline" className="cursor-pointer font-mono transition-colors hover:bg-gray-100 dark:hover:bg-gray-800">
+										{apiVersion}
+									</Badge>
+								</a>
 							</div>
 							<Separator className="dark:bg-gray-800" />
 							<div className="flex items-center justify-between">
-								<p className="text-sm font-medium text-gray-600 dark:text-gray-400">เวอร์ชัน</p>
-								<Badge variant="outline" className="font-mono">
-									1.0.0
-								</Badge>
+								<div className="flex items-center gap-2">
+									<Tag className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+									<p className="text-sm font-medium text-gray-600 dark:text-gray-400">เวอร์ชัน Web</p>
+								</div>
+								<a href="https://github.com/CMRU-Computer-Science-66/CMRU-Bus-Reservation" target="_blank" rel="noopener noreferrer">
+									<Badge variant="outline" className="cursor-pointer font-mono transition-colors hover:bg-gray-100 dark:hover:bg-gray-800">
+										1.0.0
+									</Badge>
+								</a>
 							</div>
 						</CardContent>
 					</Card>

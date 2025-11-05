@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import type { AvailableBusData, AvailableBusSchedule } from "@cmru-comsci-66/cmru-api";
 import { AlertCircle, ArrowLeft, Bus, Calendar, CheckCircle2, Clock, Grid3x3, List, Loader2, LogOut, MapPin, Moon, RefreshCw, Settings, Sun, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
@@ -104,7 +105,7 @@ export function BookingPage({ onNavigateToSchedule, onNavigateToSettings }: Book
 					schedule.reservations.map((r) => {
 						const date = new Date(r.date).toISOString().split("T")[0];
 						const time = r.departureTime.replace(".", ":");
-						const destinationType = r.destination.type === "เวียงบัว" ? "1" : "2";
+						const destinationType = r.destination.name.toLowerCase().includes("เวียงบัว") ? "2" : "1";
 						return `${date}_${time}_${destinationType}`;
 					}),
 				);
@@ -309,21 +310,10 @@ export function BookingPage({ onNavigateToSchedule, onNavigateToSettings }: Book
 						</div>
 
 						<div className="flex items-center gap-2">
-							<Button variant="outline" size="icon" onClick={toggleTheme} className="h-10 w-10 rounded-full hover:scale-110">
-								{isDark ? <Sun className="h-5 w-5 text-yellow-500" /> : <Moon className="h-5 w-5 text-blue-600" />}
-							</Button>
 							<Button variant="outline" size="icon" onClick={fetchAvailableBuses} disabled={isLoading} className="h-10 w-10 rounded-full hover:scale-110">
 								<RefreshCw className={`h-5 w-5 transition-transform ${isLoading ? "animate-spin" : "hover:rotate-180"}`} />
 							</Button>
-							{onNavigateToSettings && (
-								<Button
-									variant="outline"
-									size="icon"
-									onClick={onNavigateToSettings}
-									className="h-10 w-10 rounded-full hover:scale-110 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-950">
-									<Settings className="h-5 w-5" />
-								</Button>
-							)}
+
 							<Button
 								variant="outline"
 								size="icon"
@@ -477,7 +467,7 @@ export function BookingPage({ onNavigateToSchedule, onNavigateToSettings }: Book
 							</Badge>
 						)}
 					</div>
-					<div className="flex gap-2">
+					{/* <div className="flex gap-2">
 						<Button variant={viewMode === "grid" ? "default" : "outline"} size="sm" onClick={() => setViewMode("grid")} className="gap-2">
 							<Grid3x3 className="h-4 w-4" />
 							<span className="hidden sm:inline">กริด</span>
@@ -486,7 +476,7 @@ export function BookingPage({ onNavigateToSchedule, onNavigateToSettings }: Book
 							<List className="h-4 w-4" />
 							<span className="hidden sm:inline">ลิสต์</span>
 						</Button>
-					</div>
+					</div> */}
 				</div>
 
 				<div className={viewMode === "grid" ? "grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3" : "space-y-4"}>
@@ -499,63 +489,101 @@ export function BookingPage({ onNavigateToSchedule, onNavigateToSettings }: Book
 									</p>
 								</div>
 							)}
-							{groupedSchedules.map((group) => (
-								<Card
-									key={group.dateString}
-									className="group border-0 bg-white/90 shadow-md backdrop-blur-md transition-all hover:scale-[1.02] hover:shadow-xl dark:bg-gray-900/90">
-									<CardHeader className="pb-3">
-										<div className="flex items-start justify-between gap-2">
-											<div className="min-w-0 flex-1">
-												<CardTitle className="flex flex-wrap items-center gap-2 text-base">
-													<Calendar className="h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
-													<span className="font-bold text-gray-900 dark:text-white">{formatDate(group.date)}</span>
-													{getRelativeDay(group.date) && (
-														<Badge
-															variant="outline"
-															className="gap-1 border-orange-300 bg-orange-50 text-orange-700 dark:border-orange-600 dark:bg-orange-950 dark:text-orange-400">
-															{getRelativeDay(group.date)}
-														</Badge>
+							{groupedSchedules.map((group) => {
+								const bookedCount = group.schedules.filter((schedule) => {
+									const date = new Date(schedule.date).toISOString().split("T")[0];
+									const time = schedule.departureTime;
+									const destinationType = schedule.destinationType.toString();
+									const bookingKey = `${date}_${time}_${destinationType}`;
+									return bookedScheduleIds.has(bookingKey);
+								}).length;
+
+								return (
+									<Card
+										key={group.dateString}
+										className="group border-0 bg-white/90 shadow-md backdrop-blur-md transition-all hover:scale-[1.02] hover:shadow-xl dark:bg-gray-900/90">
+										<CardHeader>
+											<div className="flex items-start justify-between gap-2">
+												<div className="min-w-0 flex-1">
+													<CardTitle className="flex flex-col gap-2 text-base sm:flex-row sm:flex-wrap sm:items-center">
+														<div className="flex items-center gap-2">
+															<Calendar className="h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
+															<span className="font-bold text-gray-900 dark:text-white">{formatDate(group.date)}</span>
+														</div>
+														{getRelativeDay(group.date) && (
+															<Badge
+																variant="outline"
+																className="w-fit gap-1 border-orange-300 bg-orange-50 text-orange-700 dark:border-orange-600 dark:bg-orange-950 dark:text-orange-400">
+																{getRelativeDay(group.date)}
+															</Badge>
+														)}
+													</CardTitle>
+													<CardDescription className="mt-1.5 text-xs dark:text-gray-400">
+														<span>
+															{group.schedules.length} รอบ • {group.canReserveCount} รอบว่าง
+															{bookedCount > 0 && ` • ${bookedCount} จองแล้ว`}
+														</span>
+													</CardDescription>
+												</div>
+												<Badge
+													variant={group.canReserveCount > 0 ? "default" : "secondary"}
+													className={`shrink-0 ${group.canReserveCount > 0 ? "bg-green-600 hover:bg-green-700 dark:bg-green-500" : "dark:bg-gray-700"}`}>
+													{group.canReserveCount > 0 ? (
+														<span className="flex items-center gap-1">
+															<CheckCircle2 className="h-3 w-3" />
+															<span className="text-xs">ว่าง</span>
+														</span>
+													) : (
+														<span className="flex items-center gap-1">
+															<X className="h-3 w-3" />
+															<span className="text-xs">หมดเวลาจอง</span>
+														</span>
 													)}
-												</CardTitle>
-												<CardDescription className="mt-1.5 text-xs dark:text-gray-400">
-													<span>
-														{group.schedules.length} รอบ • {group.canReserveCount} รอบว่าง
-													</span>
-												</CardDescription>
+												</Badge>
 											</div>
-											<Badge
-												variant={group.canReserveCount > 0 ? "default" : "secondary"}
-												className={`shrink-0 ${group.canReserveCount > 0 ? "bg-green-600 hover:bg-green-700 dark:bg-green-500" : "dark:bg-gray-700"}`}>
-												{group.canReserveCount > 0 ? (
-													<span className="flex items-center gap-1">
-														<CheckCircle2 className="h-3 w-3" />
-														<span className="text-xs">ว่าง</span>
-													</span>
-												) : (
-													<span className="flex items-center gap-1">
-														<X className="h-3 w-3" />
-														<span className="text-xs">หมดเวลาจอง</span>
-													</span>
-												)}
-											</Badge>
-										</div>
-									</CardHeader>
+										</CardHeader>
 
-									<Separator className="dark:bg-gray-800" />
+										<Separator className="dark:bg-gray-800" />
 
-									<CardContent className="space-y-4 p-4">
-										<div className="grid grid-cols-2 gap-3">
-											<div className="space-y-2">
-												<div className="flex min-h-[28px] items-center justify-between">
-													<div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-														<MapPin className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-														<span>ไปแม่ริม</span>
+										<CardContent className="space-y-4">
+											<div className="grid grid-cols-2 gap-3">
+												<div className="space-y-2">
+													<div className="flex min-h-[28px] items-center justify-between">
+														<div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+															<MapPin className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+															<span>ไปแม่ริม</span>
+														</div>
+														{selectedSchedules[group.dateString]?.toMaeRim && (
+															<Button
+																variant="ghost"
+																size="sm"
+																onClick={() => {
+																	setSelectedSchedules((previous) => ({
+																		...previous,
+																		[group.dateString]: {
+																			toMaeRim: undefined,
+																			toWiangBua: previous[group.dateString]?.toWiangBua,
+																		},
+																	}));
+																}}
+																className="h-7 px-2 text-xs text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-950">
+																<X className="h-3 w-3" />
+															</Button>
+														)}
 													</div>
-													{selectedSchedules[group.dateString]?.toMaeRim && (
-														<Button
-															variant="ghost"
-															size="sm"
-															onClick={() => {
+													<Select
+														value={selectedSchedules[group.dateString]?.toMaeRim?.toString() || ""}
+														onValueChange={(value) => {
+															if (value) {
+																const numberValue = Number.parseInt(value);
+																setSelectedSchedules((previous) => ({
+																	...previous,
+																	[group.dateString]: {
+																		toMaeRim: numberValue,
+																		toWiangBua: previous[group.dateString]?.toWiangBua,
+																	},
+																}));
+															} else {
 																setSelectedSchedules((previous) => ({
 																	...previous,
 																	[group.dateString]: {
@@ -563,90 +591,90 @@ export function BookingPage({ onNavigateToSchedule, onNavigateToSettings }: Book
 																		toWiangBua: previous[group.dateString]?.toWiangBua,
 																	},
 																}));
-															}}
-															className="h-7 px-2 text-xs text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-950">
-															<X className="h-3 w-3" />
-														</Button>
-													)}
+															}
+														}}>
+														<SelectTrigger className="h-11 border-gray-200 transition-all hover:border-blue-300 dark:border-gray-700 dark:bg-gray-800">
+															<SelectValue placeholder="-- เลือกรอบ --" />
+														</SelectTrigger>
+														<SelectContent className="max-h-60 overflow-y-auto">
+															{group.schedules
+																.filter((s) => s.destinationType === 1)
+																.sort((a, b) => {
+																	const timeA = a.departureTime.split(":").map(Number);
+																	const timeB = b.departureTime.split(":").map(Number);
+																	return (timeA[0] ?? 0) * 60 + (timeA[1] ?? 0) - ((timeB[0] ?? 0) * 60 + (timeB[1] ?? 0));
+																})
+																.map((schedule) => {
+																	const date = new Date(schedule.date).toISOString().split("T")[0];
+																	const time = schedule.departureTime;
+																	const destinationType = "1";
+																	const bookingKey = `${date}_${time}_${destinationType}`;
+																	const isBooked = bookedScheduleIds.has(bookingKey);
+
+																	return (
+																		<SelectItem
+																			key={schedule.id}
+																			value={schedule.id.toString()}
+																			disabled={!schedule.canReserve || isBooked}
+																			className={schedule.canReserve && !isBooked ? "" : "cursor-not-allowed opacity-50"}>
+																			<div className="flex items-center gap-2">
+																				<Clock className="h-3.5 w-3.5 text-gray-500" />
+																				<span>{formatTime(time)}</span>
+																				{isBooked && (
+																					<Badge variant="default" className="bg-blue-600 text-xs dark:bg-blue-500">
+																						จองแล้ว
+																					</Badge>
+																				)}
+																				{!schedule.canReserve && !isBooked && (
+																					<Badge variant="secondary" className="text-xs">
+																						หมดเวลาจอง
+																					</Badge>
+																				)}
+																			</div>
+																		</SelectItem>
+																	);
+																})}
+														</SelectContent>
+													</Select>
 												</div>
-												<Select
-													value={selectedSchedules[group.dateString]?.toMaeRim?.toString() || ""}
-													onValueChange={(value) => {
-														if (value) {
-															const numberValue = Number.parseInt(value);
-															setSelectedSchedules((previous) => ({
-																...previous,
-																[group.dateString]: {
-																	toMaeRim: numberValue,
-																	toWiangBua: previous[group.dateString]?.toWiangBua,
-																},
-															}));
-														} else {
-															setSelectedSchedules((previous) => ({
-																...previous,
-																[group.dateString]: {
-																	toMaeRim: undefined,
-																	toWiangBua: previous[group.dateString]?.toWiangBua,
-																},
-															}));
-														}
-													}}>
-													<SelectTrigger className="h-11 border-gray-200 transition-all hover:border-blue-300 dark:border-gray-700 dark:bg-gray-800">
-														<SelectValue placeholder="-- เลือกรอบ --" />
-													</SelectTrigger>
-													<SelectContent className="max-h-60 overflow-y-auto">
-														{group.schedules
-															.filter((s) => s.destinationType === 1)
-															.sort((a, b) => {
-																const timeA = a.departureTime.split(":").map(Number);
-																const timeB = b.departureTime.split(":").map(Number);
-																return (timeA[0] ?? 0) * 60 + (timeA[1] ?? 0) - ((timeB[0] ?? 0) * 60 + (timeB[1] ?? 0));
-															})
-															.map((schedule) => {
-																const date = new Date(schedule.date).toISOString().split("T")[0];
-																const time = schedule.departureTime;
-																const destinationType = "1";
-																const bookingKey = `${date}_${time}_${destinationType}`;
-																const isBooked = bookedScheduleIds.has(bookingKey);
 
-																return (
-																	<SelectItem
-																		key={schedule.id}
-																		value={schedule.id.toString()}
-																		disabled={!schedule.canReserve || isBooked}
-																		className={schedule.canReserve && !isBooked ? "" : "cursor-not-allowed opacity-50"}>
-																		<div className="flex items-center gap-2">
-																			<Clock className="h-3.5 w-3.5 text-gray-500" />
-																			<span>{formatTime(time)}</span>
-																			{isBooked && (
-																				<Badge variant="default" className="bg-blue-600 text-xs dark:bg-blue-500">
-																					จองแล้ว
-																				</Badge>
-																			)}
-																			{!schedule.canReserve && !isBooked && (
-																				<Badge variant="secondary" className="text-xs">
-																					หมดเวลาจอง
-																				</Badge>
-																			)}
-																		</div>
-																	</SelectItem>
-																);
-															})}
-													</SelectContent>
-												</Select>
-											</div>
-
-											<div className="space-y-2">
-												<div className="flex min-h-[28px] items-center justify-between">
-													<div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-														<MapPin className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-														<span>กลับเวียงบัว</span>
+												<div className="space-y-2">
+													<div className="flex min-h-[28px] items-center justify-between">
+														<div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+															<MapPin className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+															<span>กลับเวียงบัว</span>
+														</div>
+														{selectedSchedules[group.dateString]?.toWiangBua && (
+															<Button
+																variant="ghost"
+																size="sm"
+																onClick={() => {
+																	setSelectedSchedules((previous) => ({
+																		...previous,
+																		[group.dateString]: {
+																			toMaeRim: previous[group.dateString]?.toMaeRim,
+																			toWiangBua: undefined,
+																		},
+																	}));
+																}}
+																className="h-7 px-2 text-xs text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-950">
+																<X className="h-3 w-3" />
+															</Button>
+														)}
 													</div>
-													{selectedSchedules[group.dateString]?.toWiangBua && (
-														<Button
-															variant="ghost"
-															size="sm"
-															onClick={() => {
+													<Select
+														value={selectedSchedules[group.dateString]?.toWiangBua?.toString() || ""}
+														onValueChange={(value) => {
+															if (value) {
+																const numberValue = Number.parseInt(value);
+																setSelectedSchedules((previous) => ({
+																	...previous,
+																	[group.dateString]: {
+																		toMaeRim: previous[group.dateString]?.toMaeRim,
+																		toWiangBua: numberValue,
+																	},
+																}));
+															} else {
 																setSelectedSchedules((previous) => ({
 																	...previous,
 																	[group.dateString]: {
@@ -654,135 +682,110 @@ export function BookingPage({ onNavigateToSchedule, onNavigateToSettings }: Book
 																		toWiangBua: undefined,
 																	},
 																}));
-															}}
-															className="h-7 px-2 text-xs text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-950">
-															<X className="h-3 w-3" />
-														</Button>
-													)}
+															}
+														}}>
+														<SelectTrigger className="h-11 border-gray-200 transition-all hover:border-purple-300 dark:border-gray-700 dark:bg-gray-800">
+															<SelectValue placeholder="-- เลือกรอบ --" />
+														</SelectTrigger>
+														<SelectContent className="max-h-60 overflow-y-auto">
+															{group.schedules
+																.filter((s) => s.destinationType === 2)
+																.sort((a, b) => {
+																	const timeA = a.departureTime.split(":").map(Number);
+																	const timeB = b.departureTime.split(":").map(Number);
+																	return (timeA[0] ?? 0) * 60 + (timeA[1] ?? 0) - ((timeB[0] ?? 0) * 60 + (timeB[1] ?? 0));
+																})
+																.map((schedule) => {
+																	const date = new Date(schedule.date).toISOString().split("T")[0];
+																	const time = schedule.departureTime;
+																	const destinationType = "2";
+																	const bookingKey = `${date}_${time}_${destinationType}`;
+																	const isBooked = bookedScheduleIds.has(bookingKey);
+
+																	return (
+																		<SelectItem
+																			key={schedule.id}
+																			value={schedule.id.toString()}
+																			disabled={!schedule.canReserve || isBooked}
+																			className={schedule.canReserve && !isBooked ? "" : "cursor-not-allowed opacity-50"}>
+																			<div className="flex items-center gap-2">
+																				<Clock className="h-3.5 w-3.5 text-gray-500" />
+																				<span>{formatTime(time)}</span>
+																				{isBooked && (
+																					<Badge variant="default" className="bg-blue-600 text-xs dark:bg-blue-500">
+																						จองแล้ว
+																					</Badge>
+																				)}
+																				{!schedule.canReserve && !isBooked && (
+																					<Badge variant="secondary" className="text-xs">
+																						หมดเวลาจอง
+																					</Badge>
+																				)}
+																			</div>
+																		</SelectItem>
+																	);
+																})}
+														</SelectContent>
+													</Select>
 												</div>
-												<Select
-													value={selectedSchedules[group.dateString]?.toWiangBua?.toString() || ""}
-													onValueChange={(value) => {
-														if (value) {
-															const numberValue = Number.parseInt(value);
-															setSelectedSchedules((previous) => ({
-																...previous,
-																[group.dateString]: {
-																	toMaeRim: previous[group.dateString]?.toMaeRim,
-																	toWiangBua: numberValue,
-																},
-															}));
-														} else {
-															setSelectedSchedules((previous) => ({
-																...previous,
-																[group.dateString]: {
-																	toMaeRim: previous[group.dateString]?.toMaeRim,
-																	toWiangBua: undefined,
-																},
-															}));
-														}
-													}}>
-													<SelectTrigger className="h-11 border-gray-200 transition-all hover:border-purple-300 dark:border-gray-700 dark:bg-gray-800">
-														<SelectValue placeholder="-- เลือกรอบ --" />
-													</SelectTrigger>
-													<SelectContent className="max-h-60 overflow-y-auto">
-														{group.schedules
-															.filter((s) => s.destinationType === 2)
-															.sort((a, b) => {
-																const timeA = a.departureTime.split(":").map(Number);
-																const timeB = b.departureTime.split(":").map(Number);
-																return (timeA[0] ?? 0) * 60 + (timeA[1] ?? 0) - ((timeB[0] ?? 0) * 60 + (timeB[1] ?? 0));
-															})
-															.map((schedule) => {
-																const date = new Date(schedule.date).toISOString().split("T")[0];
-																const time = schedule.departureTime;
-																const destinationType = "2";
-																const bookingKey = `${date}_${time}_${destinationType}`;
-																const isBooked = bookedScheduleIds.has(bookingKey);
-
-																return (
-																	<SelectItem
-																		key={schedule.id}
-																		value={schedule.id.toString()}
-																		disabled={!schedule.canReserve || isBooked}
-																		className={schedule.canReserve && !isBooked ? "" : "cursor-not-allowed opacity-50"}>
-																		<div className="flex items-center gap-2">
-																			<Clock className="h-3.5 w-3.5 text-gray-500" />
-																			<span>{formatTime(time)}</span>
-																			{isBooked && (
-																				<Badge variant="default" className="bg-blue-600 text-xs dark:bg-blue-500">
-																					จองแล้ว
-																				</Badge>
-																			)}
-																			{!schedule.canReserve && !isBooked && (
-																				<Badge variant="secondary" className="text-xs">
-																					หมดเวลาจอง
-																				</Badge>
-																			)}
-																		</div>
-																	</SelectItem>
-																);
-															})}
-													</SelectContent>
-												</Select>
 											</div>
-										</div>
 
-										{(selectedSchedules[group.dateString]?.toMaeRim || selectedSchedules[group.dateString]?.toWiangBua) && (
-											<div className="space-y-2 rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-900 dark:bg-blue-950">
-												<p className="text-xs font-medium text-blue-600 dark:text-blue-400">รอบที่เลือก:</p>
+											{(selectedSchedules[group.dateString]?.toMaeRim || selectedSchedules[group.dateString]?.toWiangBua) && (
+												<div className="space-y-2 rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-900 dark:bg-blue-950">
+													<p className="text-xs font-medium text-blue-600 dark:text-blue-400">รอบที่เลือก:</p>
 
-												{selectedSchedules[group.dateString]?.toMaeRim &&
-													(() => {
-														const selected = group.schedules.find((s) => s.id === selectedSchedules[group.dateString]?.toMaeRim);
-														if (!selected) return;
-														return (
-															<div className="flex flex-wrap items-center gap-2 rounded bg-white p-2 dark:bg-gray-900">
-																<Badge className="bg-blue-600 text-xs hover:bg-blue-700 dark:bg-blue-500">ไปแม่ริม</Badge>
-																<span className="text-sm font-semibold text-gray-900 dark:text-white">{formatTime(selected.departureTime)}</span>
-															</div>
-														);
-													})()}
+													{selectedSchedules[group.dateString]?.toMaeRim &&
+														(() => {
+															const selected = group.schedules.find((s) => s.id === selectedSchedules[group.dateString]?.toMaeRim);
+															if (!selected) return;
+															return (
+																<div className="flex flex-wrap items-center gap-2 rounded bg-white p-2 dark:bg-gray-900">
+																	<Badge className="bg-blue-600 text-xs hover:bg-blue-700 dark:bg-blue-500">ไปแม่ริม</Badge>
+																	<span className="text-sm font-semibold text-gray-900 dark:text-white">{formatTime(selected.departureTime)}</span>
+																</div>
+															);
+														})()}
 
-												{selectedSchedules[group.dateString]?.toWiangBua &&
-													(() => {
-														const selected = group.schedules.find((s) => s.id === selectedSchedules[group.dateString]?.toWiangBua);
-														if (!selected) return;
-														return (
-															<div className="flex flex-wrap items-center gap-2 rounded bg-white p-2 dark:bg-gray-900">
-																<Badge className="bg-purple-600 text-xs hover:bg-purple-700 dark:bg-purple-500">กลับเวียงบัว</Badge>
-																<span className="text-sm font-semibold text-gray-900 dark:text-white">{formatTime(selected.departureTime)}</span>
-															</div>
-														);
-													})()}
-											</div>
-										)}
+													{selectedSchedules[group.dateString]?.toWiangBua &&
+														(() => {
+															const selected = group.schedules.find((s) => s.id === selectedSchedules[group.dateString]?.toWiangBua);
+															if (!selected) return;
+															return (
+																<div className="flex flex-wrap items-center gap-2 rounded bg-white p-2 dark:bg-gray-900">
+																	<Badge className="bg-purple-600 text-xs hover:bg-purple-700 dark:bg-purple-500">กลับเวียงบัว</Badge>
+																	<span className="text-sm font-semibold text-gray-900 dark:text-white">{formatTime(selected.departureTime)}</span>
+																</div>
+															);
+														})()}
+												</div>
+											)}
 
-										{(selectedSchedules[group.dateString]?.toMaeRim || selectedSchedules[group.dateString]?.toWiangBua) && (
-											<Button
-												onClick={() => handleBook(group.dateString)}
-												disabled={bookingLoading !== undefined}
-												className="h-12 w-full gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-base font-semibold shadow-lg transition-all hover:scale-[1.02] hover:from-blue-700 hover:to-indigo-700 hover:shadow-xl active:scale-[0.98] disabled:hover:scale-100 dark:from-blue-500 dark:to-indigo-500"
-												size="lg">
-												{bookingLoading === undefined ? (
-													<>
-														<CheckCircle2 className="h-5 w-5" />
-														<span>
-															ยืนยันการจอง
-															{selectedSchedules[group.dateString]?.toMaeRim && selectedSchedules[group.dateString]?.toWiangBua ? " (2 รอบ)" : " (1 รอบ)"}
-														</span>
-													</>
-												) : (
-													<>
-														<Loader2 className="h-5 w-5 animate-spin" />
-														<span>กำลังจอง...</span>
-													</>
-												)}
-											</Button>
-										)}
-									</CardContent>
-								</Card>
-							))}
+											{(selectedSchedules[group.dateString]?.toMaeRim || selectedSchedules[group.dateString]?.toWiangBua) && (
+												<Button
+													onClick={() => handleBook(group.dateString)}
+													disabled={bookingLoading !== undefined}
+													className="h-12 w-full gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-base font-semibold shadow-lg transition-all hover:scale-[1.02] hover:from-blue-700 hover:to-indigo-700 hover:shadow-xl active:scale-[0.98] disabled:hover:scale-100 dark:from-blue-500 dark:to-indigo-500"
+													size="lg">
+													{bookingLoading === undefined ? (
+														<>
+															<CheckCircle2 className="h-5 w-5" />
+															<span>
+																ยืนยันการจอง
+																{selectedSchedules[group.dateString]?.toMaeRim && selectedSchedules[group.dateString]?.toWiangBua ? " (2 รอบ)" : " (1 รอบ)"}
+															</span>
+														</>
+													) : (
+														<>
+															<Loader2 className="h-5 w-5 animate-spin" />
+															<span>กำลังจอง...</span>
+														</>
+													)}
+												</Button>
+											)}
+										</CardContent>
+									</Card>
+								);
+							})}
 						</>
 					) : (
 						<Card className="col-span-full border-0 bg-white/90 shadow-md backdrop-blur-md dark:bg-gray-900/90">

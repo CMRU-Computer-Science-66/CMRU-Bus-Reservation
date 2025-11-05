@@ -15,7 +15,7 @@ function AppContent() {
 	const [currentPage, setCurrentPage] = useState<Page>("schedule");
 
 	if (!isAuthenticated) {
-		return <LoginPage onLoginSuccess={() => {}} />;
+		return <LoginPage />;
 	}
 
 	if (currentPage === "booking") {

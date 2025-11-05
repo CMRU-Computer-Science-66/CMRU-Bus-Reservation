@@ -45,8 +45,8 @@ export function LoginPage() {
 
 		try {
 			const result = await login(username, password);
-			if (!result.success) {
-				setError(result.message || "เข้าสู่ระบบไม่สำเร็จ");
+			if (!result) {
+				setError("เข้าสู่ระบบไม่สำเร็จ");
 			}
 		} catch (error_) {
 			setError(error_ instanceof Error ? error_.message : "เกิดข้อผิดพลาดในการเข้าสู่ระบบ");
@@ -99,7 +99,7 @@ export function LoginPage() {
 									type="text"
 									placeholder="กรอกชื่อผู้ใช้"
 									value={username}
-									onChange={(e) => setUsername(e.target.value)}
+									onChange={(event) => setUsername(event.target.value)}
 									disabled={isLoading}
 									className="h-12 border-gray-200 pl-11 transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:border-gray-700 dark:bg-gray-800 dark:focus:border-blue-400 dark:focus:ring-blue-900"
 									autoComplete="username"
@@ -153,7 +153,7 @@ export function LoginPage() {
 
 					<div className="space-y-3 border-t border-gray-200 pt-6 text-center text-sm text-gray-600 dark:border-gray-700 dark:text-gray-400">
 						<p>ใช้บัญชี CMU Account เพื่อเข้าสู่ระบบ</p>
-						<p className="text-xs text-gray-500 dark:text-gray-500">© 2025 มหาวิทยาลัยราชภัฏเชียงใหม่</p>
+						{/* <p className="text-xs text-gray-500 dark:text-gray-500">© 2025 สาขาวิทยาการคอมพิวเตอร์ & มหาวิทยาลัยราชภัฏเชียงใหม่</p> */}
 					</div>
 				</CardContent>
 			</Card>

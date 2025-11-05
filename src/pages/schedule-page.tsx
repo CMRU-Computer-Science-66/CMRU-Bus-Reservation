@@ -1,5 +1,5 @@
 import type { ScheduleReservation } from "@cmru-comsci-66/cmru-api";
-import { Calendar, CheckCircle2, List, Loader2, LogOut, Menu, Plus, QrCode, RefreshCw, Settings, TrendingUp, User, X } from "lucide-react";
+import { Calendar, CheckCircle2, LogOut, Menu, Plus, QrCode, RefreshCw, Settings, TrendingUp, User, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { Badge } from "../components/ui/badge";
@@ -27,13 +27,17 @@ export function SchedulePage({ onNavigateToBooking, onNavigateToSettings }: Sche
 	const [actionLoading, setActionLoading] = useState<number | null>(null);
 	const [isDark, setIsDark] = useState(false);
 	const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 	const [filterStatus, setFilterStatus] = useState<"all" | "confirmed" | "completed" | "hasQR">("all");
+	const [currentPage, setCurrentPage] = useState(1);
+	const itemsPerPage = 5;
 
 	useEffect(() => {
 		const theme = localStorage.getItem("theme");
 		const prefersDark = globalThis.matchMedia("(prefers-color-scheme: dark)").matches;
 		const shouldBeDark = theme === "dark" || (!theme && prefersDark);
+		// eslint-disable-next-line react-hooks/set-state-in-effect
 		setIsDark(shouldBeDark);
 		document.documentElement.classList.toggle("dark", shouldBeDark);
 	}, []);
@@ -54,10 +58,19 @@ export function SchedulePage({ onNavigateToBooking, onNavigateToSettings }: Sche
 						if (filterStatus === "hasQR") return item.ticket.hasQRCode;
 						return true;
 					})
+					.filter((item) => {
+						const today = new Date();
+						today.setHours(0, 0, 0, 0);
+						const itemDate = new Date(item.date);
+						itemDate.setHours(0, 0, 0, 0);
+						return itemDate.getTime() !== today.getTime();
+					})
 					.reduce(
 						(accumulator, item) => {
 							const dateObject = new Date(item.date);
 							const dateKey = dateObject.toISOString().split("T")[0];
+
+							if (!dateKey) return accumulator;
 
 							if (!accumulator[dateKey]) {
 								accumulator[dateKey] = {
@@ -74,13 +87,21 @@ export function SchedulePage({ onNavigateToBooking, onNavigateToSettings }: Sche
 						{} as Record<string, { date: string; dateISO: Date; displayDate: string; items: ScheduleReservation[] }>,
 					),
 			)
-				.sort((a, b) => new Date(a.dateISO).getTime() - new Date(b.dateISO).getTime())
+				.sort((a, b) => new Date(b.dateISO).getTime() - new Date(a.dateISO).getTime())
 				.map((dateGroup) => ({
 					...dateGroup,
 					items: dateGroup.items.sort((a, b) => {
+						const destinationA = a.destination.name.toLowerCase();
+						const destinationB = b.destination.name.toLowerCase();
+						const isMaeRimA = destinationA.includes("แม่ริม");
+						const isMaeRimB = destinationB.includes("แม่ริม");
+
+						if (isMaeRimA && !isMaeRimB) return -1;
+						if (!isMaeRimA && isMaeRimB) return 1;
+
 						const timeA = a.departureTime?.replace(".", ":") || "";
 						const timeB = b.departureTime?.replace(".", ":") || "";
-						return timeA.localeCompare(timeB);
+						return timeB.localeCompare(timeA);
 					}),
 				}))
 		: [];
@@ -99,10 +120,6 @@ export function SchedulePage({ onNavigateToBooking, onNavigateToSettings }: Sche
 
 	const handleCancel = async (item: ScheduleReservation) => {
 		if (!item.confirmation.unconfirmData) return;
-
-		if (!confirm("คุณต้องการยกเลิกการจองนี้หรือไม่?")) {
-			return;
-		}
 
 		setActionLoading(item.id);
 		const success = await cancelReservation(item.confirmation.unconfirmData);
@@ -163,13 +180,26 @@ export function SchedulePage({ onNavigateToBooking, onNavigateToSettings }: Sche
 	);
 
 	const mobileMenuButton = (
-		<Button variant="outline" size="icon" onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="h-10 w-10 md:hidden">
-			{mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-		</Button>
+		<>
+			{onNavigateToBooking && (
+				<Button
+					onClick={onNavigateToBooking}
+					size="icon"
+					className="h-10 w-10 rounded-full bg-white text-green-600 shadow-md transition-all hover:scale-110 hover:bg-orange-50 active:scale-95 md:hidden dark:bg-gray-800 dark:text-orange-400 dark:hover:bg-gray-700">
+					<Plus className="h-5 w-5" />
+				</Button>
+			)}
+			<Button variant="outline" size="icon" onClick={refetch} disabled={isLoading} className="h-10 w-10 rounded-full transition-all hover:scale-110 active:scale-95 md:hidden">
+				<RefreshCw className={`h-5 w-5 ${isLoading ? "animate-spin" : ""}`} />
+			</Button>
+			<Button variant="outline" size="icon" onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="h-10 w-10 transition-all hover:scale-110 active:scale-95 md:hidden">
+				{mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+			</Button>
+		</>
 	);
 
 	return (
-		<div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-slate-950 dark:via-blue-950 dark:to-indigo-950">
+		<div className="relative min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-slate-950 dark:via-blue-950 dark:to-indigo-950">
 			<PageHeader
 				title="รายการจองรถบัส"
 				subtitle={subtitle}
@@ -182,35 +212,8 @@ export function SchedulePage({ onNavigateToBooking, onNavigateToSettings }: Sche
 			/>
 
 			{mobileMenuOpen && (
-				<div className="container mx-auto border-b border-gray-200 bg-white/80 px-4 pb-4 backdrop-blur-md md:hidden dark:border-gray-800 dark:bg-gray-900/80">
+				<div className="animate-in slide-in-from-top-4 fade-in-0 container mx-auto border-b border-gray-200 bg-white/80 px-4 py-4 backdrop-blur-md duration-200 md:hidden dark:border-gray-800 dark:bg-gray-900/80">
 					<div className="space-y-2">
-						<Button variant="outline" size="sm" onClick={toggleTheme} className="w-full justify-start gap-2">
-							{isDark ? (
-								<>
-									<span>โหมดสว่าง</span>
-								</>
-							) : (
-								<>
-									<span>โหมดมืด</span>
-								</>
-							)}
-						</Button>
-						{onNavigateToBooking && (
-							<Button
-								size="sm"
-								onClick={() => {
-									onNavigateToBooking();
-									setMobileMenuOpen(false);
-								}}
-								className="w-full justify-start gap-2 bg-gradient-to-r from-green-600 to-emerald-600">
-								<Plus className="h-4 w-4" />
-								จองรถ
-							</Button>
-						)}
-						<Button variant="outline" size="sm" onClick={refetch} disabled={isLoading} className="w-full justify-start gap-2">
-							<RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
-							รีเฟรช
-						</Button>
 						{onNavigateToSettings && (
 							<Button
 								variant="outline"
@@ -275,55 +278,133 @@ export function SchedulePage({ onNavigateToBooking, onNavigateToSettings }: Sche
 				</div>
 			)}
 
+			{schedule &&
+				schedule.reservations &&
+				(() => {
+					const today = new Date();
+					today.setHours(0, 0, 0, 0);
+					const todayReservations = schedule.reservations
+						.filter((item) => {
+							const itemDate = new Date(item.date);
+							itemDate.setHours(0, 0, 0, 0);
+							return itemDate.getTime() === today.getTime();
+						})
+						.sort((a, b) => {
+							const destinationA = a.destination.name.toLowerCase();
+							const destinationB = b.destination.name.toLowerCase();
+							const isMaeRimA = destinationA.includes("แม่ริม");
+							const isMaeRimB = destinationB.includes("แม่ริม");
+
+							if (isMaeRimA && !isMaeRimB) return -1;
+							if (!isMaeRimA && isMaeRimB) return 1;
+
+							const timeA = a.departureTime?.replace(".", ":") || "";
+							const timeB = b.departureTime?.replace(".", ":") || "";
+							return timeB.localeCompare(timeA);
+						});
+
+					if (todayReservations.length === 0) return null;
+
+					return (
+						<div className="container mx-auto px-4 pb-8 sm:px-6">
+							<div className="mb-4">
+								<h2 className="text-lg font-semibold text-gray-900 dark:text-white">รายการจองในวันนี้</h2>
+								<p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{todayReservations.length} รายการ</p>
+							</div>
+							<div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+								{todayReservations.map((item) => (
+									<ReservationCard key={item.id} item={item} actionLoading={actionLoading} onConfirm={handleConfirm} onCancel={handleCancel} showTimeLeft={true} />
+								))}
+							</div>
+						</div>
+					);
+				})()}
+
 			<div className="container mx-auto px-4 pb-8 sm:px-6">
 				<div className="mb-4 flex items-center justify-between">
-					<h2 className="text-lg font-semibold text-gray-900 dark:text-white">รายการทั้งหมด</h2>
-					<div className="flex gap-2">
-						<Button variant={viewMode === "grid" ? "default" : "outline"} size="sm" onClick={() => setViewMode("grid")} className="gap-2">
-							<svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-								<path
-									strokeLinecap="round"
-									strokeLinejoin="round"
-									strokeWidth={2}
-									d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
-								/>
-							</svg>
-							<span className="hidden sm:inline">กริด</span>
-						</Button>
-						<Button variant={viewMode === "list" ? "default" : "outline"} size="sm" onClick={() => setViewMode("list")} className="gap-2">
-							<List className="h-4 w-4" />
-							<span className="hidden sm:inline">ลิสต์</span>
-						</Button>
+					<div>
+						<h2 className="text-lg font-semibold text-gray-900 dark:text-white">รายการจองทั้งหมด</h2>
+						{groupedByDate && groupedByDate.length > 0 && (
+							<p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+								{(() => {
+									const currentPageData = groupedByDate.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+									if (currentPageData.length === 0 || !currentPageData[0]) return null;
+									const firstDate = new Date(currentPageData[0].dateISO);
+									const buddhistYear = firstDate.getFullYear() + 543;
+									const currentYear = new Date().getFullYear() + 543;
+
+									if (buddhistYear === currentYear) {
+										return null;
+									}
+									return `ใน ปี ${buddhistYear}`;
+								})()}
+							</p>
+						)}
 					</div>
 				</div>
 
 				<div className="space-y-6">
 					{groupedByDate && groupedByDate.length > 0 ? (
-						groupedByDate.map((group) => (
-							<div key={group.date} className="space-y-4">
-								<div className="flex items-center gap-3">
-									<div className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2.5 shadow-lg dark:from-blue-500 dark:to-indigo-500">
-										<Calendar className="h-4 w-4 text-white" />
-										<span className="font-semibold text-white">{group.displayDate}</span>
-										{getRelativeDay(group.date) && (
-											<Badge variant="outline" className="ml-1 gap-1 border-white/30 bg-white/20 text-white">
-												{getRelativeDay(group.date)}
-											</Badge>
-										)}
+						<>
+							{groupedByDate.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((group) => (
+								<div key={group.date} className="space-y-4">
+									<div className="flex items-center gap-3">
+										<div className="flex items-center gap-2 rounded-lg bg-gray-200 px-4 py-2.5 shadow-md dark:bg-gray-700">
+											<Calendar className="h-4 w-4 text-gray-800 dark:text-gray-200" />
+											<span className="font-semibold text-gray-900 dark:text-white">{group.displayDate}</span>
+											{getRelativeDay(group.date) && (
+												<Badge variant="outline" className="ml-1 gap-1 border-gray-400 bg-white text-gray-800 dark:border-gray-500 dark:bg-gray-600 dark:text-gray-200">
+													{getRelativeDay(group.date)}
+												</Badge>
+											)}
+										</div>
+										<div className="h-px flex-1 bg-gray-200 dark:bg-gray-700"></div>
+										<Badge variant="secondary" className="text-xs font-medium dark:bg-gray-700 dark:text-gray-300">
+											{group.items.length} รอบ
+										</Badge>
 									</div>
-									<div className="h-px flex-1 bg-gray-200 dark:bg-gray-700"></div>
-									<Badge variant="secondary" className="text-xs font-medium dark:bg-gray-700 dark:text-gray-300">
-										{group.items.length} รอบ
-									</Badge>
-								</div>
 
-								<div className={viewMode === "grid" ? "grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3" : "space-y-4"}>
-									{group.items.map((item) => (
-										<ReservationCard key={item.id} item={item} actionLoading={actionLoading} onConfirm={handleConfirm} onCancel={handleCancel} />
-									))}
+									<div className={viewMode === "grid" ? "grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3" : "space-y-4"}>
+										{group.items.map((item) => (
+											<ReservationCard key={item.id} item={item} actionLoading={actionLoading} onConfirm={handleConfirm} onCancel={handleCancel} />
+										))}
+									</div>
 								</div>
-							</div>
-						))
+							))}
+
+							{groupedByDate.length > itemsPerPage && (
+								<div className="flex items-center justify-center gap-2 pt-6">
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={() => setCurrentPage((previous) => Math.max(1, previous - 1))}
+										disabled={currentPage === 1}
+										className="gap-2">
+										ก่อนหน้า
+									</Button>
+									<div className="flex gap-1">
+										{Array.from({ length: Math.ceil(groupedByDate.length / itemsPerPage) }, (_, index) => (
+											<Button
+												key={index + 1}
+												variant={currentPage === index + 1 ? "default" : "outline"}
+												size="sm"
+												onClick={() => setCurrentPage(index + 1)}
+												className={`min-w-[40px] ${currentPage === index + 1 ? "bg-blue-600 hover:bg-blue-700 dark:bg-blue-500" : ""}`}>
+												{index + 1}
+											</Button>
+										))}
+									</div>
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={() => setCurrentPage((previous) => Math.min(Math.ceil(groupedByDate.length / itemsPerPage), previous + 1))}
+										disabled={currentPage === Math.ceil(groupedByDate.length / itemsPerPage)}
+										className="gap-2">
+										ถัดไป
+									</Button>
+								</div>
+							)}
+						</>
 					) : (
 						<Card className="col-span-full border-0 bg-white/90 shadow-md backdrop-blur-md dark:bg-gray-900/90">
 							<CardContent className="py-16">
