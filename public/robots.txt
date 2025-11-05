@@ -1,0 +1,8 @@
+# robots.txt for CMRU Bus Reservation System
+# https://cmru-bus.vercel.app
+
+User-agent: *
+Allow: /
+Sitemap: https://cmru-bus.vercel.app/sitemap.xml
+Crawl-delay: 1
+Disallow: /api/

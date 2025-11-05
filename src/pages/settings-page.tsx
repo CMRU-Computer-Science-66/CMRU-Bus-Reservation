@@ -1,22 +1,22 @@
 import { ArrowLeft, Bell, BellOff, Check, ChevronDown, Clock, Github, Globe, LogOut, Moon, Palette, Settings, Sun, Tag, User, UserCheck } from "lucide-react";
 import { useEffect, useState } from "react";
+import { Helmet } from "react-helmet-async";
+import { useNavigate } from "react-router-dom";
 
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { Separator } from "../components/ui/separator";
+import { BASE_URL, EXTERNAL_URLS, ROUTE_METADATA, ROUTES } from "../config/routes";
 import { useApi } from "../contexts/api-context";
 import { getSessionManager } from "../lib/session-manager";
-
-interface SettingsPageProperties {
-	onNavigateBack?: () => void;
-}
 
 type ThemeMode = "light" | "dark" | "system";
 type TimeFormat = "24hour" | "thai";
 const sessionManager = getSessionManager();
 
-export function SettingsPage({ onNavigateBack }: SettingsPageProperties) {
+export function SettingsPage() {
+	const navigate = useNavigate();
 	const { logout } = useApi();
 	const [username, setUsername] = useState<string>("");
 	const [apiVersion, setApiVersion] = useState<string>("loading...");
@@ -47,7 +47,7 @@ export function SettingsPage({ onNavigateBack }: SettingsPageProperties) {
 			setUsername(session.username);
 		}
 
-		fetch("https://cmru-bus.vercel.app/api")
+		fetch(`${BASE_URL}/api`)
 			.then((response) => response.json())
 			.then((data) => {
 				if (data.version) {
@@ -58,7 +58,7 @@ export function SettingsPage({ onNavigateBack }: SettingsPageProperties) {
 				setApiVersion("N/A");
 			});
 
-		fetch("https://api.github.com/repos/CMRU-Computer-Science-66/CMRU-Bus-Reservation/contributors")
+		fetch(`https://api.github.com/repos/${EXTERNAL_URLS.GITHUB_REPO.split("github.com/")[1]}/contributors`)
 			.then((response) => response.json())
 			.then((data) => {
 				if (Array.isArray(data)) {
@@ -93,15 +93,17 @@ export function SettingsPage({ onNavigateBack }: SettingsPageProperties) {
 
 	return (
 		<div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-slate-950 dark:via-blue-950 dark:to-indigo-950">
+			<Helmet>
+				<title>{ROUTE_METADATA["/settings"].title}</title>
+				<meta name="description" content={ROUTE_METADATA["/schedule"].description} />
+			</Helmet>
 			<div className="sticky top-0 z-30 border-b border-gray-200 bg-white/80 backdrop-blur-md dark:border-gray-800 dark:bg-gray-900/80">
 				<div className="container mx-auto px-4 py-4 sm:px-6">
 					<div className="flex items-center justify-between gap-4">
 						<div className="flex min-w-0 flex-1 items-center gap-3">
-							{onNavigateBack && (
-								<Button variant="ghost" size="icon" onClick={onNavigateBack} className="h-10 w-10 shrink-0 rounded-full hover:scale-110">
-									<ArrowLeft className="h-5 w-5" />
-								</Button>
-							)}
+							<Button variant="ghost" size="icon" onClick={() => navigate(ROUTES.SCHEDULE)} className="h-10 w-10 shrink-0 rounded-full hover:scale-110">
+								<ArrowLeft className="h-5 w-5" />
+							</Button>
 							<div className="rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 p-2 shadow-lg transition-all duration-300 hover:scale-110 hover:shadow-xl">
 								<Settings className="h-5 w-5 text-white sm:h-6 sm:w-6" />
 							</div>
@@ -353,7 +355,7 @@ export function SettingsPage({ onNavigateBack }: SettingsPageProperties) {
 									<p className="text-sm font-medium text-gray-600 dark:text-gray-400">GitHub</p>
 								</div>
 								<a
-									href="https://github.com/CMRU-Computer-Science-66/CMRU-Bus-Reservation"
+									href={EXTERNAL_URLS.GITHUB_REPO}
 									target="_blank"
 									rel="noopener noreferrer"
 									className="font-mono text-sm text-blue-600 hover:underline dark:text-blue-400">
@@ -413,7 +415,7 @@ export function SettingsPage({ onNavigateBack }: SettingsPageProperties) {
 												))
 											) : (
 												<a
-													href="https://github.com/CMRU-Computer-Science-66"
+													href={EXTERNAL_URLS.GITHUB_ORG}
 													target="_blank"
 													rel="noopener noreferrer"
 													className="flex items-center gap-3 rounded-lg p-2 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800">
@@ -436,7 +438,7 @@ export function SettingsPage({ onNavigateBack }: SettingsPageProperties) {
 									<Tag className="h-4 w-4 text-gray-600 dark:text-gray-400" />
 									<p className="text-sm font-medium text-gray-600 dark:text-gray-400">เวอร์ชัน API</p>
 								</div>
-								<a href="https://github.com/CMRU-Computer-Science-66/CMRU-API" target="_blank" rel="noopener noreferrer">
+								<a href={EXTERNAL_URLS.API_REPO} target="_blank" rel="noopener noreferrer">
 									<Badge variant="outline" className="cursor-pointer font-mono transition-colors hover:bg-gray-100 dark:hover:bg-gray-800">
 										{apiVersion}
 									</Badge>
@@ -448,7 +450,7 @@ export function SettingsPage({ onNavigateBack }: SettingsPageProperties) {
 									<Tag className="h-4 w-4 text-gray-600 dark:text-gray-400" />
 									<p className="text-sm font-medium text-gray-600 dark:text-gray-400">เวอร์ชัน Web</p>
 								</div>
-								<a href="https://github.com/CMRU-Computer-Science-66/CMRU-Bus-Reservation" target="_blank" rel="noopener noreferrer">
+								<a href={EXTERNAL_URLS.GITHUB_REPO} target="_blank" rel="noopener noreferrer">
 									<Badge variant="outline" className="cursor-pointer font-mono transition-colors hover:bg-gray-100 dark:hover:bg-gray-800">
 										1.0.0
 									</Badge>

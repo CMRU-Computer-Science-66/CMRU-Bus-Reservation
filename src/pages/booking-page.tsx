@@ -2,6 +2,8 @@
 import type { AvailableBusData, AvailableBusSchedule } from "@cmru-comsci-66/cmru-api";
 import { AlertCircle, ArrowLeft, Bus, Calendar, CheckCircle2, Clock, Grid3x3, List, Loader2, LogOut, MapPin, Moon, RefreshCw, Settings, Sun, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { Helmet } from "react-helmet-async";
+import { useNavigate } from "react-router-dom";
 
 import { Alert, AlertDescription, AlertTitle } from "../components/ui/alert";
 import { Badge } from "../components/ui/badge";
@@ -10,13 +12,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../co
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { Separator } from "../components/ui/separator";
 import { Skeleton } from "../components/ui/skeleton";
+import { ROUTE_METADATA, ROUTES } from "../config/routes";
 import { useApi } from "../contexts/api-context";
 import { formatTime } from "../lib/time-formatter";
-
-interface BookingPageProperties {
-	onNavigateToSchedule?: () => void;
-	onNavigateToSettings?: () => void;
-}
 
 interface GroupedSchedule {
 	canReserveCount: number;
@@ -55,7 +53,8 @@ const getRelativeDay = (date: Date) => {
 	return null;
 };
 
-export function BookingPage({ onNavigateToSchedule, onNavigateToSettings }: BookingPageProperties) {
+export function BookingPage() {
+	const navigate = useNavigate();
 	const { bookBus, getAvailableBuses, getSchedule, isAuthenticated, logout } = useApi();
 	const [availableBuses, setAvailableBuses] = useState<AvailableBusData | undefined>();
 	const [bookedScheduleIds, setBookedScheduleIds] = useState<Set<string>>(new Set());
@@ -281,15 +280,17 @@ export function BookingPage({ onNavigateToSchedule, onNavigateToSettings }: Book
 
 	return (
 		<div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-slate-950 dark:via-blue-950 dark:to-indigo-950">
+			<Helmet>
+				<title>${ROUTE_METADATA["/booking"].title}</title>
+				<meta name="description" content={ROUTE_METADATA["/booking"].description} />
+			</Helmet>
 			<div className="sticky top-0 z-30 border-b border-gray-200 bg-white/80 backdrop-blur-md dark:border-gray-800 dark:bg-gray-900/80">
 				<div className="container mx-auto px-4 py-4 sm:px-6">
 					<div className="flex items-center justify-between gap-4">
 						<div className="flex min-w-0 flex-1 items-center gap-3">
-							{onNavigateToSchedule && (
-								<Button variant="ghost" size="icon" onClick={onNavigateToSchedule} className="h-10 w-10 shrink-0 rounded-full hover:scale-110">
-									<ArrowLeft className="h-5 w-5" />
-								</Button>
-							)}
+							<Button variant="ghost" size="icon" onClick={() => navigate(ROUTES.SCHEDULE)} className="h-10 w-10 shrink-0 rounded-full hover:scale-110">
+								<ArrowLeft className="h-5 w-5" />
+							</Button>
 							<div className="rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 p-2 shadow-lg transition-all duration-300 hover:scale-110 hover:shadow-xl">
 								<Bus className="h-5 w-5 text-white sm:h-6 sm:w-6" />
 							</div>
@@ -800,14 +801,12 @@ export function BookingPage({ onNavigateToSchedule, onNavigateToSettings }: Book
 										<p className="text-lg font-semibold text-gray-700 dark:text-gray-300">ไม่พบรอบรถที่เปิดจอง</p>
 										<p className="mt-2 text-sm text-gray-500 dark:text-gray-400">ไม่มีรอบรถที่สามารถจองได้ในขณะนี้</p>
 									</div>
-									{onNavigateToSchedule && (
-										<Button
-											onClick={onNavigateToSchedule}
-											className="mt-4 gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 shadow-lg hover:from-blue-700 hover:to-indigo-700">
-											<ArrowLeft className="h-4 w-4" />
-											กลับไปดูรายการจอง
-										</Button>
-									)}
+									<Button
+										onClick={() => navigate(ROUTES.SCHEDULE)}
+										className="mt-4 gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 shadow-lg hover:from-blue-700 hover:to-indigo-700">
+										<ArrowLeft className="h-4 w-4" />
+										กลับไปดูรายการจอง
+									</Button>
 								</div>
 							</CardContent>
 						</Card>

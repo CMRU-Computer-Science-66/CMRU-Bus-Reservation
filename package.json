@@ -12,8 +12,7 @@
 		"shadcn:update": "bunx --bun shadcn@latest add --yes --overwrite alert badge button card checkbox dialog dropdown-menu form input label select separator skeleton tabs",
 		"start": "NODE_ENV=production bun src/index.tsx",
 		"vercel:deploy": "vercel",
-		"vercel:deploy:prod": "vercel --prod",
-		"vercel:setup": "tsx scripts/setup-vercel.ts"
+		"vercel:deploy:prod": "vercel --prod"
 	},
 	"prettier": {
 		"bracketSameLine": true,
@@ -196,7 +195,9 @@
 		"lucide-react": "^0.552.0",
 		"react": "^19",
 		"react-dom": "^19",
+		"react-helmet-async": "^2.0.5",
 		"react-hook-form": "^7.66.0",
+		"react-router-dom": "^7.9.5",
 		"react-scripts": "5.0.1",
 		"tailwind-merge": "^3.3.1",
 		"tailwindcss": "^4.1.16",
@@ -227,7 +228,8 @@
 		"prettier-plugin-packagejson": "^2.5.19",
 		"prettier-plugin-sort-json": "^4.1.1",
 		"prettier-plugin-sql": "^0.19.2",
-		"prettier-plugin-tailwindcss": "^0.7.1"
+		"prettier-plugin-tailwindcss": "^0.7.1",
+		"sitemap": "^9.0.0"
 	},
 	"peerDependencies": {
 		"typescript": "^5"

@@ -1,10 +1,13 @@
 import type { ScheduleReservation } from "@cmru-comsci-66/cmru-api";
 import { Calendar, CheckCircle2, LogOut, Menu, Plus, QrCode, RefreshCw, Settings, TrendingUp, User, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import { Helmet } from "react-helmet-async";
+import { useNavigate } from "react-router-dom";
 
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
+import { ROUTE_METADATA, ROUTES } from "../config/routes";
 import { useApi } from "../contexts/api-context";
 import { useSchedule } from "../hooks/use-schedule";
 import { formatThaiDateShort, getRelativeDay } from "./components/date-utils";
@@ -15,12 +18,8 @@ import { ReservationCard } from "./components/reservation-card";
 import { StatCard } from "./components/stat-card";
 import { ThemeToggle } from "./components/theme-toggle";
 
-interface SchedulePageProperties {
-	onNavigateToBooking?: () => void;
-	onNavigateToSettings?: () => void;
-}
-
-export function SchedulePage({ onNavigateToBooking, onNavigateToSettings }: SchedulePageProperties) {
+export function SchedulePage() {
+	const navigate = useNavigate();
 	const { logout } = useApi();
 	const { error, isLoading, refetch, schedule } = useSchedule(true);
 	const { cancelReservation, confirmReservation } = useApi();
@@ -149,25 +148,21 @@ export function SchedulePage({ onNavigateToBooking, onNavigateToSettings }: Sche
 	const desktopActions = (
 		<>
 			<ThemeToggle isDark={isDark} onToggle={toggleTheme} className="hidden md:flex" />
-			{onNavigateToBooking && (
-				<Button
-					size="sm"
-					onClick={onNavigateToBooking}
-					className="hidden gap-2 bg-gradient-to-r from-green-600 to-emerald-600 shadow-lg transition-all hover:scale-105 hover:from-green-700 hover:to-emerald-700 hover:shadow-xl md:flex dark:from-green-500 dark:to-emerald-500">
-					<Plus className="h-4 w-4" />
-					จองรถ
-				</Button>
-			)}
+			<Button
+				size="sm"
+				onClick={() => navigate(ROUTES.BOOKING)}
+				className="hidden gap-2 bg-gradient-to-r from-green-600 to-emerald-600 shadow-lg transition-all hover:scale-105 hover:from-green-700 hover:to-emerald-700 hover:shadow-xl md:flex dark:from-green-500 dark:to-emerald-500">
+				<Plus className="h-4 w-4" />
+				จองรถ
+			</Button>
 			<Button variant="outline" size="sm" onClick={refetch} disabled={isLoading} className="hidden gap-2 shadow-sm hover:shadow-lg md:flex">
 				<RefreshCw className={`h-4 w-4 transition-transform ${isLoading ? "animate-spin" : "hover:rotate-180"}`} />
 				รีเฟรช
 			</Button>
-			{onNavigateToSettings && (
-				<Button variant="outline" size="sm" onClick={onNavigateToSettings} className="hidden gap-2 shadow-sm hover:shadow-lg md:flex">
-					<Settings className="h-4 w-4" />
-					ตั้งค่า
-				</Button>
-			)}
+			<Button variant="outline" size="sm" onClick={() => navigate(ROUTES.SETTINGS)} className="hidden gap-2 shadow-sm hover:shadow-lg md:flex">
+				<Settings className="h-4 w-4" />
+				ตั้งค่า
+			</Button>
 			<Button
 				variant="outline"
 				size="sm"
@@ -181,14 +176,12 @@ export function SchedulePage({ onNavigateToBooking, onNavigateToSettings }: Sche
 
 	const mobileMenuButton = (
 		<>
-			{onNavigateToBooking && (
-				<Button
-					onClick={onNavigateToBooking}
-					size="icon"
-					className="h-10 w-10 rounded-full bg-white text-green-600 shadow-md transition-all hover:scale-110 hover:bg-orange-50 active:scale-95 md:hidden dark:bg-gray-800 dark:text-orange-400 dark:hover:bg-gray-700">
-					<Plus className="h-5 w-5" />
-				</Button>
-			)}
+			<Button
+				onClick={() => navigate(ROUTES.BOOKING)}
+				size="icon"
+				className="h-10 w-10 rounded-full bg-white text-green-600 shadow-md transition-all hover:scale-110 hover:bg-orange-50 active:scale-95 md:hidden dark:bg-gray-800 dark:text-orange-400 dark:hover:bg-gray-700">
+				<Plus className="h-5 w-5" />
+			</Button>
 			<Button variant="outline" size="icon" onClick={refetch} disabled={isLoading} className="h-10 w-10 rounded-full transition-all hover:scale-110 active:scale-95 md:hidden">
 				<RefreshCw className={`h-5 w-5 ${isLoading ? "animate-spin" : ""}`} />
 			</Button>
@@ -200,6 +193,10 @@ export function SchedulePage({ onNavigateToBooking, onNavigateToSettings }: Sche
 
 	return (
 		<div className="relative min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-slate-950 dark:via-blue-950 dark:to-indigo-950">
+			<Helmet>
+				<title>{ROUTE_METADATA["/schedule"].title}</title>
+				<meta name="description" content={ROUTE_METADATA["/schedule"].description} />
+			</Helmet>
 			<PageHeader
 				title="รายการจองรถบัส"
 				subtitle={subtitle}
@@ -214,19 +211,17 @@ export function SchedulePage({ onNavigateToBooking, onNavigateToSettings }: Sche
 			{mobileMenuOpen && (
 				<div className="animate-in slide-in-from-top-4 fade-in-0 container mx-auto border-b border-gray-200 bg-white/80 px-4 py-4 backdrop-blur-md duration-200 md:hidden dark:border-gray-800 dark:bg-gray-900/80">
 					<div className="space-y-2">
-						{onNavigateToSettings && (
-							<Button
-								variant="outline"
-								size="sm"
-								onClick={() => {
-									onNavigateToSettings();
-									setMobileMenuOpen(false);
-								}}
-								className="w-full justify-start gap-2">
-								<Settings className="h-4 w-4" />
-								ตั้งค่า
-							</Button>
-						)}
+						<Button
+							variant="outline"
+							size="sm"
+							onClick={() => {
+								navigate(ROUTES.SETTINGS);
+								setMobileMenuOpen(false);
+							}}
+							className="w-full justify-start gap-2">
+							<Settings className="h-4 w-4" />
+							ตั้งค่า
+						</Button>
 						<Button variant="outline" size="sm" onClick={logout} className="w-full justify-start gap-2 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950">
 							<LogOut className="h-4 w-4" />
 							ออกจากระบบ
@@ -418,14 +413,12 @@ export function SchedulePage({ onNavigateToBooking, onNavigateToSettings }: Sche
 										<p className="text-lg font-semibold text-gray-700 dark:text-gray-300">ไม่พบรายการจอง</p>
 										<p className="mt-2 text-sm text-gray-500 dark:text-gray-400">คุณยังไม่มีรายการจองรถบัส</p>
 									</div>
-									{onNavigateToBooking && (
-										<Button
-											onClick={onNavigateToBooking}
-											className="mt-4 gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 shadow-lg hover:from-blue-700 hover:to-indigo-700">
-											<Plus className="h-4 w-4" />
-											จองรถบัสเลย
-										</Button>
-									)}
+									<Button
+										onClick={() => navigate(ROUTES.BOOKING)}
+										className="mt-4 gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 shadow-lg hover:from-blue-700 hover:to-indigo-700">
+										<Plus className="h-4 w-4" />
+										จองรถบัสเลย
+									</Button>
 								</div>
 							</CardContent>
 						</Card>

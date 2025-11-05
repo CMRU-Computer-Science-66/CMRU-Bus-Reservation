@@ -1,5 +1,8 @@
 import { AlertCircle, Bus, Eye, EyeOff, Loader2, Lock, LogIn, User } from "lucide-react";
 import { useState } from "react";
+import { Helmet } from "react-helmet-async";
+
+import { ROUTE_METADATA } from "@/config/routes";
 
 import { Alert, AlertDescription, AlertTitle } from "../components/ui/alert";
 import { Button } from "../components/ui/button";
@@ -57,6 +60,10 @@ export function LoginPage() {
 
 	return (
 		<div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-4 dark:from-slate-950 dark:via-blue-950 dark:to-indigo-950">
+			<Helmet>
+				<title>{ROUTE_METADATA["/login"].title}</title>
+				<meta name="description" content={ROUTE_METADATA["/login"].description} />
+			</Helmet>
 			<div className="absolute inset-0 overflow-hidden">
 				<div className="animate-blob absolute top-0 -left-4 h-72 w-72 rounded-full bg-purple-300 opacity-70 mix-blend-multiply blur-xl filter dark:bg-purple-900 dark:opacity-30"></div>
 				<div className="animation-delay-2000 animate-blob absolute top-0 -right-4 h-72 w-72 rounded-full bg-yellow-300 opacity-70 mix-blend-multiply blur-xl filter dark:bg-yellow-900 dark:opacity-30"></div>

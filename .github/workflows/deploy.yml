@@ -66,6 +66,12 @@ jobs:
          - name: Build project
            run: bun run build
 
+         - name: Generate sitemap
+           run: bun run scripts/generate-sitemap.ts
+
+         - name: Copy public files to dist
+           run: cp -r public/* dist/
+
          - name: Pull Vercel Environment Information
            run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
 

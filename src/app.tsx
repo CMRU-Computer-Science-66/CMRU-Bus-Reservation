@@ -1,39 +1,87 @@
 import "./index.css";
 
-import { useState } from "react";
+import { HelmetProvider } from "react-helmet-async";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 
+import { ROUTES } from "./config/routes";
 import { ApiProvider, useApi } from "./contexts/api-context";
 import { BookingPage } from "./pages/booking-page";
 import { LoginPage } from "./pages/login-page";
 import { SchedulePage } from "./pages/schedule-page";
 import { SettingsPage } from "./pages/settings-page";
 
-type Page = "schedule" | "booking" | "settings";
-
-function AppContent() {
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
 	const { isAuthenticated } = useApi();
-	const [currentPage, setCurrentPage] = useState<Page>("schedule");
 
 	if (!isAuthenticated) {
-		return <LoginPage />;
+		return <Navigate to={ROUTES.LOGIN} replace />;
 	}
 
-	if (currentPage === "booking") {
-		return <BookingPage onNavigateToSchedule={() => setCurrentPage("schedule")} onNavigateToSettings={() => setCurrentPage("settings")} />;
+	return <>{children}</>;
+}
+
+function PublicRoute({ children }: { children: React.ReactNode }) {
+	const { isAuthenticated } = useApi();
+
+	if (isAuthenticated) {
+		return <Navigate to={ROUTES.SCHEDULE} replace />;
 	}
 
-	if (currentPage === "settings") {
-		return <SettingsPage onNavigateBack={() => setCurrentPage("schedule")} />;
-	}
+	return <>{children}</>;
+}
 
-	return <SchedulePage onNavigateToBooking={() => setCurrentPage("booking")} onNavigateToSettings={() => setCurrentPage("settings")} />;
+function AppRoutes() {
+	return (
+		<Routes>
+			<Route
+				path={ROUTES.LOGIN}
+				element={
+					<PublicRoute>
+						<LoginPage />
+					</PublicRoute>
+				}
+			/>
+
+			<Route
+				path={ROUTES.SCHEDULE}
+				element={
+					<ProtectedRoute>
+						<SchedulePage />
+					</ProtectedRoute>
+				}
+			/>
+			<Route
+				path={ROUTES.BOOKING}
+				element={
+					<ProtectedRoute>
+						<BookingPage />
+					</ProtectedRoute>
+				}
+			/>
+			<Route
+				path={ROUTES.SETTINGS}
+				element={
+					<ProtectedRoute>
+						<SettingsPage />
+					</ProtectedRoute>
+				}
+			/>
+
+			<Route path={ROUTES.HOME} element={<Navigate to={ROUTES.SCHEDULE} replace />} />
+			<Route path="*" element={<Navigate to={ROUTES.SCHEDULE} replace />} />
+		</Routes>
+	);
 }
 
 export function App() {
 	return (
-		<ApiProvider>
-			<AppContent />
-		</ApiProvider>
+		<HelmetProvider>
+			<BrowserRouter>
+				<ApiProvider>
+					<AppRoutes />
+				</ApiProvider>
+			</BrowserRouter>
+		</HelmetProvider>
 	);
 }
 
