@@ -3,18 +3,18 @@ import { useCallback, useEffect, useState } from "react";
 
 import { useApi } from "../contexts/api-context";
 
-export function useSchedule(autoFetch: boolean = false) {
+export function useSchedule(autoFetch: boolean = false, page?: number) {
 	const { getSchedule, isAuthenticated } = useApi();
 	const [schedule, setSchedule] = useState<ParsedScheduleData | null>(null);
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
-	const fetchSchedule = useCallback(async () => {
+	const fetchSchedule = useCallback(async (pageNumber?: number) => {
 		setIsLoading(true);
 		setError(null);
 
 		try {
-			const data = await getSchedule();
+			const data = await getSchedule(pageNumber);
 			setSchedule(data);
 		} catch (error_) {
 			const errorMessage = error_ instanceof Error ? error_.message : "ไม่สามารถดึงข้อมูลได้";
@@ -26,9 +26,9 @@ export function useSchedule(autoFetch: boolean = false) {
 
 	useEffect(() => {
 		if (autoFetch && isAuthenticated) {
-			fetchSchedule();
+			fetchSchedule(page);
 		}
-	}, [autoFetch, isAuthenticated, fetchSchedule]);
+	}, [autoFetch, isAuthenticated, fetchSchedule, page]);
 
 	return {
 		schedule,

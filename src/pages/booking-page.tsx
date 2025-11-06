@@ -193,10 +193,6 @@ export function BookingPage() {
 			}
 		}
 
-		if (results.length > 0) {
-			alert(results.join("\n"));
-		}
-
 		if (allSuccess) {
 			setSelectedSchedules((previous) => {
 				const updatedState = { ...previous };
@@ -206,7 +202,6 @@ export function BookingPage() {
 			await fetchAvailableBuses();
 			await fetchBookedSchedules();
 		}
-
 		setBookingLoading(undefined);
 	};
 

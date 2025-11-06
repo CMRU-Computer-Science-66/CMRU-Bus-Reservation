@@ -24,6 +24,8 @@ export const API_CONFIG = {
 			AVAILABLE: "/bus/available",
 			BOOK: "/bus/book",
 			CONFIRM: "/bus/confirm",
+			UNCONFIRM: "/bus/unconfirm",
+			DELETE: "/bus/delete",
 			CANCEL: "/bus/cancel",
 			VALIDATE: "/bus/validate",
 		},

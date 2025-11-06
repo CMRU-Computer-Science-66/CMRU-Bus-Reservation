@@ -9,13 +9,15 @@ interface ApiContextType {
 	bookBus: (scheduleId: number, scheduleDate: string, destinationType: 1 | 2) => Promise<{ message: string; success: boolean }>;
 	cancelReservation: (data: string) => Promise<boolean>;
 	confirmReservation: (data: string) => Promise<boolean>;
+	deleteReservation: (reservationId: string | number) => Promise<boolean>;
 	error: string | null;
 	getAvailableBuses: (month?: string) => Promise<AvailableBusData | null>;
-	getSchedule: () => Promise<ParsedScheduleData | null>;
+	getSchedule: (page?: number) => Promise<ParsedScheduleData | null>;
 	isAuthenticated: boolean;
 	isLoading: boolean;
 	login: (username: string, password: string, rememberMe?: boolean) => Promise<boolean>;
 	logout: () => void;
+	unconfirmReservation: (data: string) => Promise<boolean>;
 }
 
 const ApiContext = createContext<ApiContextType | undefined>(undefined);
@@ -103,45 +105,49 @@ export function ApiProvider({ children }: { children: ReactNode }) {
 		sessionManager.clearSession();
 	}, []);
 
-	const getSchedule = useCallback(async (): Promise<ParsedScheduleData | null> => {
-		if (!isAuthenticated) {
-			setError("กรุณาเข้าสู่ระบบก่อน");
-			return null;
-		}
-		setIsLoading(true);
-		setError(null);
-
-		try {
-			const response = await fetch(getApiUrl(API_CONFIG.ENDPOINTS.BUS.SCHEDULE), {
-				method: "GET",
-				headers: {
-					"Content-Type": "application/json",
-				},
-			});
-
-			const result = await response.json();
-
-			if (response.ok) {
-				sessionManager.updateLastValidated();
-				return result as ParsedScheduleData;
+	const getSchedule = useCallback(
+		async (page?: number): Promise<ParsedScheduleData | null> => {
+			if (!isAuthenticated) {
+				setError("กรุณาเข้าสู่ระบบก่อน");
+				return null;
 			}
+			setIsLoading(true);
+			setError(null);
 
-			setError(result.message || "ไม่สามารถดึงข้อมูลตารางเวลาได้");
+			try {
+				const url = page ? `${API_CONFIG.ENDPOINTS.BUS.SCHEDULE}?page=${page}` : API_CONFIG.ENDPOINTS.BUS.SCHEDULE;
+				const response = await fetch(getApiUrl(url), {
+					method: "GET",
+					headers: {
+						"Content-Type": "application/json",
+					},
+				});
 
-			if (result.message?.includes("login") || result.message?.includes("Session")) {
-				sessionManager.markSessionInvalid();
-				setIsAuthenticated(false);
+				const result = await response.json();
+
+				if (response.ok) {
+					sessionManager.updateLastValidated();
+					return result as ParsedScheduleData;
+				}
+
+				setError(result.message || "ไม่สามารถดึงข้อมูลตารางเวลาได้");
+
+				if (result.message?.includes("login") || result.message?.includes("Session")) {
+					sessionManager.markSessionInvalid();
+					setIsAuthenticated(false);
+				}
+
+				return null;
+			} catch (error_) {
+				const errorMessage = error_ instanceof Error ? error_.message : "ไม่สามารถดึงข้อมูลตารางเวลาได้";
+				setError(errorMessage);
+				return null;
+			} finally {
+				setIsLoading(false);
 			}
-
-			return null;
-		} catch (error_) {
-			const errorMessage = error_ instanceof Error ? error_.message : "ไม่สามารถดึงข้อมูลตารางเวลาได้";
-			setError(errorMessage);
-			return null;
-		} finally {
-			setIsLoading(false);
-		}
-	}, [isAuthenticated]);
+		},
+		[isAuthenticated],
+	);
 
 	const confirmReservation = useCallback(
 		async (data: string): Promise<boolean> => {
@@ -153,12 +159,13 @@ export function ApiProvider({ children }: { children: ReactNode }) {
 			setError(null);
 
 			try {
+				const oneClickEnabled = sessionManager.getOneClickEnabled();
 				const response = await fetch(getApiUrl(API_CONFIG.ENDPOINTS.BUS.CONFIRM), {
 					method: "POST",
 					headers: {
 						"Content-Type": "application/json",
 					},
-					body: JSON.stringify({ data }),
+					body: JSON.stringify({ data, oneClick: oneClickEnabled }),
 				});
 
 				const result = await response.json();
@@ -187,7 +194,7 @@ export function ApiProvider({ children }: { children: ReactNode }) {
 		[isAuthenticated],
 	);
 
-	const cancelReservation = useCallback(
+	const unconfirmReservation = useCallback(
 		async (data: string): Promise<boolean> => {
 			if (!isAuthenticated) {
 				setError("กรุณาเข้าสู่ระบบก่อน");
@@ -197,12 +204,13 @@ export function ApiProvider({ children }: { children: ReactNode }) {
 			setError(null);
 
 			try {
-				const response = await fetch(getApiUrl(API_CONFIG.ENDPOINTS.BUS.CANCEL), {
+				const oneClickEnabled = sessionManager.getOneClickEnabled();
+				const response = await fetch(getApiUrl(API_CONFIG.ENDPOINTS.BUS.UNCONFIRM), {
 					method: "POST",
 					headers: {
 						"Content-Type": "application/json",
 					},
-					body: JSON.stringify({ data }),
+					body: JSON.stringify({ data, oneClick: oneClickEnabled }),
 				});
 
 				const result = await response.json();
@@ -212,7 +220,7 @@ export function ApiProvider({ children }: { children: ReactNode }) {
 					return true;
 				}
 
-				setError(result.message || "ไม่สามารถยกเลิกการจองได้");
+				setError(result.message || "ไม่สามารถยกเลิกการยืนยันได้");
 
 				if (result.message?.includes("login") || result.message?.includes("Session")) {
 					sessionManager.markSessionInvalid();
@@ -221,7 +229,58 @@ export function ApiProvider({ children }: { children: ReactNode }) {
 
 				return false;
 			} catch (error_) {
-				const errorMessage = error_ instanceof Error ? error_.message : "ไม่สามารถยกเลิกการจองได้";
+				const errorMessage = error_ instanceof Error ? error_.message : "ไม่สามารถยกเลิกการยืนยันได้";
+				setError(errorMessage);
+				return false;
+			} finally {
+				setIsLoading(false);
+			}
+		},
+		[isAuthenticated],
+	);
+
+	const cancelReservation = useCallback(
+		async (data: string): Promise<boolean> => {
+			return unconfirmReservation(data);
+		},
+		[unconfirmReservation],
+	);
+
+	const deleteReservation = useCallback(
+		async (data: string | number): Promise<boolean> => {
+			if (!isAuthenticated) {
+				setError("กรุณาเข้าสู่ระบบก่อน");
+				return false;
+			}
+			setIsLoading(true);
+			setError(null);
+
+			try {
+				const response = await fetch(getApiUrl(API_CONFIG.ENDPOINTS.BUS.DELETE), {
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+					},
+					body: JSON.stringify({ reservationId: data }),
+				});
+
+				const result = await response.json();
+
+				if (response.ok && (result.success === true || result.data)) {
+					sessionManager.updateLastValidated();
+					return true;
+				}
+
+				setError(result.message || "ไม่สามารถลบการจองได้");
+
+				if (result.message?.includes("login") || result.message?.includes("Session")) {
+					sessionManager.markSessionInvalid();
+					setIsAuthenticated(false);
+				}
+
+				return false;
+			} catch (error_) {
+				const errorMessage = error_ instanceof Error ? error_.message : "ไม่สามารถลบการจองได้";
 				setError(errorMessage);
 				return false;
 			} finally {
@@ -285,12 +344,13 @@ export function ApiProvider({ children }: { children: ReactNode }) {
 			setError(null);
 
 			try {
+				const oneClickEnabled = sessionManager.getOneClickEnabled();
 				const response = await fetch(getApiUrl(API_CONFIG.ENDPOINTS.BUS.BOOK), {
 					method: "POST",
 					headers: {
 						"Content-Type": "application/json",
 					},
-					body: JSON.stringify({ scheduleId, scheduleDate, destinationType }),
+					body: JSON.stringify({ scheduleId, scheduleDate, destinationType, oneClick: oneClickEnabled }),
 				});
 
 				const result = await response.json();
@@ -330,6 +390,8 @@ export function ApiProvider({ children }: { children: ReactNode }) {
 				logout,
 				getSchedule,
 				confirmReservation,
+				unconfirmReservation,
+				deleteReservation,
 				cancelReservation,
 				getAvailableBuses,
 				bookBus,

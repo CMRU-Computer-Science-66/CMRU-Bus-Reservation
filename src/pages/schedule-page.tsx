@@ -10,6 +10,7 @@ import { Card, CardContent } from "../components/ui/card";
 import { ROUTE_METADATA, ROUTES } from "../config/routes";
 import { useApi } from "../contexts/api-context";
 import { useSchedule } from "../hooks/use-schedule";
+import { getSessionManager } from "../lib/session-manager";
 import { formatThaiDateShort, getRelativeDay } from "./components/date-utils";
 import { ErrorScreen } from "./components/error-screen";
 import { LoadingScreen } from "./components/loading-screen";
@@ -21,16 +22,21 @@ import { ThemeToggle } from "./components/theme-toggle";
 export function SchedulePage() {
 	const navigate = useNavigate();
 	const { logout } = useApi();
-	const { error, isLoading, refetch, schedule } = useSchedule(true);
-	const { cancelReservation, confirmReservation } = useApi();
+	const [currentPage, setCurrentPage] = useState(1);
+	const { error, isLoading, refetch, schedule } = useSchedule(true, currentPage);
+	const { cancelReservation, confirmReservation, deleteReservation } = useApi();
+	const sessionManager = getSessionManager();
+	const [oneClickMode, setOneClickMode] = useState(sessionManager.getOneClickEnabled());
 	const [actionLoading, setActionLoading] = useState<number | null>(null);
 	const [isDark, setIsDark] = useState(false);
 	const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 	const [filterStatus, setFilterStatus] = useState<"all" | "confirmed" | "completed" | "hasQR">("all");
-	const [currentPage, setCurrentPage] = useState(1);
-	const itemsPerPage = 5;
+
+	useEffect(() => {
+		setOneClickMode(sessionManager.getOneClickEnabled());
+	}, [sessionManager]);
 
 	useEffect(() => {
 		const theme = localStorage.getItem("theme");
@@ -58,11 +64,19 @@ export function SchedulePage() {
 						return true;
 					})
 					.filter((item) => {
+						const now = new Date();
 						const today = new Date();
 						today.setHours(0, 0, 0, 0);
 						const itemDate = new Date(item.date);
 						itemDate.setHours(0, 0, 0, 0);
-						return itemDate.getTime() !== today.getTime();
+
+						if (itemDate.getTime() !== today.getTime()) return true;
+
+						const [hours, minutes] = (item.departureTime?.replace(".", ":") || "00:00").split(":");
+						const departureTime = new Date();
+						departureTime.setHours(Number.parseInt(hours || "0", 10), Number.parseInt(minutes || "0", 10), 0, 0);
+
+						return departureTime <= now;
 					})
 					.reduce(
 						(accumulator, item) => {
@@ -112,19 +126,25 @@ export function SchedulePage() {
 		const success = await confirmReservation(item.confirmation.confirmData);
 
 		if (success) {
-			await refetch();
+			await refetch(currentPage);
 		}
 		setActionLoading(null);
 	};
 
 	const handleCancel = async (item: ScheduleReservation) => {
-		if (!item.confirmation.unconfirmData) return;
-
 		setActionLoading(item.id);
-		const success = await cancelReservation(item.confirmation.unconfirmData);
+		let success = false;
+
+		if (item.confirmation.unconfirmData) {
+			success = await cancelReservation(item.confirmation.unconfirmData);
+		} else if (item.confirmation.canConfirm && item.actions.reservationId) {
+			success = await deleteReservation(item.actions.reservationId);
+		} else {
+			console.error("No confirmation data available for cancellation", item);
+		}
 
 		if (success) {
-			await refetch();
+			await refetch(currentPage);
 		}
 		setActionLoading(null);
 	};
@@ -134,7 +154,7 @@ export function SchedulePage() {
 	}
 
 	if (error) {
-		return <ErrorScreen error={error} onRetry={refetch} />;
+		return <ErrorScreen error={error} onRetry={() => refetch(currentPage)} />;
 	}
 
 	const subtitle = (
@@ -155,7 +175,7 @@ export function SchedulePage() {
 				<Plus className="h-4 w-4" />
 				จองรถ
 			</Button>
-			<Button variant="outline" size="sm" onClick={refetch} disabled={isLoading} className="hidden gap-2 shadow-sm hover:shadow-lg md:flex">
+			<Button variant="outline" size="sm" onClick={() => refetch(currentPage)} disabled={isLoading} className="hidden gap-2 shadow-sm hover:shadow-lg md:flex">
 				<RefreshCw className={`h-4 w-4 transition-transform ${isLoading ? "animate-spin" : "hover:rotate-180"}`} />
 				รีเฟรช
 			</Button>
@@ -182,7 +202,12 @@ export function SchedulePage() {
 				className="h-10 w-10 rounded-full bg-white text-green-600 shadow-md transition-all hover:scale-110 hover:bg-orange-50 active:scale-95 md:hidden dark:bg-gray-800 dark:text-orange-400 dark:hover:bg-gray-700">
 				<Plus className="h-5 w-5" />
 			</Button>
-			<Button variant="outline" size="icon" onClick={refetch} disabled={isLoading} className="h-10 w-10 rounded-full transition-all hover:scale-110 active:scale-95 md:hidden">
+			<Button
+				variant="outline"
+				size="icon"
+				onClick={() => refetch(currentPage)}
+				disabled={isLoading}
+				className="h-10 w-10 rounded-full transition-all hover:scale-110 active:scale-95 md:hidden">
 				<RefreshCw className={`h-5 w-5 ${isLoading ? "animate-spin" : ""}`} />
 			</Button>
 			<Button variant="outline" size="icon" onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="h-10 w-10 transition-all hover:scale-110 active:scale-95 md:hidden">
@@ -276,13 +301,19 @@ export function SchedulePage() {
 			{schedule &&
 				schedule.reservations &&
 				(() => {
+					const now = new Date();
 					const today = new Date();
 					today.setHours(0, 0, 0, 0);
 					const todayReservations = schedule.reservations
 						.filter((item) => {
 							const itemDate = new Date(item.date);
 							itemDate.setHours(0, 0, 0, 0);
-							return itemDate.getTime() === today.getTime();
+							if (itemDate.getTime() !== today.getTime()) return false;
+							const [hours, minutes] = (item.departureTime?.replace(".", ":") || "00:00").split(":");
+							const departureTime = new Date();
+							departureTime.setHours(Number.parseInt(hours || "0", 10), Number.parseInt(minutes || "0", 10), 0, 0);
+
+							return departureTime > now;
 						})
 						.sort((a, b) => {
 							const destinationA = a.destination.name.toLowerCase();
@@ -308,7 +339,15 @@ export function SchedulePage() {
 							</div>
 							<div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
 								{todayReservations.map((item) => (
-									<ReservationCard key={item.id} item={item} actionLoading={actionLoading} onConfirm={handleConfirm} onCancel={handleCancel} showTimeLeft={true} />
+									<ReservationCard
+										key={item.id}
+										item={item}
+										actionLoading={actionLoading}
+										onConfirm={handleConfirm}
+										onCancel={handleCancel}
+										oneClickMode={oneClickMode}
+										showTimeLeft={true}
+									/>
 								))}
 							</div>
 						</div>
@@ -322,7 +361,7 @@ export function SchedulePage() {
 						{groupedByDate && groupedByDate.length > 0 && (
 							<p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
 								{(() => {
-									const currentPageData = groupedByDate.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+									const currentPageData = groupedByDate;
 									if (currentPageData.length === 0 || !currentPageData[0]) return null;
 									const firstDate = new Date(currentPageData[0].dateISO);
 									const buddhistYear = firstDate.getFullYear() + 543;
@@ -341,7 +380,7 @@ export function SchedulePage() {
 				<div className="space-y-6">
 					{groupedByDate && groupedByDate.length > 0 ? (
 						<>
-							{groupedByDate.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((group) => (
+							{groupedByDate.map((group) => (
 								<div key={group.date} className="space-y-4">
 									<div className="flex items-center gap-3">
 										<div className="flex items-center gap-2 rounded-lg bg-gray-200 px-4 py-2.5 shadow-md dark:bg-gray-700">
@@ -361,42 +400,113 @@ export function SchedulePage() {
 
 									<div className={viewMode === "grid" ? "grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3" : "space-y-4"}>
 										{group.items.map((item) => (
-											<ReservationCard key={item.id} item={item} actionLoading={actionLoading} onConfirm={handleConfirm} onCancel={handleCancel} />
+											<ReservationCard
+												key={item.id}
+												item={item}
+												actionLoading={actionLoading}
+												onConfirm={handleConfirm}
+												onCancel={handleCancel}
+												oneClickMode={oneClickMode}
+											/>
 										))}
 									</div>
 								</div>
 							))}
 
-							{groupedByDate.length > itemsPerPage && (
-								<div className="flex items-center justify-center gap-2 pt-6">
-									<Button
-										variant="outline"
-										size="sm"
-										onClick={() => setCurrentPage((previous) => Math.max(1, previous - 1))}
-										disabled={currentPage === 1}
-										className="gap-2">
-										ก่อนหน้า
-									</Button>
-									<div className="flex gap-1">
-										{Array.from({ length: Math.ceil(groupedByDate.length / itemsPerPage) }, (_, index) => (
-											<Button
-												key={index + 1}
-												variant={currentPage === index + 1 ? "default" : "outline"}
-												size="sm"
-												onClick={() => setCurrentPage(index + 1)}
-												className={`min-w-[40px] ${currentPage === index + 1 ? "bg-blue-600 hover:bg-blue-700 dark:bg-blue-500" : ""}`}>
-												{index + 1}
-											</Button>
-										))}
+							{schedule && schedule.totalPages > 1 && (
+								<div className="flex flex-col items-center gap-3 pt-6">
+									<div className="hidden items-center gap-2 md:flex">
+										<Button
+											variant="outline"
+											size="sm"
+											onClick={() => setCurrentPage((previous) => Math.max(1, previous - 1))}
+											disabled={!schedule.hasPrevPage || isLoading}
+											className="gap-2">
+											ก่อนหน้า
+										</Button>
+										<div className="flex gap-1">
+											{Array.from({ length: schedule.totalPages }, (_, index) => (
+												<Button
+													key={index + 1}
+													variant={currentPage === index + 1 ? "default" : "outline"}
+													size="sm"
+													onClick={() => setCurrentPage(index + 1)}
+													disabled={isLoading}
+													className={`min-w-10 ${currentPage === index + 1 ? "bg-blue-600 hover:bg-blue-700 dark:bg-blue-500" : ""}`}>
+													{index + 1}
+												</Button>
+											))}
+										</div>
+										<Button
+											variant="outline"
+											size="sm"
+											onClick={() => setCurrentPage((previous) => Math.min(schedule.totalPages, previous + 1))}
+											disabled={!schedule.hasNextPage || isLoading}
+											className="gap-2">
+											ถัดไป
+										</Button>
 									</div>
-									<Button
-										variant="outline"
-										size="sm"
-										onClick={() => setCurrentPage((previous) => Math.min(Math.ceil(groupedByDate.length / itemsPerPage), previous + 1))}
-										disabled={currentPage === Math.ceil(groupedByDate.length / itemsPerPage)}
-										className="gap-2">
-										ถัดไป
-									</Button>
+
+									<div className="flex w-full items-center gap-2 md:hidden">
+										<Button
+											variant="outline"
+											size="sm"
+											onClick={() => setCurrentPage((previous) => Math.max(1, previous - 1))}
+											disabled={!schedule.hasPrevPage || isLoading}
+											className="shrink-0">
+											ก่อนหน้า
+										</Button>
+										<div className="scrollbar-hide flex flex-1 gap-1 overflow-x-auto px-1">
+											{(() => {
+												const pages = [];
+												const totalPages = schedule.totalPages;
+												const current = currentPage;
+
+												if (current > 3) {
+													pages.push(1);
+													if (current > 4) pages.push("...");
+												}
+
+												for (let index = Math.max(1, current - 2); index <= Math.min(totalPages, current + 2); index++) {
+													pages.push(index);
+												}
+
+												if (current < totalPages - 2) {
+													if (current < totalPages - 3) pages.push("...");
+													pages.push(totalPages);
+												}
+
+												return pages.map((page, index) =>
+													page === "..." ? (
+														<span key={`ellipsis-${index}`} className="flex min-w-10 items-center justify-center text-gray-500">
+															...
+														</span>
+													) : (
+														<Button
+															key={page}
+															variant={currentPage === page ? "default" : "outline"}
+															size="sm"
+															onClick={() => setCurrentPage(page as number)}
+															disabled={isLoading}
+															className={`min-w-10 shrink-0 ${currentPage === page ? "bg-blue-600 hover:bg-blue-700 dark:bg-blue-500" : ""}`}>
+															{page}
+														</Button>
+													),
+												);
+											})()}
+										</div>
+										<Button
+											variant="outline"
+											size="sm"
+											onClick={() => setCurrentPage((previous) => Math.min(schedule.totalPages, previous + 1))}
+											disabled={!schedule.hasNextPage || isLoading}
+											className="shrink-0">
+											ถัดไป
+										</Button>
+									</div>
+									<div className="text-sm text-gray-600 dark:text-gray-400">
+										หน้า {currentPage} จาก {schedule.totalPages}
+									</div>
 								</div>
 							)}
 						</>

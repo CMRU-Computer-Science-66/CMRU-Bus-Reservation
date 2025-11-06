@@ -1,6 +1,7 @@
 export interface SessionData {
 	isAuthenticated: boolean;
 	lastValidated: number;
+	oneClickEnabled?: boolean;
 	password: string;
 	username: string;
 }
@@ -93,6 +94,24 @@ export class SessionManager {
 			localStorage.removeItem(STORAGE_KEY);
 		} catch (error) {
 			console.error("Failed to clear session:", error);
+		}
+	}
+
+	public getOneClickEnabled(): boolean {
+		const session = this.loadSession();
+		return session?.oneClickEnabled ?? true;
+	}
+
+	public setOneClickEnabled(enabled: boolean): void {
+		const session = this.loadSession();
+		if (session) {
+			session.oneClickEnabled = enabled;
+			try {
+				const encrypted = btoa(JSON.stringify(session));
+				localStorage.setItem(STORAGE_KEY, encrypted);
+			} catch (error) {
+				console.error("Failed to update oneClick setting:", error);
+			}
 		}
 	}
 

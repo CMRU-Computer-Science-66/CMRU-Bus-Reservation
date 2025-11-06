@@ -13,10 +13,11 @@ interface ReservationCardProperties {
 	item: ScheduleReservation;
 	onCancel?: (item: ScheduleReservation) => void;
 	onConfirm?: (item: ScheduleReservation) => void;
+	oneClickMode?: boolean;
 	showTimeLeft?: boolean;
 }
 
-export function ReservationCard({ actionLoading, item, onCancel, onConfirm, showTimeLeft }: ReservationCardProperties) {
+export function ReservationCard({ actionLoading, item, onCancel, onConfirm, oneClickMode = false, showTimeLeft }: ReservationCardProperties) {
 	const [currentTime, setCurrentTime] = useState(new Date());
 
 	useEffect(() => {
@@ -126,42 +127,86 @@ export function ReservationCard({ actionLoading, item, onCancel, onConfirm, show
 
 				{(item.confirmation.canConfirm || item.confirmation.canCancel) && !item.travelStatus.hasCompleted && (
 					<div className="flex flex-col gap-3 sm:flex-row sm:gap-2">
-						{item.confirmation.canConfirm && !item.confirmation.isConfirmed && onConfirm && (
-							<Button
-								onClick={() => onConfirm(item)}
-								disabled={actionLoading === item.id}
-								className="h-11 flex-1 gap-2 rounded-md bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2 text-sm font-medium shadow-lg hover:from-blue-700 hover:to-indigo-700 sm:h-11 dark:from-blue-500 dark:to-indigo-500">
-								{actionLoading === item.id ? (
-									<>
-										<Loader2 className="h-4 w-4 animate-spin" />
-										<span>กำลังดำเนินการ...</span>
-									</>
-								) : (
-									<>
-										<CheckCircle2 className="h-4 w-4" />
-										<span>ยืนยันการจอง</span>
-									</>
+						{oneClickMode ? (
+							<>
+								{item.confirmation.canConfirm && !item.confirmation.isConfirmed && onConfirm && (
+									<Button
+										onClick={() => onConfirm(item)}
+										disabled={actionLoading === item.id}
+										className="h-11 w-full gap-2 rounded-md bg-linear-to-r from-blue-600 to-indigo-600 px-4 py-2 text-sm font-medium shadow-lg hover:from-blue-700 hover:to-indigo-700 dark:from-blue-500 dark:to-indigo-500">
+										{actionLoading === item.id ? (
+											<>
+												<Loader2 className="h-4 w-4 animate-spin" />
+												<span>กำลังดำเนินการ...</span>
+											</>
+										) : (
+											<>
+												<CheckCircle2 className="h-4 w-4" />
+												<span>ยืนยันการจอง</span>
+											</>
+										)}
+									</Button>
 								)}
-							</Button>
-						)}
-						{item.confirmation.canCancel && onCancel && (
-							<Button
-								onClick={() => onCancel(item)}
-								disabled={actionLoading === item.id}
-								variant="outline"
-								className="h-11 flex-1 gap-2 rounded-md border-red-200 px-4 py-2 text-sm font-medium text-red-600 shadow-sm transition-all hover:scale-105 hover:border-red-300 hover:bg-red-50 hover:text-red-700 hover:shadow-lg active:scale-95 sm:h-11 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950">
-								{actionLoading === item.id ? (
-									<>
-										<Loader2 className="h-4 w-4 animate-spin" />
-										<span>กำลังดำเนินการ...</span>
-									</>
-								) : (
-									<>
-										<XCircle className="h-4 w-4" />
-										<span>ยกเลิกการจอง</span>
-									</>
+								{item.confirmation.canCancel && onCancel && (
+									<Button
+										onClick={() => onCancel(item)}
+										disabled={actionLoading === item.id}
+										variant="outline"
+										className="h-11 w-full gap-2 rounded-md border-red-200 px-4 py-2 text-sm font-medium text-red-600 shadow-sm transition-all hover:scale-105 hover:border-red-300 hover:bg-red-50 hover:text-red-700 hover:shadow-lg active:scale-95 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950">
+										{actionLoading === item.id ? (
+											<>
+												<Loader2 className="h-4 w-4 animate-spin" />
+												<span>กำลังดำเนินการ...</span>
+											</>
+										) : (
+											<>
+												<XCircle className="h-4 w-4" />
+												<span>ยกเลิกการจอง</span>
+											</>
+										)}
+									</Button>
 								)}
-							</Button>
+							</>
+						) : (
+							<>
+								{item.confirmation.canConfirm && !item.confirmation.isConfirmed && onConfirm && (
+									<Button
+										onClick={() => onConfirm(item)}
+										disabled={actionLoading === item.id}
+										className="h-11 flex-1 gap-2 rounded-md bg-linear-to-r from-blue-600 to-indigo-600 px-4 py-2 text-sm font-medium shadow-lg hover:from-blue-700 hover:to-indigo-700 sm:h-11 dark:from-blue-500 dark:to-indigo-500">
+										{actionLoading === item.id ? (
+											<>
+												<Loader2 className="h-4 w-4 animate-spin" />
+												<span>กำลังดำเนินการ...</span>
+											</>
+										) : (
+											<>
+												<CheckCircle2 className="h-4 w-4" />
+												<span>ยืนยันการจอง</span>
+											</>
+										)}
+									</Button>
+								)}
+								{((item.confirmation.canCancel && item.confirmation.isConfirmed) || (item.confirmation.canConfirm && !item.confirmation.isConfirmed)) && onCancel && (
+									<Button
+										onClick={() => onCancel(item)}
+										disabled={actionLoading === item.id}
+										variant="outline"
+										className="h-11 flex-1 gap-2 rounded-md border-red-200 px-4 py-2 text-sm font-medium text-red-600 shadow-sm transition-all hover:scale-105 hover:border-red-300 hover:bg-red-50 hover:text-red-700 hover:shadow-lg active:scale-95 sm:h-11 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950">
+										{actionLoading === item.id ? (
+											<>
+												<Loader2 className="h-4 w-4 animate-spin" />
+												<span>กำลังดำเนินการ...</span>
+											</>
+										) : (
+											<>
+												<XCircle className="h-4 w-4" />
+												<span>{item.confirmation.isConfirmed ? "ยกเลิกการยืนยัน" : "ยกเลิกการจอง"}</span>
+											</>
+										)}
+									</Button>
+								)}
+							</>
 						)}
 					</div>
 				)}

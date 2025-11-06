@@ -159,7 +159,7 @@ export function LoginPage() {
 					</form>
 
 					<div className="space-y-3 border-t border-gray-200 pt-6 text-center text-sm text-gray-600 dark:border-gray-700 dark:text-gray-400">
-						<p>ใช้บัญชี CMU Account เพื่อเข้าสู่ระบบ</p>
+						<p>ใช้บัญชี CMRU Account เพื่อเข้าสู่ระบบ</p>
 						{/* <p className="text-xs text-gray-500 dark:text-gray-500">© 2025 สาขาวิทยาการคอมพิวเตอร์ & มหาวิทยาลัยราชภัฏเชียงใหม่</p> */}
 					</div>
 				</CardContent>

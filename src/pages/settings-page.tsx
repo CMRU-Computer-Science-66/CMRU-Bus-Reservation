@@ -31,13 +31,12 @@ export function SettingsPage() {
 		const prefersDark = globalThis.matchMedia("(prefers-color-scheme: dark)").matches;
 		return theme === "dark" || (!theme && prefersDark);
 	});
-	const [notifications, setNotifications] = useState(() => {
-		const saved = localStorage.getItem("notifications");
-		return saved === null ? true : saved === "true";
-	});
 	const [timeFormat, setTimeFormat] = useState<TimeFormat>(() => {
 		const format = localStorage.getItem("timeFormat") as TimeFormat | null;
 		return format || "thai";
+	});
+	const [oneClickEnabled, setOneClickEnabled] = useState(() => {
+		return sessionManager.getOneClickEnabled();
 	});
 
 	useEffect(() => {
@@ -80,15 +79,15 @@ export function SettingsPage() {
 		setIsDark(shouldBeDark);
 	};
 
-	const toggleNotifications = () => {
-		const updatedValue = !notifications;
-		setNotifications(updatedValue);
-		localStorage.setItem("notifications", String(updatedValue));
-	};
-
 	const handleTimeFormatChange = (format: TimeFormat) => {
 		setTimeFormat(format);
 		localStorage.setItem("timeFormat", format);
+	};
+
+	const toggleOneClick = () => {
+		const isOneClickEnabled = !oneClickEnabled;
+		setOneClickEnabled(isOneClickEnabled);
+		sessionManager.setOneClickEnabled(isOneClickEnabled);
 	};
 
 	return (
@@ -149,6 +148,46 @@ export function SettingsPage() {
 					<Card className="border-0 bg-white/90 shadow-md backdrop-blur-md dark:bg-gray-900/90">
 						<CardHeader>
 							<div className="flex items-center gap-3">
+								<div className="rounded-full bg-indigo-100 p-3 dark:bg-indigo-900">
+									<Check className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
+								</div>
+								<div>
+									<CardTitle className="text-lg">การจองอัตโนมัติ</CardTitle>
+									<CardDescription>ยืนยันหรือยกเลิกการจองแบบคลิกเดียว</CardDescription>
+								</div>
+							</div>
+						</CardHeader>
+						<Separator className="dark:bg-gray-800" />
+						<CardContent>
+							<button
+								type="button"
+								onClick={toggleOneClick}
+								className="flex w-full items-center justify-between rounded-lg border-2 border-gray-200 bg-white p-4 transition-all hover:border-blue-300 hover:shadow-md dark:border-gray-700 dark:bg-gray-800 dark:hover:border-blue-600">
+								<div className="flex items-center gap-3">
+									<div className={`rounded-full p-2 ${oneClickEnabled ? "bg-indigo-100 dark:bg-indigo-900" : "bg-gray-100 dark:bg-gray-700"}`}>
+										<Check className={`h-5 w-5 ${oneClickEnabled ? "text-indigo-600 dark:text-indigo-400" : "text-gray-600 dark:text-gray-400"}`} />
+									</div>
+									<div className="text-left">
+										<div className="flex items-center gap-2">
+											<p className="font-semibold text-gray-900 dark:text-white">โหมดคลิกเดียว</p>
+											<Badge variant="secondary" className="h-5 px-1.5 py-0 text-[10px] font-medium">
+												ใหม่
+											</Badge>
+										</div>
+										<p className="text-sm text-gray-600 dark:text-gray-400">
+											{oneClickEnabled ? "จองและยืนยันในคลิกเดียว / ยกเลิกทั้งหมดในคลิกเดียว" : "ต้องกดยืนยันหรือยกเลิก 2 รอบ (ปกติ)"}
+										</p>
+									</div>
+								</div>
+								<Badge variant={oneClickEnabled ? "default" : "secondary"} className={oneClickEnabled ? "bg-indigo-600 dark:bg-indigo-500" : ""}>
+									{oneClickEnabled ? "เปิด" : "ปิด"}
+								</Badge>
+							</button>
+						</CardContent>
+					</Card>
+					<Card className="border-0 bg-white/90 shadow-md backdrop-blur-md dark:bg-gray-900/90">
+						<CardHeader>
+							<div className="flex items-center gap-3">
 								<div className="rounded-full bg-orange-100 p-3 dark:bg-orange-900">
 									<Clock className="h-6 w-6 text-orange-600 dark:text-orange-400" />
 								</div>
@@ -171,7 +210,7 @@ export function SettingsPage() {
 									</div>
 									<div className="text-left">
 										<div className="flex items-center gap-2">
-											<p className="font-semibold text-gray-900 dark:text-white">แบบไทยแท้้</p>
+											<p className="font-semibold text-gray-900 dark:text-white">แบบไทยแท้</p>
 											<Badge variant="secondary" className="h-5 px-1.5 py-0 text-[10px] font-medium">
 												ทดลอง
 											</Badge>
@@ -305,23 +344,26 @@ export function SettingsPage() {
 							</div>
 						</CardHeader>
 						<Separator className="dark:bg-gray-800" />
-						<CardContent className="pt-6">
+						<CardContent>
 							<button
 								type="button"
-								onClick={toggleNotifications}
-								className="flex w-full items-center justify-between rounded-lg border-2 border-gray-200 bg-white p-4 transition-all hover:border-blue-300 hover:shadow-md dark:border-gray-700 dark:bg-gray-800 dark:hover:border-blue-600">
+								disabled
+								className="flex w-full cursor-not-allowed items-center justify-between rounded-lg border-2 border-gray-200 bg-gray-50 p-4 opacity-60 dark:border-gray-700 dark:bg-gray-800/50">
 								<div className="flex items-center gap-3">
-									<div className={`rounded-full p-2 ${notifications ? "bg-green-100 dark:bg-green-900" : "bg-gray-100 dark:bg-gray-700"}`}>
-										{notifications ? <Bell className="h-5 w-5 text-green-600 dark:text-green-400" /> : <BellOff className="h-5 w-5 text-gray-600 dark:text-gray-400" />}
+									<div className="rounded-full bg-gray-100 p-2 dark:bg-gray-700">
+										<BellOff className="h-5 w-5 text-gray-600 dark:text-gray-400" />
 									</div>
 									<div className="text-left">
-										<p className="font-semibold text-gray-900 dark:text-white">การแจ้งเตือนทั่วไป</p>
+										<div className="flex items-center gap-2">
+											<p className="font-semibold text-gray-900 dark:text-white">การแจ้งเตือนทั่วไป</p>
+											<Badge variant="secondary" className="h-5 px-1.5 py-0 text-[10px] font-medium">
+												ยังไม่พร้อม
+											</Badge>
+										</div>
 										<p className="text-sm text-gray-600 dark:text-gray-400">รับการแจ้งเตือนเกี่ยวกับการจองและรอบรถ</p>
 									</div>
 								</div>
-								<Badge variant={notifications ? "default" : "secondary"} className={notifications ? "bg-green-600 dark:bg-green-500" : ""}>
-									{notifications ? "เปิด" : "ปิด"}
-								</Badge>
+								<Badge variant="secondary">ปิด</Badge>
 							</button>
 						</CardContent>
 					</Card>
