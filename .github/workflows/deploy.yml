@@ -52,9 +52,6 @@ jobs:
            if: github.event.inputs.version_type != 'none'
            run: cp vercel.json vercel.json.backup
 
-         - name: Backup index.html
-           run: cp src/index.html src/index.html.backup
-
          - name: Update vercel.json with API_URL
            run: |
               sed -i 's|\${API_URL}|${{ secrets.API_URL }}|g' vercel.json
@@ -104,9 +101,6 @@ jobs:
          - name: Restore vercel.json
            if: github.event.inputs.version_type != 'none'
            run: mv vercel.json.backup vercel.json
-
-         - name: Restore index.html
-           run: mv src/index.html.backup src/index.html
 
          - name: Automatically Commit Changes
            if: github.event.inputs.version_type != 'none'
