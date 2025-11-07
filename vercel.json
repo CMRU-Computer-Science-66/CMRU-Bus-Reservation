@@ -6,6 +6,9 @@
 	"outputDirectory": "dist",
 	"cleanUrls": true,
 	"trailingSlash": false,
+	"git": {
+		"deploymentEnabled": false
+	},
 	"rewrites": [
 		{
 			"source": "/api/:path*",

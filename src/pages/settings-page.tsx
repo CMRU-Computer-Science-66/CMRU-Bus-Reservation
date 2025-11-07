@@ -494,7 +494,7 @@ export function SettingsPage() {
 								</div>
 								<a href={EXTERNAL_URLS.GITHUB_REPO} target="_blank" rel="noopener noreferrer">
 									<Badge variant="outline" className="cursor-pointer font-mono transition-colors hover:bg-gray-100 dark:hover:bg-gray-800">
-										{process.env.APP_VERSION || "Dev"}
+										{process.env.NODE_ENV === "production" ? process.env.APP_VERSION || "Development" : "local"}
 									</Badge>
 								</a>
 							</div>

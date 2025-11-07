@@ -75,25 +75,28 @@ jobs:
            id: changelog
            run: |
               PREVIOUS_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+
               if [ -z "$PREVIOUS_TAG" ]; then
-                CHANGELOG="Initial release"
+                ALL_COMMITS=$(git log --pretty=format:"* %s by @%an (%h)" --no-merges | grep -v "^* Release v")
                 echo "previous_tag=" >> $GITHUB_OUTPUT
               else
                 ALL_COMMITS=$(git log ${PREVIOUS_TAG}..HEAD --pretty=format:"* %s by @%an (%h)" --no-merges | grep -v "^* Release v")
-                ADD_COMMITS=$(echo "$ALL_COMMITS" | grep "^* Add " || true)
-                UPDATE_COMMITS=$(echo "$ALL_COMMITS" | grep "^* Update " || true)
-                FIX_COMMITS=$(echo "$ALL_COMMITS" | grep "^* Fix " || true)
-                OTHER_COMMITS=$(echo "$ALL_COMMITS" | grep -v "^* Add " | grep -v "^* Update " | grep -v "^* Fix " || true)
-                
-                CHANGELOG=""
-                [ -n "$ADD_COMMITS" ] && CHANGELOG="$ADD_COMMITS"
-                [ -n "$UPDATE_COMMITS" ] && CHANGELOG="$CHANGELOG"$'\n'"$UPDATE_COMMITS"
-                [ -n "$FIX_COMMITS" ] && CHANGELOG="$CHANGELOG"$'\n'"$FIX_COMMITS"
-                [ -n "$OTHER_COMMITS" ] && CHANGELOG="$CHANGELOG"$'\n'"$OTHER_COMMITS"
-                
-                CHANGELOG=$(echo "$CHANGELOG" | sed '/^$/d')
                 echo "previous_tag=${PREVIOUS_TAG}" >> $GITHUB_OUTPUT
               fi
+
+              ADD_COMMITS=$(echo "$ALL_COMMITS" | grep "^* Add " || true)
+              UPDATE_COMMITS=$(echo "$ALL_COMMITS" | grep "^* Update " || true)
+              FIX_COMMITS=$(echo "$ALL_COMMITS" | grep "^* Fix " || true)
+              OTHER_COMMITS=$(echo "$ALL_COMMITS" | grep -v "^* Add " | grep -v "^* Update " | grep -v "^* Fix " || true)
+
+              CHANGELOG=""
+              [ -n "$ADD_COMMITS" ] && CHANGELOG="$ADD_COMMITS"
+              [ -n "$UPDATE_COMMITS" ] && CHANGELOG="$CHANGELOG"$'\n'"$UPDATE_COMMITS"
+              [ -n "$FIX_COMMITS" ] && CHANGELOG="$CHANGELOG"$'\n'"$FIX_COMMITS"
+              [ -n "$OTHER_COMMITS" ] && CHANGELOG="$CHANGELOG"$'\n'"$OTHER_COMMITS"
+
+              CHANGELOG=$(echo "$CHANGELOG" | sed '/^$/d')
+
               echo "changelog<<EOF" >> $GITHUB_OUTPUT
               echo "$CHANGELOG" >> $GITHUB_OUTPUT
               echo "EOF" >> $GITHUB_OUTPUT

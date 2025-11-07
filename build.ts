@@ -16,6 +16,7 @@ Usage: bun run build.ts [options]
 
 Common Options:
   --outdir <path>          Output directory (default: "dist")
+  --dev                    Development mode only generate HTML files and exit
   --minify                 Enable minification (or --minify.whitespace, --minify.syntax, etc)
   --sourcemap <type>      Sourcemap type: none|linked|inline|external
   --target <target>        Build target: browser|bun|node
@@ -33,6 +34,7 @@ Common Options:
 
 Example:
   bun run build.ts --outdir=dist --minify --sourcemap=linked --external=react,react-dom
+  bun run build.ts --dev   (Development mode - generate HTML only)
 `);
 	process.exit(0);
 }
@@ -159,15 +161,21 @@ const generateSitemap = async (outputDir: string) => {
 	}
 };
 
-const generatePageHTML = (pageName: string = "index", route: string = "/", metadata?: { title: string; description: string }, clientScriptPath?: string): string => {
+const generatePageHTML = (
+	pageName: string = "index",
+	route: string = "/",
+	metadata?: { title: string; description: string },
+	clientScriptPath?: string,
+	isDev: boolean = false,
+): string => {
 	const title = metadata?.title || `${pageName.charAt(0).toUpperCase() + pageName.slice(1)} - CMRU Bus`;
 	const description = metadata?.description || `${pageName} page for CMRU Bus Reservation System`;
-	const baseUrl = "https://cmru-bus.vercel.app";
+	const baseUrl = isDev ? "http://localhost:3000" : "https://cmru-bus.vercel.app";
 	const fullUrl = `${baseUrl}${route}`;
 	const relativePath = "./";
 	const isIndexPage = pageName === "index" || route === "/";
 	const additionalMetaTags =
-		isIndexPage && Bun.env.GOOGLE_VERIFICATION_TOKEN
+		isIndexPage && !isDev && Bun.env.GOOGLE_VERIFICATION_TOKEN
 			? `
 		<meta name="google-site-verification" content="${Bun.env.GOOGLE_VERIFICATION_TOKEN ?? ""}" />`
 			: "";
@@ -264,7 +272,7 @@ const generatePageHTML = (pageName: string = "index", route: string = "/", metad
 			}
 		</style>
 
-		${clientScriptPath ? `<script type="module" src="${relativePath}${clientScriptPath}" async></script>` : ""}
+		${clientScriptPath ? `<script type="module" src="${relativePath}${clientScriptPath}" async></script>` : isDev ? `<script type="module" src="${relativePath}client.tsx" async></script>` : ""}
 		<script>
 			document.documentElement.classList.add("js-loaded");
 		</script>
@@ -276,7 +284,7 @@ const generatePageHTML = (pageName: string = "index", route: string = "/", metad
 `;
 };
 
-const createPageHTMLFiles = async () => {
+const createPageHTMLFiles = async (isDev: boolean = false) => {
 	const routesConfigPath = path.join("src", "config", "routes.ts");
 
 	let defaultRoutes: Array<{
@@ -330,12 +338,12 @@ const createPageHTMLFiles = async () => {
 		const htmlPath = path.join("src", htmlFileName);
 
 		if (!existsSync(htmlPath)) {
-			const htmlContent = generatePageHTML(pageName, route, { title, description });
+			const htmlContent = generatePageHTML(pageName, route, { title, description }, undefined, isDev);
 
 			await Bun.write(htmlPath, htmlContent);
 			console.log(`     📝  Created HTML template: ${htmlFileName} → ${route}`);
 		} else {
-			const htmlContent = generatePageHTML(pageName, route, { title, description });
+			const htmlContent = generatePageHTML(pageName, route, { title, description }, undefined, isDev);
 			await Bun.write(htmlPath, htmlContent);
 			console.log(`     🔄  Updated HTML template: ${htmlFileName} → ${route}`);
 		}
@@ -363,22 +371,35 @@ const cleanupGeneratedHTMLFiles = async (routesData: Array<{ pageName: string }>
 console.log("\n🚀 Starting build process...\n");
 
 const cliConfig = parseArgs();
-const outdir = cliConfig.outdir || path.join(process.cwd(), "dist");
-
-const generatedRoutes = await createPageHTMLFiles();
-
-console.log("📝  Generating index.html...");
-const indexPath = path.join("src", "index.html");
+const isDev = cliConfig.dev || false;
+const outdir = cliConfig.outdir || path.join(process.cwd(), isDev ? "dev-dist" : "dist");
 const indexMetadata = {
 	title: "ระบบจองรถรับ-ส่ง | มหาวิทยาลัยราชภัฏเชียงใหม่",
 	description: "ระบบจองรถรับ-ส่ง มหาวิทยาลัยราชภัฏเชียงใหม่ - จองรถรับส่งนักศึกษาและบุคลากรได้อย่างสะดวกรวดเร็ว พร้อมตรวจสอบตารางเดินรถและประวัติการจอง",
 };
+
+if (isDev) {
+	console.log("🧪 Development mode");
+	const indexPath = path.join("src", "index.html");
+	await Bun.write(indexPath, generatePageHTML("index", "/", indexMetadata, undefined, isDev));
+
+	console.log("     ✅  Generated index.html for development");
+	console.log("     📄  index.html ready for development server");
+	console.log("");
+	process.exit(0);
+}
+
+const generatedRoutes = await createPageHTMLFiles(isDev);
+
+console.log("📝  Generating index.html...");
+const indexPath = path.join("src", "index.html");
+
 if (!existsSync(indexPath)) {
-	await Bun.write(indexPath, generatePageHTML("index", "/", indexMetadata));
+	await Bun.write(indexPath, generatePageHTML("index", "/", indexMetadata, undefined, isDev));
 	console.log("     ✅  Generated index.html");
 } else {
-	await Bun.write(indexPath, generatePageHTML("index", "/", indexMetadata));
-	console.log("     🔄  Updated index.html");
+	await Bun.write(indexPath, generatePageHTML("index", "/", indexMetadata, undefined, isDev));
+	console.log("     �  Updated index.html");
 }
 
 if (existsSync(outdir)) {
@@ -417,6 +438,7 @@ const result = await Bun.build({
 	target: "browser",
 	sourcemap: cliConfig.sourcemap || "linked",
 	splitting: true,
+	env: "inline",
 	define: {
 		"process.env.NODE_ENV": JSON.stringify("production"),
 		"process.env.APP_VERSION": version,

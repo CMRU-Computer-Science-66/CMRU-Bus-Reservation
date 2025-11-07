@@ -84,7 +84,7 @@ export function App() {
 						<AppRoutes />
 					</ApiProvider>
 				</BrowserRouter>
-				<Analytics />
+				{process.env.NODE_ENV === "production" && <Analytics />}
 			</HelmetProvider>
 		</ErrorBoundary>
 	);

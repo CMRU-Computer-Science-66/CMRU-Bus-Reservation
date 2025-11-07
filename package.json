@@ -5,12 +5,14 @@
 	"module": "src/index.tsx",
 	"scripts": {
 		"build": "bun run build.ts",
-		"dev": "bun --hot src/index.tsx",
+		"build:dev": "bun run build.ts --dev",
+		"dev": "bun run build:dev && bun --hot --watch src/index.tsx",
 		"fix": "eslint . --fix",
+		"preinstall": "npx only-allow bun",
 		"lint": "eslint .",
 		"prettier": "prettier --write . --ignore-unknown",
 		"shadcn:update": "bunx --bun shadcn@latest add --yes --overwrite alert badge button card checkbox dialog dropdown-menu form input label select separator skeleton tabs",
-		"start": "NODE_ENV=production bun src/index.tsx",
+		"start": "bun run build && NODE_ENV=production bun serve ./dist -p 4399",
 		"vercel:deploy": "vercel",
 		"vercel:deploy:prod": "vercel --prod"
 	},
@@ -232,6 +234,7 @@
 		"prettier-plugin-sort-json": "^4.1.1",
 		"prettier-plugin-sql": "^0.19.2",
 		"prettier-plugin-tailwindcss": "^0.7.1",
+		"serve": "14.2.5",
 		"sitemap": "^9.0.0"
 	},
 	"peerDependencies": {
