@@ -1,4 +1,4 @@
-# CMRU Bus Reservation (Web Application)
+# CMRU Bus Reservation
 
 ![GitHub last commit](https://img.shields.io/github/last-commit/CMRU-Computer-Science-66/CMRU-Bus-Reservation)
 ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/CMRU-Computer-Science-66/CMRU-Bus-Reservation/deploy.yml?label=deploy)
@@ -45,51 +45,28 @@
 
 ### 🔧 อยากช่วยเขียนโค้ด?
 
+**ข้อกำหนด**: ต้องมี [CMRU-API](https://github.com/CMRU-Computer-Science-66/CMRU-API) server ก่อน
+
 ### ข้อกำหนดเบื้องต้น
 
 - **Git**
 - **Bun** 1.0+ หรือ **Node.js** 20+
 
-```bash
-# 1. Fork และ Clone
-git clone https://github.com/YOUR_USERNAME/CMRU-Bus-Reservation.git
-cd CMRU-Bus-Reservation
+### การรันในโหมดพัฒนา
 
-# 2. ติดตั้งและรัน
-bun install
-bunx @cmru-comsci-66/cmru-api serve  # Terminal 1
-bun run dev                          # Terminal 2
-
-# 3. สร้าง branch ใหม่
-git checkout -b feature/your-awesome-feature
-
-# 4. เขียนโค้ด แล้ว commit
-git add .
-git commit -m "feat: add awesome feature"
-
-# 5. Push และสร้าง Pull Request
-git push origin feature/your-awesome-feature
-```
-
-### การตั้งค่า Environment
-
-สร้างไฟล์ `.env` และกำหนดค่าตัแปรสิ่งแวดล้อม:
+สร้างไฟล์ `.env`:
 
 ```env
 API_URL=http://localhost:4399/
 APP_VERSION=Development
 ```
 
-### การรันในโหมดพัฒนา
-
-**ข้อกำหนด**: ต้องมี [CMRU-API](https://github.com/CMRU-Computer-Science-66/CMRU-API) server ก่อน
-
 ```bash
-# 1. รัน CMRU-API server (ใน terminal แยก)
-bunx @cmru-comsci-66/cmru-api serve
+bun install
 
-# 2. รัน development server
-bun run dev
+bunx @cmru-comsci-66/cmru-api serve  # Terminal 1
+
+bun run dev                          # Terminal 2
 ```
 
 เปิดเบราว์เซอร์ที่ `http://localhost:4399`
