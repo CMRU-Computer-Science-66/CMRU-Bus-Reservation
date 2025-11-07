@@ -1,6 +1,6 @@
 {
 	"name": "@cmru-comsci-66/cmru-bus-reservation",
-	"version": "0.0.0",
+	"version": "0.0.1",
 	"type": "module",
 	"module": "src/index.tsx",
 	"scripts": {
