@@ -33,6 +33,12 @@ export function SchedulePage() {
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 	const [filterStatus, setFilterStatus] = useState<"all" | "confirmed" | "completed" | "hasQR">("all");
+	const [qrRefreshTrigger, setQrRefreshTrigger] = useState(0);
+
+	const handleRefresh = async () => {
+		await refetch(currentPage);
+		setQrRefreshTrigger((previous) => previous + 1);
+	};
 
 	useEffect(() => {
 		setOneClickMode(sessionManager.getOneClickEnabled());
@@ -127,6 +133,7 @@ export function SchedulePage() {
 
 		if (success) {
 			await refetch(currentPage);
+			setQrRefreshTrigger((previous) => previous + 1);
 		}
 		setActionLoading(null);
 	};
@@ -145,12 +152,13 @@ export function SchedulePage() {
 
 		if (success) {
 			await refetch(currentPage);
+			setQrRefreshTrigger((previous) => previous + 1);
 		}
 		setActionLoading(null);
 	};
 
 	if (error) {
-		return <ErrorScreen error={error} onRetry={() => refetch(currentPage)} />;
+		return <ErrorScreen error={error} onRetry={handleRefresh} />;
 	}
 
 	const subtitle = (
@@ -171,7 +179,7 @@ export function SchedulePage() {
 				<Plus className="h-4 w-4" />
 				จองรถ
 			</Button>
-			<Button variant="outline" size="sm" onClick={() => refetch(currentPage)} disabled={isLoading} className="hidden gap-2 shadow-sm hover:shadow-lg md:flex">
+			<Button variant="outline" size="sm" onClick={handleRefresh} disabled={isLoading} className="hidden gap-2 shadow-sm hover:shadow-lg md:flex">
 				<RefreshCw className={`h-4 w-4 transition-transform ${isLoading ? "animate-spin" : "hover:rotate-180"}`} />
 				รีเฟรช
 			</Button>
@@ -201,7 +209,7 @@ export function SchedulePage() {
 			<Button
 				variant="outline"
 				size="icon"
-				onClick={() => refetch(currentPage)}
+				onClick={handleRefresh}
 				disabled={isLoading}
 				className="h-10 w-10 rounded-full transition-all hover:scale-110 active:scale-95 md:hidden">
 				<RefreshCw className={`h-4 w-4 sm:h-5 sm:w-5 ${isLoading ? "animate-spin" : ""}`} />
@@ -345,6 +353,7 @@ export function SchedulePage() {
 										onCancel={handleCancel}
 										oneClickMode={oneClickMode}
 										showTimeLeft={true}
+										refreshTrigger={qrRefreshTrigger}
 									/>
 								))}
 							</div>
@@ -411,6 +420,7 @@ export function SchedulePage() {
 												onConfirm={handleConfirm}
 												onCancel={handleCancel}
 												oneClickMode={oneClickMode}
+												refreshTrigger={qrRefreshTrigger}
 											/>
 										))}
 									</div>

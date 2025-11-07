@@ -1,6 +1,6 @@
 import type { ScheduleReservation } from "@cmru-comsci-66/cmru-api";
 import { CheckCircle2, Clock, Loader2, MapPin, QrCode, XCircle } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
@@ -9,8 +9,8 @@ import { Dialog, DialogContent } from "../../components/ui/dialog";
 import { Separator } from "../../components/ui/separator";
 import { Skeleton } from "../../components/ui/skeleton";
 import { API_CONFIG, getApiUrl } from "../../config/api";
-import { formatTime } from "../../lib/time-formatter";
 import { getSessionManager } from "../../lib/session-manager";
+import { formatTime } from "../../lib/time-formatter";
 
 interface ReservationCardProperties {
 	actionLoading: number | null;
@@ -19,16 +19,57 @@ interface ReservationCardProperties {
 	onCancel?: (item: ScheduleReservation) => void;
 	onConfirm?: (item: ScheduleReservation) => void;
 	oneClickMode?: boolean;
+	refreshTrigger?: number;
 	showTimeLeft?: boolean;
 }
 
-export function ReservationCard({ actionLoading, isLoading = false, item, onCancel, onConfirm, oneClickMode = false, showTimeLeft }: ReservationCardProperties) {
+export function ReservationCard({ actionLoading, isLoading = false, item, onCancel, onConfirm, oneClickMode = false, refreshTrigger, showTimeLeft }: ReservationCardProperties) {
 	const [currentTime, setCurrentTime] = useState(new Date());
 	const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
 	const [qrImageError, setQrImageError] = useState(false);
 	const [qrLoading, setQrLoading] = useState(false);
 	const [qrDialogOpen, setQrDialogOpen] = useState(false);
+	const [qrAutoReloadInterval, setQrAutoReloadInterval] = useState<NodeJS.Timeout | null>(null);
+	const [qrCountdownInterval, setQrCountdownInterval] = useState<NodeJS.Timeout | null>(null);
+	const [qrCountdown, setQrCountdown] = useState<number>(0);
 	const sessionManager = getSessionManager();
+
+	const loadQRCode = useCallback(async () => {
+		if (!item?.ticket.hasQRCode || !item?.ticket.id) {
+			setQrCodeUrl(null);
+			setQrImageError(false);
+			return;
+		}
+
+		setQrLoading(true);
+		setQrImageError(false);
+		try {
+			const response = await fetch(getApiUrl(`${API_CONFIG.ENDPOINTS.BUS.TICKET_INFO}?ticketId=${item.ticket.id}`), {
+				method: "GET",
+				headers: {
+					"Content-Type": "application/json",
+				},
+			});
+
+			if (response.ok) {
+				const ticketInfo = await response.json();
+				if (ticketInfo?.qrCode?.imageUrl) {
+					const qrUrl = ticketInfo.qrCode.imageUrl.startsWith("http") ? ticketInfo.qrCode.imageUrl : `https://cmrubus.cmru.ac.th${ticketInfo.qrCode.imageUrl}`;
+					setQrCodeUrl(qrUrl);
+				} else {
+					setQrImageError(true);
+				}
+			} else {
+				console.error("Failed to get ticket info:", response.status);
+				setQrImageError(true);
+			}
+		} catch (error) {
+			console.error("Failed to load QR code:", error);
+			setQrImageError(true);
+		} finally {
+			setQrLoading(false);
+		}
+	}, [item?.ticket.hasQRCode, item?.ticket.id]);
 
 	useEffect(() => {
 		if (!showTimeLeft) return;
@@ -42,46 +83,68 @@ export function ReservationCard({ actionLoading, isLoading = false, item, onCanc
 
 	useEffect(() => {
 		if (!item) return;
+		loadQRCode();
+	}, [item, loadQRCode]);
 
-		const loadQRCode = async () => {
-			if (item.ticket.hasQRCode && item.ticket.id) {
-				setQrLoading(true);
-				setQrImageError(false);
-				try {
-					const response = await fetch(getApiUrl(`${API_CONFIG.ENDPOINTS.BUS.TICKET_INFO}?ticketId=${item.ticket.id}`), {
-						method: "GET",
-						headers: {
-							"Content-Type": "application/json",
-						},
-					});
+	useEffect(() => {
+		if (refreshTrigger && item?.ticket.hasQRCode) {
+			loadQRCode();
+		}
+	}, [refreshTrigger, item?.ticket.hasQRCode, loadQRCode]);
 
-					if (response.ok) {
-						const ticketInfo = await response.json();
-						if (ticketInfo?.qrCode?.imageUrl) {
-							const qrUrl = ticketInfo.qrCode.imageUrl.startsWith("http") ? ticketInfo.qrCode.imageUrl : `https://cmrubus.cmru.ac.th${ticketInfo.qrCode.imageUrl}`;
+	useEffect(() => {
+		if (qrDialogOpen && item?.ticket.hasQRCode) {
+			if (qrCountdown === 0) {
+				const now = Date.now();
+				const secondsElapsed = Math.floor(now / 1000) % 60;
+				const initialCountdown = 60 - secondsElapsed;
+				setQrCountdown(initialCountdown);
+			}
 
-							setQrCodeUrl(qrUrl);
-						} else {
-							setQrImageError(true);
-						}
-					} else {
-						console.error("Failed to get ticket info:", response.status);
-						setQrImageError(true);
+			const interval = setInterval(() => {
+				setQrCountdown((previous) => {
+					if (previous <= 1) {
+						loadQRCode();
+						return 60;
 					}
-				} catch (error) {
-					console.error("Failed to load QR code:", error);
-					setQrImageError(true);
-				} finally {
-					setQrLoading(false);
+					return previous - 1;
+				});
+			}, 1000);
+
+			setQrCountdownInterval(interval);
+
+			return () => {
+				if (interval) {
+					clearInterval(interval);
 				}
-			} else {
-				setQrCodeUrl(null);
-				setQrImageError(false);
+				setQrCountdownInterval(null);
+				setQrCountdown(0);
+			};
+		} else {
+			if (qrCountdownInterval) {
+				clearInterval(qrCountdownInterval);
+				setQrCountdownInterval(null);
+			}
+			setQrCountdown(0);
+		}
+	}, [qrDialogOpen, item?.ticket.hasQRCode, loadQRCode]);
+
+	useEffect(() => {
+		const handleVisibilityChange = () => {
+			if (!document.hidden && qrDialogOpen && item?.ticket.hasQRCode) {
+				const now = Date.now();
+				const currentSecond = Math.floor(now / 1000) % 60;
+				const countdown = 60 - currentSecond;
+				setQrCountdown(countdown);
 			}
 		};
 
-		loadQRCode();
-	}, [item?.ticket.hasQRCode, item?.ticket.id]);
+		document.addEventListener("visibilitychange", handleVisibilityChange);
+
+		return () => {
+			document.removeEventListener("visibilitychange", handleVisibilityChange);
+		};
+	}, [qrDialogOpen, item?.ticket.hasQRCode]);
 
 	const getTimeLeft = () => {
 		if (!showTimeLeft || !item) return null;
@@ -223,7 +286,13 @@ export function ReservationCard({ actionLoading, isLoading = false, item, onCanc
 								<Loader2 className="h-8 w-8 animate-spin text-gray-400" />
 							</div>
 						) : qrCodeUrl && !qrImageError ? (
-							<button type="button" onClick={() => setQrDialogOpen(true)} className="cursor-pointer transition-transform hover:scale-105">
+							<button
+								type="button"
+								onClick={() => {
+									setQrDialogOpen(true);
+									loadQRCode();
+								}}
+								className="cursor-pointer transition-transform hover:scale-105">
 								<img
 									src={qrCodeUrl}
 									alt="QR Code สำหรับขึ้นรถ"
@@ -331,28 +400,41 @@ export function ReservationCard({ actionLoading, isLoading = false, item, onCanc
 			</CardContent>
 
 			<Dialog open={qrDialogOpen} onOpenChange={setQrDialogOpen}>
-				<DialogContent className="max-w-md">
-					<div className="flex flex-col items-center gap-4 p-4">
-						<h3 className="text-lg font-semibold">QR Code สำหรับขึ้นรถ</h3>
-						{qrLoading ? (
-							<div className="flex h-64 w-64 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-800">
-								<Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+				<DialogContent className="max-w-lg">
+					<div className="flex flex-col items-center gap-4 p-6">
+						<div className="flex w-full items-center justify-between">
+							<div className="flex flex-col">
+								<h3 className="text-lg font-semibold">QR Code สำหรับขึ้นรถ</h3>
+								{qrCountdown > 0 && <p className="text-xs text-gray-500 dark:text-gray-400">รีโหลดอัตโนมัติใน {qrCountdown} วินาที</p>}
 							</div>
-						) : qrCodeUrl && !qrImageError ? (
-							<div className="flex flex-col items-center gap-2">
-								<img src={qrCodeUrl} alt="QR Code สำหรับขึ้นรถ" className="w-full max-w-sm rounded-lg" onError={() => setQrImageError(true)} />
-								<p className="text-center text-sm text-gray-600 dark:text-gray-400">
-									{item.destination.name} - {formatTime(item.departureTime)}
-								</p>
+							<Button
+								onClick={() => {
+									loadQRCode();
+									setQrCountdown(60);
+								}}
+								variant="outline"
+								size="sm"
+								className="gap-1 text-xs"
+								disabled={qrLoading}>
+								{qrLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : "รีเฟรช"}
+							</Button>
+						</div>
+						<div className="relative">
+							<div className="flex h-80 w-80 items-center justify-center rounded-lg bg-gray-100 sm:h-96 sm:w-96 dark:bg-gray-800">
+								{qrLoading ? (
+									<Loader2 className="h-12 w-12 animate-spin text-gray-400" />
+								) : qrCodeUrl && !qrImageError ? (
+									<img src={qrCodeUrl} alt="QR Code สำหรับขึ้นรถ" className="h-full w-full rounded-lg object-contain p-2" onError={() => setQrImageError(true)} />
+								) : (
+									<QrCode className="h-20 w-20 text-gray-400" />
+								)}
 							</div>
-						) : (
-							<div className="flex flex-col items-center gap-2">
-								<div className="flex h-64 w-64 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-800">
-									<QrCode className="h-16 w-16 text-gray-400" />
-								</div>
-								<p className="text-center text-sm text-gray-500 dark:text-gray-400">ไม่สามารถโหลด QR Code ได้</p>
-							</div>
-						)}
+							{qrImageError && !qrLoading && <p className="mt-2 text-center text-sm text-gray-500 dark:text-gray-400">ไม่สามารถโหลด QR Code ได้</p>}
+						</div>
+						<div className="text-center">
+							<p className="text-base font-semibold text-gray-800 dark:text-gray-200">{item.destination.name}</p>
+							<p className="text-sm text-gray-600 dark:text-gray-400">เวลาออกเดินทาง: {formatTime(item.departureTime)}</p>
+						</div>
 					</div>
 				</DialogContent>
 			</Dialog>

@@ -15,10 +15,20 @@ interface DateSectionProperties {
 	onCancel?: (item: ScheduleReservation) => void;
 	onConfirm?: (item: ScheduleReservation) => void;
 	oneClickMode?: boolean;
+	refreshTrigger?: number;
 	showTimeLeft?: boolean;
 }
 
-export function DateSection({ actionLoading = null, dateGroup, isLoading = false, onCancel, onConfirm, oneClickMode = false, showTimeLeft = false }: DateSectionProperties) {
+export function DateSection({
+	actionLoading = null,
+	dateGroup,
+	isLoading = false,
+	onCancel,
+	onConfirm,
+	oneClickMode = false,
+	refreshTrigger,
+	showTimeLeft = false,
+}: DateSectionProperties) {
 	if (isLoading) {
 		return (
 			<div className="space-y-4">
@@ -64,6 +74,7 @@ export function DateSection({ actionLoading = null, dateGroup, isLoading = false
 						onConfirm={onConfirm}
 						onCancel={onCancel}
 						oneClickMode={oneClickMode}
+						refreshTrigger={refreshTrigger}
 						showTimeLeft={showTimeLeft}
 					/>
 				))}

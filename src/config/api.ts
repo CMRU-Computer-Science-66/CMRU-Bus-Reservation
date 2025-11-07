@@ -15,7 +15,7 @@ const getBaseUrl = (): string => {
 		return "/api";
 	}
 
-	return "http://165.101.64.33:3000";
+	return process.env.API_URL || "/api";
 };
 
 export const API_CONFIG = {
