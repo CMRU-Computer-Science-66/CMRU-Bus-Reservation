@@ -7,7 +7,11 @@ const getBaseUrl = (): string => {
 		return import.meta.env.API_URL as string;
 	}
 
-	if (globalThis.window !== undefined && globalThis.location.hostname !== "localhost") {
+	if (globalThis.window !== undefined && globalThis.location.hostname === "localhost") {
+		return "http://localhost:3000";
+	}
+
+	if (globalThis.window !== undefined) {
 		return "/api";
 	}
 
@@ -28,6 +32,7 @@ export const API_CONFIG = {
 			DELETE: "/bus/delete",
 			CANCEL: "/bus/cancel",
 			VALIDATE: "/bus/validate",
+			TICKET_QR: "/bus/ticket/qrcode",
 		},
 	},
 } as const;

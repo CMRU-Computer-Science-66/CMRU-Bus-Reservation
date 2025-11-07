@@ -12,7 +12,7 @@ interface ApiContextType {
 	deleteReservation: (reservationId: string | number) => Promise<boolean>;
 	error: string | null;
 	getAvailableBuses: (month?: string) => Promise<AvailableBusData | null>;
-	getSchedule: (page?: number) => Promise<ParsedScheduleData | null>;
+	getSchedule: (page?: number, perPage?: number) => Promise<ParsedScheduleData | null>;
 	isAuthenticated: boolean;
 	isLoading: boolean;
 	login: (username: string, password: string, rememberMe?: boolean) => Promise<boolean>;
@@ -106,7 +106,7 @@ export function ApiProvider({ children }: { children: ReactNode }) {
 	}, []);
 
 	const getSchedule = useCallback(
-		async (page?: number): Promise<ParsedScheduleData | null> => {
+		async (page?: number, perPage: number = 10): Promise<ParsedScheduleData | null> => {
 			if (!isAuthenticated) {
 				setError("กรุณาเข้าสู่ระบบก่อน");
 				return null;
@@ -115,7 +115,11 @@ export function ApiProvider({ children }: { children: ReactNode }) {
 			setError(null);
 
 			try {
-				const url = page ? `${API_CONFIG.ENDPOINTS.BUS.SCHEDULE}?page=${page}` : API_CONFIG.ENDPOINTS.BUS.SCHEDULE;
+				const params = new URLSearchParams();
+				if (page) params.append("page", page.toString());
+				params.append("perPage", perPage.toString());
+
+				const url = `${API_CONFIG.ENDPOINTS.BUS.SCHEDULE}?${params.toString()}`;
 				const response = await fetch(getApiUrl(url), {
 					method: "GET",
 					headers: {

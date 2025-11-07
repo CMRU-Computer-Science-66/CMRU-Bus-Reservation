@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import type { AvailableBusData, AvailableBusSchedule } from "@cmru-comsci-66/cmru-api";
-import { AlertCircle, ArrowLeft, Bus, Calendar, CheckCircle2, Clock, Grid3x3, List, Loader2, LogOut, MapPin, Moon, RefreshCw, Settings, Sun, X } from "lucide-react";
+import { AlertCircle, ArrowLeft, Bus, Calendar, CheckCircle2, Clock, Loader2, LogOut, MapPin, RefreshCw, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Helmet } from "react-helmet-async";
 import { useNavigate } from "react-router-dom";

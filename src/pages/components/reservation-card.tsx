@@ -5,7 +5,9 @@ import { useEffect, useState } from "react";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
+import { Dialog, DialogContent } from "../../components/ui/dialog";
 import { Separator } from "../../components/ui/separator";
+import { API_CONFIG, getApiUrl } from "../../config/api";
 import { formatTime } from "../../lib/time-formatter";
 
 interface ReservationCardProperties {
@@ -19,6 +21,9 @@ interface ReservationCardProperties {
 
 export function ReservationCard({ actionLoading, item, onCancel, onConfirm, oneClickMode = false, showTimeLeft }: ReservationCardProperties) {
 	const [currentTime, setCurrentTime] = useState(new Date());
+	const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
+	const [qrLoading, setQrLoading] = useState(false);
+	const [qrDialogOpen, setQrDialogOpen] = useState(false);
 
 	useEffect(() => {
 		if (!showTimeLeft) return;
@@ -29,6 +34,37 @@ export function ReservationCard({ actionLoading, item, onCancel, onConfirm, oneC
 
 		return () => clearInterval(interval);
 	}, [showTimeLeft]);
+
+	useEffect(() => {
+		const loadQRCode = async () => {
+			if (item.ticket.hasQRCode && item.ticket.id) {
+				setQrLoading(true);
+				try {
+					const response = await fetch(getApiUrl(`${API_CONFIG.ENDPOINTS.BUS.TICKET_QR}?ticketId=${item.ticket.id}`), {
+						method: "GET",
+					});
+
+					if (response.ok) {
+						const blob = await response.blob();
+						const url = URL.createObjectURL(blob);
+						setQrCodeUrl(url);
+					}
+				} catch (error) {
+					console.error("Failed to load QR code:", error);
+				} finally {
+					setQrLoading(false);
+				}
+			}
+		};
+
+		loadQRCode();
+
+		return () => {
+			if (qrCodeUrl) {
+				URL.revokeObjectURL(qrCodeUrl);
+			}
+		};
+	}, [item.ticket.hasQRCode, item.ticket.id]);
 
 	const getTimeLeft = () => {
 		if (!showTimeLeft) return null;
@@ -125,6 +161,24 @@ export function ReservationCard({ actionLoading, item, onCancel, onConfirm, oneC
 					)}
 				</div>
 
+				{item.ticket.hasQRCode && item.ticket.id && (
+					<div className="flex justify-center rounded-lg bg-gray-50 p-4 dark:bg-gray-800">
+						{qrLoading ? (
+							<div className="flex h-48 w-48 items-center justify-center">
+								<Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+							</div>
+						) : qrCodeUrl ? (
+							<button type="button" onClick={() => setQrDialogOpen(true)} className="cursor-pointer transition-transform hover:scale-105">
+								<img src={qrCodeUrl} alt="QR Code สำหรับขึ้นรถ" className="h-48 w-48 rounded-lg" />
+							</button>
+						) : (
+							<div className="flex h-48 w-48 items-center justify-center">
+								<QrCode className="h-16 w-16 text-gray-400" />
+							</div>
+						)}
+					</div>
+				)}
+
 				{(item.confirmation.canConfirm || item.confirmation.canCancel) && !item.travelStatus.hasCompleted && (
 					<div className="flex flex-col gap-3 sm:flex-row sm:gap-2">
 						{oneClickMode ? (
@@ -211,6 +265,23 @@ export function ReservationCard({ actionLoading, item, onCancel, onConfirm, oneC
 					</div>
 				)}
 			</CardContent>
+
+			{/* QR Code Dialog */}
+			<Dialog open={qrDialogOpen} onOpenChange={setQrDialogOpen}>
+				<DialogContent className="max-w-md">
+					<div className="flex flex-col items-center gap-4 p-4">
+						<h3 className="text-lg font-semibold">QR Code สำหรับขึ้นรถ</h3>
+						{qrCodeUrl && (
+							<div className="flex flex-col items-center gap-2">
+								<img src={qrCodeUrl} alt="QR Code สำหรับขึ้นรถ" className="w-full max-w-sm rounded-lg" />
+								<p className="text-center text-sm text-gray-600 dark:text-gray-400">
+									{item.destination.name} - {formatTime(item.departureTime)}
+								</p>
+							</div>
+						)}
+					</div>
+				</DialogContent>
+			</Dialog>
 		</Card>
 	);
 }
