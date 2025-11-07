@@ -6,6 +6,7 @@ export const ROUTES = {
 	SCHEDULE: "/schedule",
 	BOOKING: "/booking",
 	SETTINGS: "/settings",
+	STATISTICS: "/statistics",
 } as const;
 
 export const EXTERNAL_URLS = {
@@ -44,6 +45,12 @@ export const ROUTE_METADATA = {
 		title: "ตั้งค่า - ระบบจองรถบัส CMRU",
 		description: "จัดการการตั้งค่าและข้อมูลส่วนตัว ระบบจองรถบัส มหาวิทยาลัยราชภัฏเชียงใหม่",
 		priority: 0.5,
+		frequency: "weekly" as const,
+	},
+	[ROUTES.STATISTICS]: {
+		title: "สถิติการเดินทาง - ระบบจองรถบัส CMRU",
+		description: "ดูสถิติและข้อมูลการเดินทางทั้งหมด มหาวิทยาลัยราชภัฏเชียงใหม่",
+		priority: 0.7,
 		frequency: "weekly" as const,
 	},
 } as const;

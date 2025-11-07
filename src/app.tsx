@@ -11,6 +11,7 @@ import { BookingPage } from "./pages/booking-page";
 import { LoginPage } from "./pages/login-page";
 import { SchedulePage } from "./pages/schedule-page";
 import { SettingsPage } from "./pages/settings-page";
+import { StatisticsPage } from "./pages/statistics-page";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
 	const { isAuthenticated } = useApi();
@@ -65,6 +66,14 @@ function AppRoutes() {
 				element={
 					<ProtectedRoute>
 						<SettingsPage />
+					</ProtectedRoute>
+				}
+			/>
+			<Route
+				path={ROUTES.STATISTICS}
+				element={
+					<ProtectedRoute>
+						<StatisticsPage />
 					</ProtectedRoute>
 				}
 			/>

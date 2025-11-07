@@ -1,4 +1,4 @@
-import { ArrowLeft, Bell, BellOff, Check, ChevronDown, Clock, Github, Globe, LogOut, Moon, Palette, Settings, Sun, Tag, User, UserCheck } from "lucide-react";
+import { ArrowLeft, Bell, BellOff, Check, ChevronDown, Clock, Github, Globe, LogOut, Moon, Palette, Settings, Sun, Tag, TrendingUp, User, UserCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Helmet } from "react-helmet-async";
 import { useNavigate } from "react-router-dom";
@@ -37,6 +37,9 @@ export function SettingsPage() {
 	});
 	const [oneClickEnabled, setOneClickEnabled] = useState(() => {
 		return sessionManager.getOneClickEnabled();
+	});
+	const [showStatistics, setShowStatistics] = useState(() => {
+		return sessionManager.getShowStatistics();
 	});
 
 	useEffect(() => {
@@ -88,6 +91,12 @@ export function SettingsPage() {
 		const isOneClickEnabled = !oneClickEnabled;
 		setOneClickEnabled(isOneClickEnabled);
 		sessionManager.setOneClickEnabled(isOneClickEnabled);
+	};
+
+	const toggleShowStatistics = () => {
+		const isShowStatistics = !showStatistics;
+		setShowStatistics(isShowStatistics);
+		sessionManager.setShowStatistics(isShowStatistics);
 	};
 
 	return (
@@ -181,6 +190,43 @@ export function SettingsPage() {
 								</div>
 								<Badge variant={oneClickEnabled ? "default" : "secondary"} className={oneClickEnabled ? "bg-indigo-600 dark:bg-indigo-500" : ""}>
 									{oneClickEnabled ? "เปิด" : "ปิด"}
+								</Badge>
+							</button>
+						</CardContent>
+					</Card>
+					<Card className="border-0 bg-white/90 shadow-md backdrop-blur-md dark:bg-gray-900/90">
+						<CardHeader>
+							<div className="flex items-center gap-3">
+								<div className="rounded-full bg-green-100 p-3 dark:bg-green-900">
+									<TrendingUp className="h-6 w-6 text-green-600 dark:text-green-400" />
+								</div>
+								<div>
+									<CardTitle className="text-lg">การแสดง Statistics</CardTitle>
+									<CardDescription>เลือกแสดงหรือซ่อนส่วน Statistics ในหน้าต่างๆ</CardDescription>
+								</div>
+							</div>
+						</CardHeader>
+						<Separator className="dark:bg-gray-800" />
+						<CardContent>
+							<button
+								type="button"
+								onClick={toggleShowStatistics}
+								className="flex w-full items-center justify-between rounded-lg border-2 border-gray-200 bg-white p-4 transition-all hover:border-blue-300 hover:shadow-md dark:border-gray-700 dark:bg-gray-800 dark:hover:border-blue-600">
+								<div className="flex items-center gap-3">
+									<div className={`rounded-full p-2 ${showStatistics ? "bg-green-100 dark:bg-green-900" : "bg-gray-100 dark:bg-gray-700"}`}>
+										<TrendingUp className={`h-5 w-5 ${showStatistics ? "text-green-600 dark:text-green-400" : "text-gray-600 dark:text-gray-400"}`} />
+									</div>
+									<div className="text-left">
+										<div className="flex items-center gap-2">
+											<p className="font-semibold text-gray-900 dark:text-white">แสดง Statistics</p>
+										</div>
+										<p className="text-sm text-gray-600 dark:text-gray-400">
+											{showStatistics ? "แสดงข้อมูลสถิติในหน้า Schedule และ Booking" : "ซ่อนข้อมูลสถิติในหน้าต่างๆ"}
+										</p>
+									</div>
+								</div>
+								<Badge variant={showStatistics ? "default" : "secondary"} className={showStatistics ? "bg-green-600 dark:bg-green-500" : ""}>
+									{showStatistics ? "เปิด" : "ปิด"}
 								</Badge>
 							</button>
 						</CardContent>
