@@ -57,8 +57,8 @@ export function ApiProvider({ children }: { children: ReactNode }) {
 						sessionManager.clearSession();
 						setIsAuthenticated(false);
 					}
-				} catch (error_) {
-					console.error("Background session validation failed:", error_);
+				} catch {
+					/* empty */
 				}
 			}
 		};

@@ -27,6 +27,7 @@ export function SchedulePage() {
 	const { cancelReservation, confirmReservation, deleteReservation } = useApi();
 	const sessionManager = getSessionManager();
 	const [oneClickMode, setOneClickMode] = useState(sessionManager.getOneClickEnabled());
+	const [showStatistics, setShowStatistics] = useState(sessionManager.getShowStatistics());
 	const [actionLoading, setActionLoading] = useState<number | null>(null);
 	const [isDark, setIsDark] = useState(false);
 	const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -42,6 +43,17 @@ export function SchedulePage() {
 
 	useEffect(() => {
 		setOneClickMode(sessionManager.getOneClickEnabled());
+		setShowStatistics(sessionManager.getShowStatistics());
+	}, [sessionManager]);
+
+	useEffect(() => {
+		const handleFocus = () => {
+			setOneClickMode(sessionManager.getOneClickEnabled());
+			setShowStatistics(sessionManager.getShowStatistics());
+		};
+
+		window.addEventListener("focus", handleFocus);
+		return () => window.removeEventListener("focus", handleFocus);
 	}, [sessionManager]);
 
 	useEffect(() => {
@@ -146,8 +158,6 @@ export function SchedulePage() {
 			success = await cancelReservation(item.confirmation.unconfirmData);
 		} else if (item.confirmation.canConfirm && item.actions.reservationId) {
 			success = await deleteReservation(item.actions.reservationId);
-		} else {
-			console.error("No confirmation data available for cancellation", item);
 		}
 
 		if (success) {
@@ -182,6 +192,10 @@ export function SchedulePage() {
 			<Button variant="outline" size="sm" onClick={handleRefresh} disabled={isLoading} className="hidden gap-2 shadow-sm hover:shadow-lg md:flex">
 				<RefreshCw className={`h-4 w-4 transition-transform ${isLoading ? "animate-spin" : "hover:rotate-180"}`} />
 				รีเฟรช
+			</Button>
+			<Button variant="outline" size="sm" onClick={() => navigate(ROUTES.STATISTICS)} className="hidden gap-2 shadow-sm hover:shadow-lg md:flex">
+				<TrendingUp className="h-4 w-4" />
+				สถิติ
 			</Button>
 			<Button variant="outline" size="sm" onClick={() => navigate(ROUTES.SETTINGS)} className="hidden gap-2 shadow-sm hover:shadow-lg md:flex">
 				<Settings className="h-4 w-4" />
@@ -244,6 +258,17 @@ export function SchedulePage() {
 							variant="outline"
 							size="sm"
 							onClick={() => {
+								navigate(ROUTES.STATISTICS);
+								setMobileMenuOpen(false);
+							}}
+							className="w-full justify-start gap-2">
+							<TrendingUp className="h-4 w-4" />
+							สถิติ
+						</Button>
+						<Button
+							variant="outline"
+							size="sm"
+							onClick={() => {
 								navigate(ROUTES.SETTINGS);
 								setMobileMenuOpen(false);
 							}}
@@ -259,50 +284,54 @@ export function SchedulePage() {
 				</div>
 			)}
 
-			<div className="container mx-auto px-4 py-6 sm:px-6">
-				<div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-					<StatCard
-						label="ยืนยันแล้ว"
-						value={schedule?.reservations ? schedule.reservations.filter((r) => r.confirmation.isConfirmed).length : 0}
-						icon={CheckCircle2}
-						gradient="from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400"
-						iconBg="bg-blue-100 dark:bg-blue-900"
-						onClick={() => setFilterStatus(filterStatus === "confirmed" ? "all" : "confirmed")}
-						isActive={filterStatus === "confirmed"}
-						isLoading={isLoading}
-					/>
-					<StatCard
-						label="เดินทางแล้ว"
-						value={schedule?.reservations ? schedule.reservations.filter((r) => r.travelStatus.hasCompleted === true).length : 0}
-						icon={TrendingUp}
-						gradient="from-green-600 to-emerald-600 dark:from-green-400 dark:to-emerald-400"
-						iconBg="bg-green-100 dark:bg-green-900"
-						onClick={() => setFilterStatus(filterStatus === "completed" ? "all" : "completed")}
-						isActive={filterStatus === "completed"}
-						isLoading={isLoading}
-					/>
-					<StatCard
-						label="มี QR Code"
-						value={schedule?.reservations ? schedule.reservations.filter((r) => r.ticket.hasQRCode).length : 0}
-						icon={QrCode}
-						gradient="from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400"
-						iconBg="bg-purple-100 dark:bg-purple-900"
-						onClick={() => setFilterStatus(filterStatus === "hasQR" ? "all" : "hasQR")}
-						isActive={filterStatus === "hasQR"}
-						isLoading={isLoading}
-					/>
-					<StatCard
-						label="ทั้งหมด"
-						value={schedule?.totalReservations || 0}
-						icon={User}
-						gradient="from-orange-600 to-red-600 dark:from-orange-400 dark:to-red-400"
-						iconBg="bg-orange-100 dark:bg-orange-900"
-						onClick={() => setFilterStatus("all")}
-						isActive={filterStatus === "all"}
-						isLoading={isLoading}
-					/>
+			{showStatistics ? (
+				<div className="container mx-auto px-4 py-6 sm:px-6">
+					<div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+						<StatCard
+							label="ยืนยันแล้ว"
+							value={schedule?.reservations ? schedule.reservations.filter((r) => r.confirmation.isConfirmed).length : 0}
+							icon={CheckCircle2}
+							gradient="from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400"
+							iconBg="bg-blue-100 dark:bg-blue-900"
+							onClick={() => setFilterStatus(filterStatus === "confirmed" ? "all" : "confirmed")}
+							isActive={filterStatus === "confirmed"}
+							isLoading={isLoading}
+						/>
+						<StatCard
+							label="เดินทางแล้ว"
+							value={schedule?.reservations ? schedule.reservations.filter((r) => r.travelStatus.hasCompleted === true).length : 0}
+							icon={TrendingUp}
+							gradient="from-green-600 to-emerald-600 dark:from-green-400 dark:to-emerald-400"
+							iconBg="bg-green-100 dark:bg-green-900"
+							onClick={() => setFilterStatus(filterStatus === "completed" ? "all" : "completed")}
+							isActive={filterStatus === "completed"}
+							isLoading={isLoading}
+						/>
+						<StatCard
+							label="มี QR Code"
+							value={schedule?.reservations ? schedule.reservations.filter((r) => r.ticket.hasQRCode).length : 0}
+							icon={QrCode}
+							gradient="from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400"
+							iconBg="bg-purple-100 dark:bg-purple-900"
+							onClick={() => setFilterStatus(filterStatus === "hasQR" ? "all" : "hasQR")}
+							isActive={filterStatus === "hasQR"}
+							isLoading={isLoading}
+						/>
+						<StatCard
+							label="ทั้งหมด"
+							value={schedule?.totalReservations || 0}
+							icon={User}
+							gradient="from-orange-600 to-red-600 dark:from-orange-400 dark:to-red-400"
+							iconBg="bg-orange-100 dark:bg-orange-900"
+							onClick={() => setFilterStatus("all")}
+							isActive={filterStatus === "all"}
+							isLoading={isLoading}
+						/>
+					</div>
 				</div>
-			</div>
+			) : (
+				<div className="py-2"></div>
+			)}
 
 			{schedule &&
 				schedule.reservations &&
@@ -364,7 +393,7 @@ export function SchedulePage() {
 			<div className="container mx-auto px-4 pb-8 sm:px-6">
 				<div className="mb-4 flex items-center justify-between">
 					<div>
-						<h2 className="text-lg font-semibold text-gray-900 dark:text-white">ประวัติรายการจองทั้งหมด</h2>
+						<h2 className="text-lg font-semibold text-gray-900 dark:text-white">รายการจองทั้งหมด</h2>
 						{groupedByDate && groupedByDate.length > 0 && (
 							<p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
 								{(() => {
@@ -427,7 +456,7 @@ export function SchedulePage() {
 								</div>
 							))}
 
-							{schedule && schedule.totalPages > 1 && (
+							{schedule && schedule.totalPages > 0 && (
 								<div className="flex flex-col items-center gap-3 pt-6">
 									<div className="hidden items-center gap-2 md:flex">
 										<Button

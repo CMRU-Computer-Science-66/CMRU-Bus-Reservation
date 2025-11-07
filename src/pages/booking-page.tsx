@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import type { AvailableBusData, AvailableBusSchedule } from "@cmru-comsci-66/cmru-api";
+import type { AvailableBusData, AvailableBusSchedule, ScheduleReservation } from "@cmru-comsci-66/cmru-api";
 import { AlertCircle, ArrowLeft, Bus, Calendar, CheckCircle2, Clock, Loader2, LogOut, MapPin, RefreshCw, TrendingUp, User, Users, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Helmet } from "react-helmet-async";
@@ -14,6 +14,7 @@ import { Separator } from "../components/ui/separator";
 import { Skeleton } from "../components/ui/skeleton";
 import { ROUTE_METADATA, ROUTES } from "../config/routes";
 import { useApi } from "../contexts/api-context";
+import { getSessionManager } from "../lib/session-manager";
 import { formatTime } from "../lib/time-formatter";
 import { PageHeader } from "./components/page-header";
 import { StatCard } from "./components/stat-card";
@@ -57,16 +58,38 @@ const getRelativeDay = (date: Date) => {
 
 export function BookingPage() {
 	const navigate = useNavigate();
-	const { bookBus, getAvailableBuses, getSchedule, isAuthenticated, logout } = useApi();
+	const { bookBus, cancelReservation, deleteReservation, getAvailableBuses, getSchedule, isAuthenticated, logout } = useApi();
 	const [availableBuses, setAvailableBuses] = useState<AvailableBusData | undefined>();
 	const [bookedScheduleIds, setBookedScheduleIds] = useState<Set<string>>(new Set());
+	const [bookedReservations, setBookedReservations] = useState<Map<string, ScheduleReservation>>(new Map());
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState<string | undefined>();
 	const [bookingLoading, setBookingLoading] = useState<number | undefined>();
-	const [selectedSchedules, setSelectedSchedules] = useState<Record<string, { toMaeRim: number | undefined; toWiangBua: number | undefined }>>({});
+	const [bookingStatus, setBookingStatus] = useState<string>("");
+	const [selectedSchedules, setSelectedSchedules] = useState<Record<string, { toMaeRim: number | string | undefined; toWiangBua: number | string | undefined }>>({});
 	const [isDark, setIsDark] = useState(false);
 	const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 	const [filterMode, setFilterMode] = useState<"all" | "available" | "canReserve">("all");
+	const [showStatistics, setShowStatistics] = useState(() => {
+		return getSessionManager().getShowStatistics();
+	});
+
+	const scrollToCard = useCallback((dateString: string) => {
+		if (window.innerWidth < 768) {
+			setTimeout(() => {
+				// eslint-disable-next-line unicorn/prefer-query-selector
+				const cardElement = document.getElementById(`card-${dateString}`);
+
+				if (cardElement) {
+					cardElement.scrollIntoView({
+						behavior: "smooth",
+						block: "center",
+						inline: "nearest",
+					});
+				}
+			}, 100);
+		}
+	}, []);
 
 	useEffect(() => {
 		const theme = localStorage.getItem("theme");
@@ -76,12 +99,18 @@ export function BookingPage() {
 		document.documentElement.classList.toggle("dark", shouldBeDark);
 	}, []);
 
-	const toggleTheme = () => {
-		const userTheme = !isDark;
-		setIsDark(userTheme);
-		localStorage.setItem("theme", userTheme ? "dark" : "light");
-		document.documentElement.classList.toggle("dark", userTheme);
-	};
+	useEffect(() => {
+		setShowStatistics(getSessionManager().getShowStatistics());
+	}, []);
+
+	useEffect(() => {
+		const handleFocus = () => {
+			setShowStatistics(getSessionManager().getShowStatistics());
+		};
+
+		window.addEventListener("focus", handleFocus);
+		return () => window.removeEventListener("focus", handleFocus);
+	}, []);
 
 	const fetchAvailableBuses = useCallback(async () => {
 		setIsLoading(true);
@@ -102,18 +131,24 @@ export function BookingPage() {
 		try {
 			const schedule = await getSchedule();
 			if (schedule?.reservations) {
-				const bookedKeys = new Set(
-					schedule.reservations.map((r) => {
-						const date = new Date(r.date).toISOString().split("T")[0];
-						const time = r.departureTime.replace(".", ":");
-						const destinationType = r.destination.name.toLowerCase().includes("เวียงบัว") ? "2" : "1";
-						return `${date}_${time}_${destinationType}`;
-					}),
-				);
+				const bookedKeys = new Set<string>();
+				const reservationMap = new Map<string, ScheduleReservation>();
+
+				for (const r of schedule.reservations) {
+					const date = new Date(r.date).toISOString().split("T")[0];
+					const time = r.departureTime.replace(".", ":");
+					const destinationType = r.destination.name.toLowerCase().includes("เวียงบัว") ? "2" : "1";
+					const bookingKey = `${date}_${time}_${destinationType}`;
+
+					bookedKeys.add(bookingKey);
+					reservationMap.set(bookingKey, r);
+				}
+
 				setBookedScheduleIds(bookedKeys);
+				setBookedReservations(reservationMap);
 			}
-		} catch (error_) {
-			console.error("Failed to fetch booked schedules:", error_);
+		} catch {
+			/* empty */
 		}
 	}, [getSchedule]);
 
@@ -168,34 +203,162 @@ export function BookingPage() {
 				.sort((a, b) => a.date.getTime() - b.date.getTime())
 		: [];
 
+	const handleMultipleBook = async () => {
+		const allDateStrings = Object.keys(selectedSchedules).filter((dateString) => {
+			const selections = selectedSchedules[dateString];
+			return selections && (selections.toMaeRim || selections.toWiangBua);
+		});
+
+		if (allDateStrings.length === 0) return;
+
+		setBookingLoading(-1);
+		setBookingStatus("กำลังเตรียมการจองหลายวัน...");
+
+		try {
+			let processedCount = 0;
+			for (const dateString of allDateStrings) {
+				processedCount++;
+				setBookingStatus(`กำลังประมวลผล ${processedCount}/${allDateStrings.length} วัน...`);
+				await handleSingleBook(dateString);
+			}
+
+			setSelectedSchedules({});
+
+			await fetchAvailableBuses();
+			await fetchBookedSchedules();
+		} finally {
+			setBookingLoading(undefined);
+			setBookingStatus("");
+		}
+	};
+
+	const handleSingleBook = async (dateString: string) => {
+		const selections = selectedSchedules[dateString];
+		if (!selections) return;
+
+		const scheduleIds = [selections.toMaeRim, selections.toWiangBua].filter((id): id is number => typeof id === "number" && id !== undefined);
+		const hasCancellation = selections.toMaeRim === "__CANCEL__" || selections.toWiangBua === "__CANCEL__";
+
+		if (scheduleIds.length === 0 && !hasCancellation) return;
+
+		try {
+			const groupSchedules =
+				availableBuses?.availableSchedules.filter((s) => {
+					const scheduleDate = new Date(s.date).toISOString().split("T")[0];
+					return scheduleDate === dateString;
+				}) || [];
+
+			const existingBookingsToCancel: typeof groupSchedules = [];
+
+			if (selections.toMaeRim && selections.toMaeRim === "__CANCEL__") {
+				const existingMaeRimBooking = groupSchedules.find((schedule) => {
+					if (schedule.destinationType !== 1) return false;
+					const date = new Date(schedule.date).toISOString().split("T")[0];
+					const time = schedule.departureTime;
+					const bookingKey = `${date}_${time}_1`;
+					return bookedScheduleIds.has(bookingKey);
+				});
+				if (existingMaeRimBooking) {
+					existingBookingsToCancel.push(existingMaeRimBooking);
+				}
+			} else if (typeof selections.toMaeRim === "number") {
+				const existingMaeRimBooking = groupSchedules.find((schedule) => {
+					if (schedule.destinationType !== 1) return false;
+					const date = new Date(schedule.date).toISOString().split("T")[0];
+					const time = schedule.departureTime;
+					const bookingKey = `${date}_${time}_1`;
+					return bookedScheduleIds.has(bookingKey);
+				});
+				if (existingMaeRimBooking) {
+					existingBookingsToCancel.push(existingMaeRimBooking);
+				}
+			}
+
+			if (selections.toWiangBua && selections.toWiangBua === "__CANCEL__") {
+				const existingWiangBuaBooking = groupSchedules.find((schedule) => {
+					if (schedule.destinationType !== 2) return false;
+					const date = new Date(schedule.date).toISOString().split("T")[0];
+					const time = schedule.departureTime;
+					const bookingKey = `${date}_${time}_2`;
+					return bookedScheduleIds.has(bookingKey);
+				});
+				if (existingWiangBuaBooking) {
+					existingBookingsToCancel.push(existingWiangBuaBooking);
+				}
+			} else if (typeof selections.toWiangBua === "number") {
+				const existingWiangBuaBooking = groupSchedules.find((schedule) => {
+					if (schedule.destinationType !== 2) return false;
+					const date = new Date(schedule.date).toISOString().split("T")[0];
+					const time = schedule.departureTime;
+					const bookingKey = `${date}_${time}_2`;
+					return bookedScheduleIds.has(bookingKey);
+				});
+				if (existingWiangBuaBooking) {
+					existingBookingsToCancel.push(existingWiangBuaBooking);
+				}
+			}
+
+			if (existingBookingsToCancel.length > 0) {
+				for (const existingBooking of existingBookingsToCancel) {
+					try {
+						const date = new Date(existingBooking.date).toISOString().split("T")[0];
+						const time = existingBooking.departureTime;
+						const destinationType = existingBooking.destinationType.toString();
+						const bookingKey = `${date}_${time}_${destinationType}`;
+						const reservationData = bookedReservations.get(bookingKey);
+
+						if (reservationData) {
+							let success = false;
+
+							if (reservationData.confirmation?.unconfirmData) {
+								success = await cancelReservation(reservationData.confirmation.unconfirmData);
+							} else if (reservationData.confirmation?.canConfirm && reservationData.actions?.reservationId) {
+								success = await deleteReservation(reservationData.actions.reservationId);
+							}
+						}
+					} catch {
+						/* empty */
+					}
+				}
+			}
+
+			if (scheduleIds.length > 0) {
+				for (const scheduleId of scheduleIds) {
+					const schedule = availableBuses?.availableSchedules.find((s) => s.id === scheduleId);
+					if (!schedule || !schedule.canReserve) continue;
+
+					const bookingDateString = typeof schedule.date === "string" ? schedule.date : new Date(schedule.date).toISOString();
+					await bookBus(schedule.id, bookingDateString, schedule.destinationType);
+				}
+			}
+		} catch {
+			throw error;
+		}
+	};
+
 	const handleBook = async (dateString: string) => {
 		const selections = selectedSchedules[dateString];
 		if (!selections) return;
 
-		const scheduleIds = [selections.toMaeRim, selections.toWiangBua].filter((id): id is number => id !== undefined);
+		const scheduleIds = [selections.toMaeRim, selections.toWiangBua].filter((id): id is number => typeof id === "number" && id !== undefined);
+		const hasCancellation = selections.toMaeRim === "__CANCEL__" || selections.toWiangBua === "__CANCEL__";
 
-		if (scheduleIds.length === 0) return;
+		if (scheduleIds.length === 0 && !hasCancellation) return;
 
-		setBookingLoading(-1);
-
-		let allSuccess = true;
-		const results: string[] = [];
-
-		for (const scheduleId of scheduleIds) {
-			const schedule = availableBuses?.availableSchedules.find((s) => s.id === scheduleId);
-			if (!schedule || !schedule.canReserve) continue;
-
-			const dateString = typeof schedule.date === "string" ? schedule.date : new Date(schedule.date).toISOString();
-			const result = await bookBus(schedule.id, dateString, schedule.destinationType);
-
-			results.push(`${schedule.destination} ${formatTime(schedule.departureTime)} : ${result.message}`);
-
-			if (!result.success) {
-				allSuccess = false;
-			}
+		if (
+			Object.keys(selectedSchedules).filter((ds) => {
+				const sel = selectedSchedules[ds];
+				return sel && (sel.toMaeRim || sel.toWiangBua);
+			}).length <= 1
+		) {
+			setBookingLoading(-1);
+			setBookingStatus("กำลังเตรียมการจอง...");
 		}
 
-		if (allSuccess) {
+		try {
+			await handleSingleBook(dateString);
+
+			setBookingStatus("กำลังอัพเดทข้อมูล...");
 			setSelectedSchedules((previous) => {
 				const updatedState = { ...previous };
 				delete updatedState[dateString];
@@ -203,8 +366,12 @@ export function BookingPage() {
 			});
 			await fetchAvailableBuses();
 			await fetchBookedSchedules();
+		} catch {
+			setBookingStatus("เกิดข้อผิดพลาด");
+		} finally {
+			setBookingLoading(undefined);
+			setBookingStatus("");
 		}
-		setBookingLoading(undefined);
 	};
 
 	if (isLoading && !availableBuses) {
@@ -236,42 +403,46 @@ export function BookingPage() {
 					}
 				/>
 
-				<div className="container mx-auto px-4 py-6 sm:px-6">
-					<div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-						<StatCard
-							label="วันที่มีรถ"
-							value={0}
-							icon={CheckCircle2}
-							gradient="from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400"
-							iconBg="bg-blue-100 dark:bg-blue-900"
-							isLoading={true}
-						/>
-						<StatCard
-							label="มีรอบว่าง"
-							value={0}
-							icon={TrendingUp}
-							gradient="from-green-600 to-emerald-600 dark:from-green-400 dark:to-emerald-400"
-							iconBg="bg-green-100 dark:bg-green-900"
-							isLoading={true}
-						/>
-						<StatCard
-							label="รอบทั้งหมด"
-							value={0}
-							icon={Bus}
-							gradient="from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400"
-							iconBg="bg-purple-100 dark:bg-purple-900"
-							isLoading={true}
-						/>
-						<StatCard
-							label="จองได้"
-							value={0}
-							icon={User}
-							gradient="from-orange-600 to-red-600 dark:from-orange-400 dark:to-red-400"
-							iconBg="bg-orange-100 dark:bg-orange-900"
-							isLoading={true}
-						/>
+				{showStatistics ? (
+					<div className="container mx-auto px-4 py-6 sm:px-6">
+						<div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+							<StatCard
+								label="วันที่มีรถ"
+								value={0}
+								icon={CheckCircle2}
+								gradient="from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400"
+								iconBg="bg-blue-100 dark:bg-blue-900"
+								isLoading={true}
+							/>
+							<StatCard
+								label="มีรอบว่าง"
+								value={0}
+								icon={TrendingUp}
+								gradient="from-green-600 to-emerald-600 dark:from-green-400 dark:to-emerald-400"
+								iconBg="bg-green-100 dark:bg-green-900"
+								isLoading={true}
+							/>
+							<StatCard
+								label="รอบทั้งหมด"
+								value={0}
+								icon={Bus}
+								gradient="from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400"
+								iconBg="bg-purple-100 dark:bg-purple-900"
+								isLoading={true}
+							/>
+							<StatCard
+								label="จองได้"
+								value={0}
+								icon={User}
+								gradient="from-orange-600 to-red-600 dark:from-orange-400 dark:to-red-400"
+								iconBg="bg-orange-100 dark:bg-orange-900"
+								isLoading={true}
+							/>
+						</div>
 					</div>
-				</div>
+				) : (
+					<div className="py-2"></div>
+				)}
 
 				<div className="container mx-auto px-4 pb-8 sm:px-6">
 					<div className="mb-4 flex items-center justify-between">
@@ -373,95 +544,107 @@ export function BookingPage() {
 				}
 			/>
 
-			<div className="container mx-auto px-4 py-6 sm:px-6">
-				<div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-					<StatCard
-						label="วันที่มีรถ"
-						value={
-							availableBuses?.availableSchedules
-								? Object.keys(
-										availableBuses.availableSchedules.reduce(
-											(accumulator, schedule) => {
-												const dateKey = new Date(schedule.date).toISOString().split("T")[0] || "";
-												const groupDate = new Date(schedule.date);
-												groupDate.setHours(0, 0, 0, 0);
-												const today = new Date();
-												today.setHours(0, 0, 0, 0);
-												if (groupDate.getTime() >= today.getTime()) {
-													accumulator[dateKey] = true;
-												}
-												return accumulator;
-											},
-											{} as Record<string, boolean>,
-										),
-									).length
-								: 0
-						}
-						icon={CheckCircle2}
-						gradient="from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400"
-						iconBg="bg-blue-100 dark:bg-blue-900"
-						onClick={() => setFilterMode(filterMode === "all" ? "all" : "all")}
-						isActive={filterMode === "all"}
-						isLoading={isLoading}
-					/>
-					<StatCard
-						label="มีรอบว่าง"
-						value={
-							availableBuses?.availableSchedules
-								? Object.values(
-										availableBuses.availableSchedules.reduce(
-											(accumulator, schedule) => {
-												const dateKey = new Date(schedule.date).toISOString().split("T")[0] || "";
-												const groupDate = new Date(schedule.date);
-												groupDate.setHours(0, 0, 0, 0);
-												const today = new Date();
-												today.setHours(0, 0, 0, 0);
-												if (groupDate.getTime() >= today.getTime()) {
-													if (!accumulator[dateKey]) {
-														accumulator[dateKey] = { canReserveCount: 0 };
+			{showStatistics ? (
+				<div className="container mx-auto px-4 py-6 sm:px-6">
+					<div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+						<StatCard
+							label="วันที่มีรถ"
+							value={
+								availableBuses?.availableSchedules
+									? Object.keys(
+											availableBuses.availableSchedules.reduce(
+												(accumulator, schedule) => {
+													const dateKey = new Date(schedule.date).toISOString().split("T")[0] || "";
+													const groupDate = new Date(schedule.date);
+													groupDate.setHours(0, 0, 0, 0);
+													const today = new Date();
+													today.setHours(0, 0, 0, 0);
+													if (groupDate.getTime() >= today.getTime()) {
+														accumulator[dateKey] = true;
 													}
-													if (schedule.canReserve) {
-														accumulator[dateKey].canReserveCount++;
+													return accumulator;
+												},
+												{} as Record<string, boolean>,
+											),
+										).length
+									: 0
+							}
+							icon={CheckCircle2}
+							gradient="from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400"
+							iconBg="bg-blue-100 dark:bg-blue-900"
+							onClick={() => setFilterMode(filterMode === "all" ? "all" : "all")}
+							isActive={filterMode === "all"}
+							isLoading={isLoading}
+						/>
+						<StatCard
+							label="มีรอบว่าง"
+							value={
+								availableBuses?.availableSchedules
+									? Object.values(
+											availableBuses.availableSchedules.reduce(
+												(accumulator, schedule) => {
+													const dateKey = new Date(schedule.date).toISOString().split("T")[0] || "";
+													const groupDate = new Date(schedule.date);
+													groupDate.setHours(0, 0, 0, 0);
+													const today = new Date();
+													today.setHours(0, 0, 0, 0);
+													if (groupDate.getTime() >= today.getTime()) {
+														if (!accumulator[dateKey]) {
+															accumulator[dateKey] = { canReserveCount: 0 };
+														}
+														if (schedule.canReserve) {
+															accumulator[dateKey].canReserveCount++;
+														}
 													}
-												}
-												return accumulator;
-											},
-											{} as Record<string, { canReserveCount: number }>,
-										),
-									).filter((g) => g.canReserveCount > 0).length
-								: 0
-						}
-						icon={TrendingUp}
-						gradient="from-green-600 to-emerald-600 dark:from-green-400 dark:to-emerald-400"
-						iconBg="bg-green-100 dark:bg-green-900"
-						onClick={() => setFilterMode(filterMode === "available" ? "all" : "available")}
-						isActive={filterMode === "available"}
-						isLoading={isLoading}
-					/>
-					<StatCard
-						label="รอบทั้งหมด"
-						value={availableBuses?.totalAvailable || 0}
-						icon={Bus}
-						gradient="from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400"
-						iconBg="bg-purple-100 dark:bg-purple-900"
-						onClick={() => setFilterMode("all")}
-						isActive={filterMode === "all"}
-						isLoading={isLoading}
-					/>
-					<StatCard
-						label="จองได้"
-						value={availableBuses?.availableSchedules?.filter((s) => s.canReserve).length || 0}
-						icon={User}
-						gradient="from-orange-600 to-red-600 dark:from-orange-400 dark:to-red-400"
-						iconBg="bg-orange-100 dark:bg-orange-900"
-						onClick={() => setFilterMode(filterMode === "canReserve" ? "all" : "canReserve")}
-						isActive={filterMode === "canReserve"}
-						isLoading={isLoading}
-					/>
+													return accumulator;
+												},
+												{} as Record<string, { canReserveCount: number }>,
+											),
+										).filter((g) => g.canReserveCount > 0).length
+									: 0
+							}
+							icon={TrendingUp}
+							gradient="from-green-600 to-emerald-600 dark:from-green-400 dark:to-emerald-400"
+							iconBg="bg-green-100 dark:bg-green-900"
+							onClick={() => setFilterMode(filterMode === "available" ? "all" : "available")}
+							isActive={filterMode === "available"}
+							isLoading={isLoading}
+						/>
+						<StatCard
+							label="รอบทั้งหมด"
+							value={availableBuses?.totalAvailable || 0}
+							icon={Bus}
+							gradient="from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400"
+							iconBg="bg-purple-100 dark:bg-purple-900"
+							onClick={() => setFilterMode("all")}
+							isActive={filterMode === "all"}
+							isLoading={isLoading}
+						/>
+						<StatCard
+							label="จองได้"
+							value={availableBuses?.availableSchedules?.filter((s) => s.canReserve).length || 0}
+							icon={User}
+							gradient="from-orange-600 to-red-600 dark:from-orange-400 dark:to-red-400"
+							iconBg="bg-orange-100 dark:bg-orange-900"
+							onClick={() => setFilterMode(filterMode === "canReserve" ? "all" : "canReserve")}
+							isActive={filterMode === "canReserve"}
+							isLoading={isLoading}
+						/>
+					</div>
 				</div>
-			</div>
+			) : (
+				<div className="py-2"></div>
+			)}
 
-			<div className="container mx-auto px-4 pb-8 sm:px-6">
+			<div
+				className={`container mx-auto px-4 sm:px-6 ${(() => {
+					const multipleSelections =
+						Object.keys(selectedSchedules).filter((dateString) => {
+							const sel = selectedSchedules[dateString];
+							return sel && (sel.toMaeRim || sel.toWiangBua);
+						}).length > 1;
+					return multipleSelections ? "pb-40 sm:pb-32" : "pb-8";
+				})()}`}>
 				<div className="mb-4 flex items-center justify-between">
 					<div className="flex items-center gap-2">
 						<h2 className="text-lg font-semibold text-gray-900 dark:text-white">รอบรถที่เปิดจอง</h2>
@@ -507,7 +690,24 @@ export function BookingPage() {
 								return (
 									<Card
 										key={group.dateString}
-										className="group border-0 bg-white/90 shadow-md backdrop-blur-md transition-all hover:scale-[1.02] hover:shadow-xl dark:bg-gray-900/90">
+										id={`card-${group.dateString}`}
+										className={`group bg-white/90 shadow-md backdrop-blur-md transition-all hover:scale-[1.02] hover:shadow-xl dark:bg-gray-900/90 ${(() => {
+											const current = selectedSchedules[group.dateString];
+											const hasCancellation = current?.toMaeRim === "__CANCEL__" || current?.toWiangBua === "__CANCEL__";
+											const hasNewBooking = (current?.toMaeRim && current.toMaeRim !== "__CANCEL__") || (current?.toWiangBua && current.toWiangBua !== "__CANCEL__");
+											const hasSelection = current?.toMaeRim || current?.toWiangBua;
+
+											if (hasSelection) {
+												if (hasCancellation && hasNewBooking) {
+													return "border-2 border-orange-300 dark:border-orange-600";
+												} else if (hasCancellation) {
+													return "border-2 border-red-300 dark:border-red-600";
+												} else {
+													return "border-2 border-blue-300 dark:border-blue-600";
+												}
+											}
+											return "border-0";
+										})()}`}>
 										<CardHeader>
 											<div className="flex items-start justify-between gap-2">
 												<div className="min-w-0 flex-1">
@@ -557,7 +757,19 @@ export function BookingPage() {
 													<div className="flex min-h-7 items-center justify-between">
 														<div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
 															<MapPin className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-															<span>ไปแม่ริม</span>
+															<span>แม่ริม</span>
+															{(() => {
+																const bookedSchedule = group.schedules
+																	.filter((s) => s.destinationType === 1)
+																	.find((schedule) => {
+																		const date = new Date(schedule.date).toISOString().split("T")[0];
+																		const time = schedule.departureTime;
+																		const bookingKey = `${date}_${time}_1`;
+																		return bookedScheduleIds.has(bookingKey);
+																	});
+
+																return bookedSchedule ? "จองแล้ว" : null;
+															})()}
 														</div>
 														{selectedSchedules[group.dateString]?.toMaeRim && (
 															<Button
@@ -578,10 +790,53 @@ export function BookingPage() {
 														)}
 													</div>
 													<Select
-														value={selectedSchedules[group.dateString]?.toMaeRim?.toString() || ""}
+														value={
+															selectedSchedules[group.dateString]?.toMaeRim?.toString() ||
+															(() => {
+																const bookedSchedule = group.schedules
+																	.filter((s) => s.destinationType === 1)
+																	.find((schedule) => {
+																		const date = new Date(schedule.date).toISOString().split("T")[0];
+																		const time = schedule.departureTime;
+																		const bookingKey = `${date}_${time}_1`;
+																		return bookedScheduleIds.has(bookingKey);
+																	});
+
+																return bookedSchedule ? bookedSchedule.id.toString() : "";
+															})()
+														}
 														onValueChange={(value) => {
-															if (value) {
+															if (value === "__CANCEL__") {
+																setSelectedSchedules((previous) => ({
+																	...previous,
+																	[group.dateString]: {
+																		toMaeRim: "__CANCEL__",
+																		toWiangBua: previous[group.dateString]?.toWiangBua,
+																	},
+																}));
+																scrollToCard(group.dateString);
+															} else if (value) {
 																const numberValue = Number.parseInt(value);
+																const selectedSchedule = group.schedules.find((s) => s.id === numberValue);
+
+																if (selectedSchedule) {
+																	const date = new Date(selectedSchedule.date).toISOString().split("T")[0];
+																	const time = selectedSchedule.departureTime;
+																	const bookingKey = `${date}_${time}_1`;
+																	const isBookedItem = bookedScheduleIds.has(bookingKey);
+
+																	if (isBookedItem) {
+																		setSelectedSchedules((previous) => ({
+																			...previous,
+																			[group.dateString]: {
+																				toMaeRim: undefined,
+																				toWiangBua: previous[group.dateString]?.toWiangBua,
+																			},
+																		}));
+																		return;
+																	}
+																}
+
 																setSelectedSchedules((previous) => ({
 																	...previous,
 																	[group.dateString]: {
@@ -589,20 +844,31 @@ export function BookingPage() {
 																		toWiangBua: previous[group.dateString]?.toWiangBua,
 																	},
 																}));
-															} else {
-																setSelectedSchedules((previous) => ({
-																	...previous,
-																	[group.dateString]: {
-																		toMaeRim: undefined,
-																		toWiangBua: previous[group.dateString]?.toWiangBua,
-																	},
-																}));
+																scrollToCard(group.dateString);
 															}
 														}}>
 														<SelectTrigger className="h-11 border-gray-200 transition-all hover:border-blue-300 dark:border-gray-700 dark:bg-gray-800">
 															<SelectValue placeholder="-- เลือกรอบ --" />
 														</SelectTrigger>
 														<SelectContent className="max-h-60 overflow-y-auto">
+															{(() => {
+																const hasBookedMaeRim = group.schedules
+																	.filter((s) => s.destinationType === 1)
+																	.some((schedule) => {
+																		const date = new Date(schedule.date).toISOString().split("T")[0];
+																		const time = schedule.departureTime;
+																		const bookingKey = `${date}_${time}_1`;
+																		return bookedScheduleIds.has(bookingKey);
+																	});
+																return hasBookedMaeRim;
+															})() && (
+																<SelectItem value="__CANCEL__" className="text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950">
+																	<div className="flex items-center gap-2">
+																		<X className="h-3.5 w-3.5" />
+																		<span>ยกเลิก</span>
+																	</div>
+																</SelectItem>
+															)}
 															{group.schedules
 																.filter((s) => s.destinationType === 1)
 																.sort((a, b) => {
@@ -621,16 +887,11 @@ export function BookingPage() {
 																		<SelectItem
 																			key={schedule.id}
 																			value={schedule.id.toString()}
-																			disabled={!schedule.canReserve || isBooked}
-																			className={schedule.canReserve && !isBooked ? "" : "cursor-not-allowed opacity-50"}>
+																			disabled={!schedule.canReserve && !isBooked}
+																			className={schedule.canReserve || isBooked ? "" : "cursor-not-allowed opacity-50"}>
 																			<div className="flex items-center gap-2">
-																				<Clock className="h-3.5 w-3.5 text-gray-500" />
+																				<Clock className={`h-3.5 w-3.5 ${isBooked ? "text-green-400" : "text-gray-500"}`} />
 																				<span>{formatTime(time)}</span>
-																				{isBooked && (
-																					<Badge variant="default" className="bg-blue-600 text-xs dark:bg-blue-500">
-																						จองแล้ว
-																					</Badge>
-																				)}
 																				{!schedule.canReserve && !isBooked && (
 																					<Badge variant="secondary" className="text-xs">
 																						หมดเวลาจอง
@@ -648,7 +909,19 @@ export function BookingPage() {
 													<div className="flex min-h-7 items-center justify-between">
 														<div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
 															<MapPin className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-															<span>กลับเวียงบัว</span>
+															<span>เวียงบัว</span>
+															{(() => {
+																const bookedSchedule = group.schedules
+																	.filter((s) => s.destinationType === 2)
+																	.find((schedule) => {
+																		const date = new Date(schedule.date).toISOString().split("T")[0];
+																		const time = schedule.departureTime;
+																		const bookingKey = `${date}_${time}_2`;
+																		return bookedScheduleIds.has(bookingKey);
+																	});
+
+																return bookedSchedule ? "จองแล้ว" : null;
+															})()}
 														</div>
 														{selectedSchedules[group.dateString]?.toWiangBua && (
 															<Button
@@ -669,10 +942,52 @@ export function BookingPage() {
 														)}
 													</div>
 													<Select
-														value={selectedSchedules[group.dateString]?.toWiangBua?.toString() || ""}
+														value={
+															selectedSchedules[group.dateString]?.toWiangBua?.toString() ||
+															(() => {
+																const bookedSchedule = group.schedules
+																	.filter((s) => s.destinationType === 2)
+																	.find((schedule) => {
+																		const date = new Date(schedule.date).toISOString().split("T")[0];
+																		const time = schedule.departureTime;
+																		const bookingKey = `${date}_${time}_2`;
+																		return bookedScheduleIds.has(bookingKey);
+																	});
+
+																return bookedSchedule ? bookedSchedule.id.toString() : "";
+															})()
+														}
 														onValueChange={(value) => {
-															if (value) {
+															if (value === "__CANCEL__") {
+																setSelectedSchedules((previous) => ({
+																	...previous,
+																	[group.dateString]: {
+																		toMaeRim: previous[group.dateString]?.toMaeRim,
+																		toWiangBua: "__CANCEL__",
+																	},
+																}));
+																scrollToCard(group.dateString);
+															} else if (value) {
 																const numberValue = Number.parseInt(value);
+																const selectedSchedule = group.schedules.find((s) => s.id === numberValue);
+																if (selectedSchedule) {
+																	const date = new Date(selectedSchedule.date).toISOString().split("T")[0];
+																	const time = selectedSchedule.departureTime;
+																	const bookingKey = `${date}_${time}_2`;
+																	const isBookedItem = bookedScheduleIds.has(bookingKey);
+
+																	if (isBookedItem) {
+																		setSelectedSchedules((previous) => ({
+																			...previous,
+																			[group.dateString]: {
+																				toMaeRim: previous[group.dateString]?.toMaeRim,
+																				toWiangBua: undefined,
+																			},
+																		}));
+																		return;
+																	}
+																}
+
 																setSelectedSchedules((previous) => ({
 																	...previous,
 																	[group.dateString]: {
@@ -680,20 +995,31 @@ export function BookingPage() {
 																		toWiangBua: numberValue,
 																	},
 																}));
-															} else {
-																setSelectedSchedules((previous) => ({
-																	...previous,
-																	[group.dateString]: {
-																		toMaeRim: previous[group.dateString]?.toMaeRim,
-																		toWiangBua: undefined,
-																	},
-																}));
+																scrollToCard(group.dateString);
 															}
 														}}>
 														<SelectTrigger className="h-11 border-gray-200 transition-all hover:border-purple-300 dark:border-gray-700 dark:bg-gray-800">
 															<SelectValue placeholder="-- เลือกรอบ --" />
 														</SelectTrigger>
 														<SelectContent className="max-h-60 overflow-y-auto">
+															{(() => {
+																const hasBookedWiangBua = group.schedules
+																	.filter((s) => s.destinationType === 2)
+																	.some((schedule) => {
+																		const date = new Date(schedule.date).toISOString().split("T")[0];
+																		const time = schedule.departureTime;
+																		const bookingKey = `${date}_${time}_2`;
+																		return bookedScheduleIds.has(bookingKey);
+																	});
+																return hasBookedWiangBua;
+															})() && (
+																<SelectItem value="__CANCEL__" className="text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950">
+																	<div className="flex items-center gap-2">
+																		<X className="h-3.5 w-3.5" />
+																		<span>ยกเลิก</span>
+																	</div>
+																</SelectItem>
+															)}
 															{group.schedules
 																.filter((s) => s.destinationType === 2)
 																.sort((a, b) => {
@@ -712,16 +1038,11 @@ export function BookingPage() {
 																		<SelectItem
 																			key={schedule.id}
 																			value={schedule.id.toString()}
-																			disabled={!schedule.canReserve || isBooked}
-																			className={schedule.canReserve && !isBooked ? "" : "cursor-not-allowed opacity-50"}>
+																			disabled={!schedule.canReserve && !isBooked}
+																			className={schedule.canReserve || isBooked ? "" : "cursor-not-allowed opacity-50"}>
 																			<div className="flex items-center gap-2">
-																				<Clock className="h-3.5 w-3.5 text-gray-500" />
+																				<Clock className={`h-3.5 w-3.5 ${isBooked ? "text-green-400" : "text-gray-500"}`} />
 																				<span>{formatTime(time)}</span>
-																				{isBooked && (
-																					<Badge variant="default" className="bg-blue-600 text-xs dark:bg-blue-500">
-																						จองแล้ว
-																					</Badge>
-																				)}
 																				{!schedule.canReserve && !isBooked && (
 																					<Badge variant="secondary" className="text-xs">
 																						หมดเวลาจอง
@@ -736,54 +1057,225 @@ export function BookingPage() {
 												</div>
 											</div>
 
-											{(selectedSchedules[group.dateString]?.toMaeRim || selectedSchedules[group.dateString]?.toWiangBua) && (
-												<div className="space-y-2 rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-900 dark:bg-blue-950">
-													<p className="text-xs font-medium text-blue-600 dark:text-blue-400">รอบที่เลือก:</p>
+											{(() => {
+												const hasBookedSchedules = group.schedules.some((schedule) => {
+													const date = new Date(schedule.date).toISOString().split("T")[0];
+													const time = schedule.departureTime;
+													const destinationType = schedule.destinationType.toString();
+													const bookingKey = `${date}_${time}_${destinationType}`;
+													return bookedScheduleIds.has(bookingKey);
+												});
 
-													{selectedSchedules[group.dateString]?.toMaeRim &&
-														(() => {
-															const selected = group.schedules.find((s) => s.id === selectedSchedules[group.dateString]?.toMaeRim);
-															if (!selected) return;
-															return (
-																<div className="flex flex-wrap items-center gap-2 rounded bg-white p-2 dark:bg-gray-900">
-																	<Badge className="bg-blue-600 text-xs hover:bg-blue-700 dark:bg-blue-500">ไปแม่ริม</Badge>
-																	<span className="text-sm font-semibold text-gray-900 dark:text-white">{formatTime(selected.departureTime)}</span>
-																</div>
-															);
-														})()}
+												const currentSelections = selectedSchedules[group.dateString];
+												const validSelectedSchedules = {
+													toMaeRim:
+														currentSelections?.toMaeRim === "__CANCEL__"
+															? "__CANCEL__"
+															: typeof currentSelections?.toMaeRim === "number"
+																? currentSelections.toMaeRim
+																: undefined,
+													toWiangBua:
+														currentSelections?.toWiangBua === "__CANCEL__"
+															? "__CANCEL__"
+															: typeof currentSelections?.toWiangBua === "number"
+																? currentSelections.toWiangBua
+																: undefined,
+												};
 
-													{selectedSchedules[group.dateString]?.toWiangBua &&
-														(() => {
-															const selected = group.schedules.find((s) => s.id === selectedSchedules[group.dateString]?.toWiangBua);
-															if (!selected) return;
-															return (
-																<div className="flex flex-wrap items-center gap-2 rounded bg-white p-2 dark:bg-gray-900">
-																	<Badge className="bg-purple-600 text-xs hover:bg-purple-700 dark:bg-purple-500">กลับเวียงบัว</Badge>
-																	<span className="text-sm font-semibold text-gray-900 dark:text-white">{formatTime(selected.departureTime)}</span>
-																</div>
-															);
-														})()}
-												</div>
-											)}
+												const hasSelectedSchedules = validSelectedSchedules.toMaeRim || validSelectedSchedules.toWiangBua;
 
-											{(selectedSchedules[group.dateString]?.toMaeRim || selectedSchedules[group.dateString]?.toWiangBua) && (
+												return (
+													<>
+														{hasBookedSchedules && (
+															<div className="space-y-2 rounded-lg border border-green-200 bg-green-50 p-3 dark:border-green-900 dark:bg-green-950">
+																<p className="text-xs font-medium text-green-600 dark:text-green-400">รอบที่คุณจอง:</p>
+
+																{group.schedules
+																	.filter((schedule) => {
+																		const date = new Date(schedule.date).toISOString().split("T")[0];
+																		const time = schedule.departureTime;
+																		const destinationType = schedule.destinationType.toString();
+																		const bookingKey = `${date}_${time}_${destinationType}`;
+																		return bookedScheduleIds.has(bookingKey);
+																	})
+																	.map((bookedSchedule) => (
+																		<div key={bookedSchedule.id} className="flex flex-wrap items-center gap-2 rounded bg-white p-2 dark:bg-gray-900">
+																			<Badge
+																				className={`text-xs ${
+																					bookedSchedule.destinationType === 1
+																						? "bg-blue-600 hover:bg-blue-700 dark:bg-blue-500"
+																						: "bg-purple-600 hover:bg-purple-700 dark:bg-purple-500"
+																				}`}>
+																				{bookedSchedule.destinationType === 1 ? "ไปแม่ริม" : "กลับเวียงบัว"}
+																			</Badge>
+																			<span className="text-sm font-semibold text-gray-900 dark:text-white">{formatTime(bookedSchedule.departureTime)}</span>
+																		</div>
+																	))}
+															</div>
+														)}
+
+														{hasSelectedSchedules && (
+															<div
+																className={`space-y-2 rounded-lg border p-3 ${
+																	hasBookedSchedules
+																		? "border-yellow-200 bg-yellow-50 dark:border-yellow-900 dark:bg-yellow-950"
+																		: "border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950"
+																}`}>
+																<p
+																	className={`text-xs font-medium ${(() => {
+																		const current = selectedSchedules[group.dateString];
+																		const hasCancellation = current?.toMaeRim === "__CANCEL__" || current?.toWiangBua === "__CANCEL__";
+																		const hasNewBooking =
+																			(current?.toMaeRim && current.toMaeRim !== "__CANCEL__") || (current?.toWiangBua && current.toWiangBua !== "__CANCEL__");
+
+																		if (hasCancellation && hasNewBooking) {
+																			return "text-orange-600 dark:text-orange-400";
+																		} else if (hasCancellation) {
+																			return "text-red-600 dark:text-red-400";
+																		} else if (hasBookedSchedules) {
+																			return "text-yellow-600 dark:text-yellow-400";
+																		} else {
+																			return "text-blue-600 dark:text-blue-400";
+																		}
+																	})()}`}>
+																	{(() => {
+																		const current = selectedSchedules[group.dateString];
+																		const hasCancellation = current?.toMaeRim === "__CANCEL__" || current?.toWiangBua === "__CANCEL__";
+																		const hasNewBooking =
+																			(current?.toMaeRim && current.toMaeRim !== "__CANCEL__") || (current?.toWiangBua && current.toWiangBua !== "__CANCEL__");
+
+																		if (hasCancellation && hasNewBooking) {
+																			return "เปลี่ยนแปลงการจอง:";
+																		} else if (hasCancellation) {
+																			return "การยกเลิก:";
+																		} else if (hasBookedSchedules) {
+																			return "เปลี่ยนรอบเป็น:";
+																		} else {
+																			return "รอบที่เลือก:";
+																		}
+																	})()}
+																</p>
+
+																{validSelectedSchedules.toMaeRim &&
+																	(() => {
+																		if (validSelectedSchedules.toMaeRim === "__CANCEL__") {
+																			return (
+																				<div className="flex flex-wrap items-center gap-2 rounded bg-white p-2 dark:bg-gray-900">
+																					<Badge className="bg-red-600 text-xs hover:bg-red-700 dark:bg-red-500">ไปแม่ริม</Badge>
+																					<span className="text-sm font-semibold text-red-600 dark:text-red-400">ยกเลิก</span>
+																				</div>
+																			);
+																		}
+																		const selected = group.schedules.find((s) => s.id === validSelectedSchedules.toMaeRim);
+																		if (!selected) return;
+																		return (
+																			<div className="flex flex-wrap items-center gap-2 rounded bg-white p-2 dark:bg-gray-900">
+																				<Badge className="bg-blue-600 text-xs hover:bg-blue-700 dark:bg-blue-500">ไปแม่ริม</Badge>
+																				<span className="text-sm font-semibold text-gray-900 dark:text-white">{formatTime(selected.departureTime)}</span>
+																			</div>
+																		);
+																	})()}
+
+																{validSelectedSchedules.toWiangBua &&
+																	(() => {
+																		if (validSelectedSchedules.toWiangBua === "__CANCEL__") {
+																			return (
+																				<div className="flex flex-wrap items-center gap-2 rounded bg-white p-2 dark:bg-gray-900">
+																					<Badge className="bg-red-600 text-xs hover:bg-red-700 dark:bg-red-500">กลับเวียงบัว</Badge>
+																					<span className="text-sm font-semibold text-red-600 dark:text-red-400">ยกเลิก</span>
+																				</div>
+																			);
+																		}
+																		const selected = group.schedules.find((s) => s.id === validSelectedSchedules.toWiangBua);
+																		if (!selected) return;
+																		return (
+																			<div className="flex flex-wrap items-center gap-2 rounded bg-white p-2 dark:bg-gray-900">
+																				<Badge className="bg-purple-600 text-xs hover:bg-purple-700 dark:bg-purple-500">กลับเวียงบัว</Badge>
+																				<span className="text-sm font-semibold text-gray-900 dark:text-white">{formatTime(selected.departureTime)}</span>
+																			</div>
+																		);
+																	})()}
+															</div>
+														)}
+													</>
+												);
+											})()}
+
+											{(() => {
+												const current = selectedSchedules[group.dateString];
+												const hasSelection = current?.toMaeRim || current?.toWiangBua;
+												const hasCancellation = current?.toMaeRim === "__CANCEL__" || current?.toWiangBua === "__CANCEL__";
+												const multipleSelections =
+													Object.keys(selectedSchedules).filter((dateString) => {
+														const sel = selectedSchedules[dateString];
+														return sel && (sel.toMaeRim || sel.toWiangBua);
+													}).length > 1;
+
+												return (hasSelection || hasCancellation) && !multipleSelections;
+											})() && (
 												<Button
 													onClick={() => handleBook(group.dateString)}
 													disabled={bookingLoading !== undefined}
-													className="h-12 w-full gap-2 bg-linear-to-r from-blue-600 to-indigo-600 text-base font-semibold shadow-lg transition-all hover:scale-[1.02] hover:from-blue-700 hover:to-indigo-700 hover:shadow-xl active:scale-[0.98] disabled:hover:scale-100 dark:from-blue-500 dark:to-indigo-500"
+													className={(() => {
+														const current = selectedSchedules[group.dateString];
+														const hasCancellation = current?.toMaeRim === "__CANCEL__" || current?.toWiangBua === "__CANCEL__";
+														const hasNewBooking =
+															(current?.toMaeRim && current.toMaeRim !== "__CANCEL__") || (current?.toWiangBua && current.toWiangBua !== "__CANCEL__");
+
+														if (hasCancellation && hasNewBooking) {
+															return "h-12 w-full gap-2 bg-linear-to-r from-orange-600 to-amber-600 text-base font-semibold shadow-lg transition-all hover:scale-[1.02] hover:from-orange-700 hover:to-amber-700 hover:shadow-xl active:scale-[0.98] disabled:hover:scale-100 dark:from-orange-500 dark:to-amber-500";
+														} else if (hasCancellation) {
+															return "h-12 w-full gap-2 bg-linear-to-r from-red-600 to-red-700 text-base font-semibold shadow-lg transition-all hover:scale-[1.02] hover:from-red-700 hover:to-red-800 hover:shadow-xl active:scale-[0.98] disabled:hover:scale-100 dark:from-red-500 dark:to-red-600";
+														} else {
+															return "h-12 w-full gap-2 bg-linear-to-r from-blue-600 to-indigo-600 text-base font-semibold shadow-lg transition-all hover:scale-[1.02] hover:from-blue-700 hover:to-indigo-700 hover:shadow-xl active:scale-[0.98] disabled:hover:scale-100 dark:from-blue-500 dark:to-indigo-500";
+														}
+													})()}
 													size="lg">
 													{bookingLoading === undefined ? (
 														<>
-															<CheckCircle2 className="h-5 w-5" />
+															{(() => {
+																const current = selectedSchedules[group.dateString];
+																const hasCancellation = current?.toMaeRim === "__CANCEL__" || current?.toWiangBua === "__CANCEL__";
+																const hasNewBooking =
+																	(current?.toMaeRim && current.toMaeRim !== "__CANCEL__") || (current?.toWiangBua && current.toWiangBua !== "__CANCEL__");
+
+																if (hasCancellation && hasNewBooking) {
+																	return <RefreshCw className="h-5 w-5" />;
+																} else if (hasCancellation) {
+																	return <X className="h-5 w-5" />;
+																} else {
+																	return <CheckCircle2 className="h-5 w-5" />;
+																}
+															})()}
 															<span>
-																ยืนยันการจอง
-																{selectedSchedules[group.dateString]?.toMaeRim && selectedSchedules[group.dateString]?.toWiangBua ? " (2 รอบ)" : " (1 รอบ)"}
+																{(() => {
+																	const current = selectedSchedules[group.dateString];
+																	const hasCancellation = current?.toMaeRim === "__CANCEL__" || current?.toWiangBua === "__CANCEL__";
+																	const hasNewBooking =
+																		(current?.toMaeRim && current.toMaeRim !== "__CANCEL__") || (current?.toWiangBua && current.toWiangBua !== "__CANCEL__");
+
+																	if (hasCancellation && hasNewBooking) {
+																		const cancelCount = (current?.toMaeRim === "__CANCEL__" ? 1 : 0) + (current?.toWiangBua === "__CANCEL__" ? 1 : 0);
+																		const bookingCount =
+																			(current?.toMaeRim && current.toMaeRim !== "__CANCEL__" ? 1 : 0) +
+																			(current?.toWiangBua && current.toWiangBua !== "__CANCEL__" ? 1 : 0);
+																		return `เปลี่ยนแปลงการจอง (ยกเลิก ${cancelCount} • จอง ${bookingCount})`;
+																	} else if (hasCancellation) {
+																		const cancelCount = (current?.toMaeRim === "__CANCEL__" ? 1 : 0) + (current?.toWiangBua === "__CANCEL__" ? 1 : 0);
+																		return `ยืนยันการยกเลิก${cancelCount > 1 ? ` (${cancelCount} รอบ)` : ""}`;
+																	} else {
+																		const count =
+																			(current?.toMaeRim && current.toMaeRim !== "__CANCEL__" ? 1 : 0) +
+																			(current?.toWiangBua && current.toWiangBua !== "__CANCEL__" ? 1 : 0);
+																		return `ยืนยันการจอง${count > 1 ? ` (${count} รอบ)` : ""}`;
+																	}
+																})()}
 															</span>
 														</>
 													) : (
 														<>
 															<Loader2 className="h-5 w-5 animate-spin" />
-															<span>กำลังจอง...</span>
+															<span>{bookingStatus || "กำลังดำเนินการ..."}</span>
 														</>
 													)}
 												</Button>
@@ -817,6 +1309,92 @@ export function BookingPage() {
 						</Card>
 					)}
 				</div>
+
+				{(() => {
+					const multipleSelections = Object.keys(selectedSchedules).filter((dateString) => {
+						const sel = selectedSchedules[dateString];
+						return sel && (sel.toMaeRim || sel.toWiangBua);
+					});
+
+					if (multipleSelections.length <= 1) return null;
+
+					let totalNewBookings = 0;
+					let totalCancellations = 0;
+					const totalDays = multipleSelections.length;
+
+					for (const dateString of multipleSelections) {
+						const sel = selectedSchedules[dateString];
+						if (sel?.toMaeRim === "__CANCEL__") totalCancellations++;
+						else if (sel?.toMaeRim && sel.toMaeRim !== "__CANCEL__") totalNewBookings++;
+
+						if (sel?.toWiangBua === "__CANCEL__") totalCancellations++;
+						else if (sel?.toWiangBua && sel.toWiangBua !== "__CANCEL__") totalNewBookings++;
+					}
+
+					const hasBothTypes = totalNewBookings > 0 && totalCancellations > 0;
+					const hasOnlyCancellation = totalCancellations > 0 && totalNewBookings === 0;
+
+					return (
+						<div className="fixed right-0 bottom-0 left-0 z-50">
+							<div className="bg-gradient-to-t from-white/95 to-transparent p-4 pb-6 dark:from-gray-950/95">
+								<div className="mx-auto max-w-4xl">
+									<div
+										className={`rounded-2xl border-2 p-4 shadow-2xl backdrop-blur-md ${
+											hasBothTypes
+												? "border-orange-300 bg-orange-50/95 dark:border-orange-600 dark:bg-orange-950/95"
+												: hasOnlyCancellation
+													? "border-red-300 bg-red-50/95 dark:border-red-600 dark:bg-red-950/95"
+													: "border-blue-300 bg-blue-50/95 dark:border-blue-600 dark:bg-blue-950/95"
+										}`}>
+										<div className="mb-3 text-center">
+											<p
+												className={`text-sm font-medium ${
+													hasBothTypes
+														? "text-orange-700 dark:text-orange-300"
+														: hasOnlyCancellation
+															? "text-red-700 dark:text-red-300"
+															: "text-blue-700 dark:text-blue-300"
+												}`}>
+												เลือกแล้ว {totalDays} วัน •{totalNewBookings > 0 && ` จอง ${totalNewBookings} รอบ`}
+												{totalCancellations > 0 && ` ยกเลิก ${totalCancellations} รอบ`}
+											</p>
+										</div>
+
+										<Button
+											onClick={handleMultipleBook}
+											disabled={bookingLoading !== undefined}
+											className={`h-14 w-full gap-3 text-base font-bold shadow-lg transition-all hover:scale-[1.02] hover:shadow-xl active:scale-[0.98] disabled:hover:scale-100 ${
+												hasBothTypes
+													? "bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 dark:from-orange-500 dark:to-amber-500"
+													: hasOnlyCancellation
+														? "bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 dark:from-red-500 dark:to-red-600"
+														: "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 dark:from-blue-500 dark:to-indigo-500"
+											}`}
+											size="lg">
+											{bookingLoading === undefined ? (
+												<>
+													{hasBothTypes ? <RefreshCw className="h-6 w-6" /> : hasOnlyCancellation ? <X className="h-6 w-6" /> : <CheckCircle2 className="h-6 w-6" />}
+													<span>
+														{hasBothTypes
+															? `ดำเนินการทั้งหมด (${totalDays} วัน)`
+															: hasOnlyCancellation
+																? `ยืนยันการยกเลิกทั้งหมด (${totalDays} วัน)`
+																: `ยืนยันการจองทั้งหมด (${totalDays} วัน)`}
+													</span>
+												</>
+											) : (
+												<>
+													<Loader2 className="h-6 w-6 animate-spin" />
+													<span>{bookingStatus || "กำลังดำเนินการ..."}</span>
+												</>
+											)}
+										</Button>
+									</div>
+								</div>
+							</div>
+						</div>
+					);
+				})()}
 			</div>
 		</div>
 	);

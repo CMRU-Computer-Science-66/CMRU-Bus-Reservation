@@ -57,11 +57,9 @@ export function ReservationCard({ actionLoading, isLoading = false, item, onCanc
 					setQrImageError(true);
 				}
 			} else {
-				console.error("Failed to get ticket info:", response.status);
 				setQrImageError(true);
 			}
-		} catch (error) {
-			console.error("Failed to load QR code:", error);
+		} catch {
 			setQrImageError(true);
 		} finally {
 			setQrLoading(false);
@@ -295,7 +293,6 @@ export function ReservationCard({ actionLoading, isLoading = false, item, onCanc
 									alt="QR Code สำหรับขึ้นรถ"
 									className="h-48 w-48 rounded-lg"
 									onError={() => {
-										console.error("Failed to load QR code image:", qrCodeUrl);
 										setQrImageError(true);
 									}}
 								/>

@@ -3,6 +3,7 @@ export interface SessionData {
 	lastValidated: number;
 	oneClickEnabled?: boolean;
 	password: string;
+	showStatistics?: boolean;
 	username: string;
 }
 
@@ -36,8 +37,8 @@ export class SessionManager {
 		try {
 			const encrypted = btoa(JSON.stringify(sessionData));
 			localStorage.setItem(STORAGE_KEY, encrypted);
-		} catch (error) {
-			console.error("Failed to save session:", error);
+		} catch {
+			/* empty */
 		}
 	}
 
@@ -52,8 +53,7 @@ export class SessionManager {
 
 			const sessionData = JSON.parse(atob(encrypted)) as SessionData;
 			return sessionData;
-		} catch (error) {
-			console.error("Failed to load session:", error);
+		} catch {
 			return null;
 		}
 	}
@@ -80,8 +80,8 @@ export class SessionManager {
 			try {
 				const encrypted = btoa(JSON.stringify(session));
 				localStorage.setItem(STORAGE_KEY, encrypted);
-			} catch (error) {
-				console.error("Failed to update session:", error);
+			} catch {
+				/* empty */
 			}
 		}
 	}
@@ -104,8 +104,8 @@ export class SessionManager {
 
 		try {
 			localStorage.removeItem(STORAGE_KEY);
-		} catch (error) {
-			console.error("Failed to clear session:", error);
+		} catch {
+			/* empty */
 		}
 	}
 
@@ -121,8 +121,26 @@ export class SessionManager {
 			try {
 				const encrypted = btoa(JSON.stringify(session));
 				localStorage.setItem(STORAGE_KEY, encrypted);
-			} catch (error) {
-				console.error("Failed to update oneClick setting:", error);
+			} catch {
+				/* empty */
+			}
+		}
+	}
+
+	public getShowStatistics(): boolean {
+		const session = this.loadSession();
+		return session?.showStatistics ?? true;
+	}
+
+	public setShowStatistics(enabled: boolean): void {
+		const session = this.loadSession();
+		if (session) {
+			session.showStatistics = enabled;
+			try {
+				const encrypted = btoa(JSON.stringify(session));
+				localStorage.setItem(STORAGE_KEY, encrypted);
+			} catch {
+				/* empty */
 			}
 		}
 	}
@@ -134,8 +152,8 @@ export class SessionManager {
 			try {
 				const encrypted = btoa(JSON.stringify(session));
 				localStorage.setItem(STORAGE_KEY, encrypted);
-			} catch (error) {
-				console.error("Failed to mark session invalid:", error);
+			} catch {
+				/* empty */
 			}
 		}
 	}
