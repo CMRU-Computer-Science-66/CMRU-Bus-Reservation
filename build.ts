@@ -384,7 +384,11 @@ if (!existsSync(indexPath)) {
 if (existsSync(outdir)) {
 	console.log("");
 	console.log(`🗑️  Cleaning previous build at ${outdir}`);
-	await rm(outdir, { recursive: true, force: true });
+	try {
+		await rm(outdir, { recursive: true, force: true });
+	} catch (error) {
+		console.warn(`⚠️  Could not remove ${outdir}, proceeding anyway...`);
+	}
 }
 
 const start = performance.now();
@@ -448,31 +452,43 @@ const outputTable = result.outputs.map((output) => ({
 const clientScriptOutput = result.outputs.find((output) => output.path.includes("client") && output.kind === "entry-point" && output.path.endsWith(".js"));
 const clientScriptPath = clientScriptOutput ? path.relative(outdir, clientScriptOutput.path) : undefined;
 
+const clientCssOutput = result.outputs.find((output) => output.path.includes("client") && output.kind === "asset" && output.path.endsWith(".css"));
+const clientCssPath = clientCssOutput ? path.relative(outdir, clientCssOutput.path) : undefined;
+
 console.table(outputTable);
 const buildTime = (end - start).toFixed(2);
 
-if (clientScriptPath) {
-	console.log(`📝  Updating HTML files with client script: ${clientScriptPath}`);
+if (clientScriptPath || clientCssPath) {
+	console.log(`📝  Updating HTML files with client assets:`);
+	if (clientScriptPath) console.log(`     🟦  Script: ${clientScriptPath}`);
+	if (clientCssPath) console.log(`     🎨  CSS: ${clientCssPath}`);
 
 	const indexHtmlPath = path.join(outdir, "index.html");
 	if (existsSync(indexHtmlPath)) {
 		let indexContent = await Bun.file(indexHtmlPath).text();
 
-		const preloadTag = `<link rel="preload" href="./${clientScriptPath}" as="script" crossorigin="anonymous" />`;
-		indexContent = indexContent.replace(/(<link rel="preload" href="\.\/fonts\/.*?" \/>\s*)/, `$1\t\t${preloadTag}\n\t\t`);
+		if (clientCssPath) {
+			const cssLinkTag = `<link rel="stylesheet" href="./${clientCssPath}">`;
+			indexContent = indexContent.replace(/(<link rel="preconnect"[^>]*>\s*)/, `${cssLinkTag}\n\t\t$1`);
+		}
 
-		const modulePreloadScript = `
+		if (clientScriptPath) {
+			const preloadTag = `<link rel="preload" href="./${clientScriptPath}" as="script" crossorigin="anonymous" />`;
+			indexContent = indexContent.replace(/(<link rel="preload" href="\.\/fonts\/.*?" \/>\s*)/, `$1\t\t${preloadTag}\n\t\t`);
+
+			const modulePreloadScript = `
 			const preloadScript = document.createElement("link");
 			preloadScript.rel = "modulepreload";
 			preloadScript.href = "./${clientScriptPath}";
 			document.head.appendChild(preloadScript);`;
-		indexContent = indexContent.replace(/(}\)\(\);\s*)/, `$1${modulePreloadScript}\n\t\t`);
+			indexContent = indexContent.replace(/(}\)\(\);\s*)/, `$1${modulePreloadScript}\n\t\t`);
 
-		const scriptTag = `<script type="module" src="./${clientScriptPath}" async></script>`;
-		indexContent = indexContent.replace(/(<script>\s*document\.documentElement\.classList\.add\("js-loaded"\);\s*<\/script>)/, `${scriptTag}\n\t\t$1`);
+			const scriptTag = `<script type="module" src="./${clientScriptPath}" async></script>`;
+			indexContent = indexContent.replace(/(<script>\s*document\.documentElement\.classList\.add\("js-loaded"\);\s*<\/script>)/, `${scriptTag}\n\t\t$1`);
+		}
 
 		await Bun.write(indexHtmlPath, indexContent);
-		console.log("     🔄  Updated index.html with correct client script path");
+		console.log("     🔄  Updated index.html with correct client assets");
 	}
 }
 
@@ -530,20 +546,28 @@ for (const htmlFile of builtHTMLFiles) {
 		.replace(/href="\.\/logo\.svg"/g, 'href="../logo.svg"')
 		.replace(/href="\.\/fonts\//g, 'href="../fonts/');
 
-	if (clientScriptPath) {
-		const preloadTag = `<link rel="preload" href="../${clientScriptPath}" as="script" crossorigin="anonymous" />`;
-		fixedContent = fixedContent.replace(/(<link rel="preload" href="\.\.\/fonts\/.*?" \/>\s*)/, `$1\t\t${preloadTag}\n\t\t`);
+	if (clientScriptPath || clientCssPath) {
+		if (clientCssPath) {
+			const cssLinkTag = `<link rel="stylesheet" href="../${clientCssPath}">`;
+			fixedContent = fixedContent.replace(/(<link rel="preconnect"[^>]*>\s*)/, `${cssLinkTag}\n\t\t$1`);
+		}
 
-		const modulePreloadScript = `
+		if (clientScriptPath) {
+			const preloadTag = `<link rel="preload" href="../${clientScriptPath}" as="script" crossorigin="anonymous" />`;
+			fixedContent = fixedContent.replace(/(<link rel="preload" href="\.\.\/fonts\/.*?" \/>\s*)/, `$1\t\t${preloadTag}\n\t\t`);
+
+			const modulePreloadScript = `
 			const preloadScript = document.createElement("link");
 			preloadScript.rel = "modulepreload";
 			preloadScript.href = "../${clientScriptPath}";
 			document.head.appendChild(preloadScript);`;
-		fixedContent = fixedContent.replace(/(}\)\(\);\s*)/, `$1${modulePreloadScript}\n\t\t`);
+			fixedContent = fixedContent.replace(/(}\)\(\);\s*)/, `$1${modulePreloadScript}\n\t\t`);
 
-		const scriptTag = `<script type="module" src="../${clientScriptPath}" async></script>`;
-		fixedContent = fixedContent.replace(/(<script>\s*document\.documentElement\.classList\.add\("js-loaded"\);\s*<\/script>)/, `${scriptTag}\n\t\t$1`);
-		fixedContent = fixedContent.replace(/client\.tsx/g, `../${clientScriptPath}`).replace(/href="\.\.\/client\./g, `href="../${clientScriptPath.replace(".js", ".")}`);
+			const scriptTag = `<script type="module" src="../${clientScriptPath}" async></script>`;
+			fixedContent = fixedContent.replace(/(<script>\s*document\.documentElement\.classList\.add\("js-loaded"\);\s*<\/script>)/, `${scriptTag}\n\t\t$1`);
+
+			fixedContent = fixedContent.replace(/client\.tsx/g, `../${clientScriptPath}`).replace(/href="\.\.\/client\./g, `href="../${clientScriptPath.replace(".js", ".")}`);
+		}
 	}
 
 	await Bun.write(newPath, fixedContent);
