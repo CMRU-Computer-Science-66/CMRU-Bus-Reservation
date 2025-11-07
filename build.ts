@@ -432,13 +432,15 @@ const result = await Bun.build({
 	entrypoints: allEntrypoints,
 	outdir,
 	plugins: [plugin],
-	minify: isProduction ? {
-		whitespace: true,
-		identifiers: true,
-		syntax: true,
-	} : false,
+	minify: isProduction
+		? {
+				whitespace: true,
+				identifiers: true,
+				syntax: true,
+			}
+		: false,
 	target: "browser",
-	sourcemap: isProduction ? (cliConfig.sourcemap || "none") : "linked",
+	sourcemap: isProduction ? cliConfig.sourcemap || "none" : "linked",
 	splitting: true,
 	env: "inline",
 	define: {
