@@ -55,16 +55,14 @@ jobs:
          - name: Backup index.html
            run: cp src/index.html src/index.html.backup
 
-         - name: Update index.html with Google verification token
-           run: |
-              sed -i 's|VERIFICATION_TOKEN|${{ secrets.GOOGLE_VERIFICATION_TOKEN }}|g' src/index.html
-
          - name: Update vercel.json with API_URL
            run: |
               sed -i 's|\${API_URL}|${{ secrets.API_URL }}|g' vercel.json
 
          - name: Build project
            run: bun run build
+           env:
+              GOOGLE_VERIFICATION_TOKEN: ${{ secrets.GOOGLE_VERIFICATION_TOKEN }}
 
          - name: Pull Vercel Environment Information
            run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}

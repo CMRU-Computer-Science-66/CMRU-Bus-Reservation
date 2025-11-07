@@ -6,6 +6,7 @@ import path from "path";
 import { cp } from "node:fs/promises";
 import { Readable } from "node:stream";
 import { SitemapStream, streamToPromise } from "sitemap";
+import { version } from "./package.json";
 
 if (process.argv.includes("--help") || process.argv.includes("-h")) {
 	console.log(`
@@ -158,93 +159,121 @@ const generateSitemap = async (outputDir: string) => {
 	}
 };
 
-const generatePageHTML = (pageName: string, route: string, metadata?: { title: string; description: string }): string => {
+const generatePageHTML = (pageName: string = "index", route: string = "/", metadata?: { title: string; description: string }, clientScriptPath?: string): string => {
 	const title = metadata?.title || `${pageName.charAt(0).toUpperCase() + pageName.slice(1)} - CMRU Bus`;
 	const description = metadata?.description || `${pageName} page for CMRU Bus Reservation System`;
 	const baseUrl = "https://cmru-bus.vercel.app";
 	const fullUrl = `${baseUrl}${route}`;
 	const relativePath = "./";
+	const isIndexPage = pageName === "index" || route === "/";
+	const additionalMetaTags =
+		isIndexPage && Bun.env.GOOGLE_VERIFICATION_TOKEN
+			? `
+		<meta name="google-site-verification" content="${Bun.env.GOOGLE_VERIFICATION_TOKEN ?? ""}" />`
+			: "";
 
 	return `<!DOCTYPE html>
 <html lang="th">
-<head>
-	<meta charset="UTF-8" />
-	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-	<link rel="icon" type="image/svg+xml" href="${relativePath}logo.svg" />
-	<title>${title}</title>
-	<meta name="description" content="${description}" />
-	<meta name="keywords" content="CMRU, มหาวิทยาลัยราชภัฏเชียงใหม่, จองรถ, รถรับส่ง, รถบัส, Chiang Mai Rajabhat University, Bus Reservation" />
-	<meta name="author" content="CMRU Computer Science 66" />
-	<meta name="robots" content="index, follow" />
-	<meta name="language" content="Thai" />
-	<meta property="og:type" content="website" />
-	<meta property="og:url" content="${fullUrl}" />
-	<meta property="og:title" content="${title}" />
-	<meta property="og:description" content="${description}" />
-	<meta property="og:site_name" content="CMRU Bus Reservation" />
-	<meta property="og:locale" content="th_TH" />
-	<meta name="twitter:card" content="summary_large_image" />
-	<meta name="twitter:url" content="${fullUrl}" />
-	<meta name="twitter:title" content="${title}" />
-	<meta name="twitter:description" content="${description}" />
-	<meta name="apple-mobile-web-app-capable" content="yes" />
-	<meta name="apple-mobile-web-app-status-bar-style" content="default" />
-	<meta name="apple-mobile-web-app-title" content="CMRU Bus" />
-	<meta name="format-detection" content="telephone=no" />
-	<meta name="theme-color" content="#2563eb" media="(prefers-color-scheme: light)" />
-	<meta name="theme-color" content="#1e40af" media="(prefers-color-scheme: dark)" />
-	<link rel="preconnect" href="https://fonts.googleapis.com" />
-	<link rel="dns-prefetch" href="https://cmru-bus.vercel.app" />
-	<link rel="preload" href="${relativePath}fonts/LINE_Seed_Sans_TH/Web/WOFF2/LINESeedSansTH_W_Rg.woff2" as="font" type="font/woff2" crossorigin="anonymous" />
-	<link rel="preload" href="${relativePath}fonts/LINE_Seed_Sans_TH/Web/WOFF2/LINESeedSansTH_W_Bd.woff2" as="font" type="font/woff2" crossorigin="anonymous" />
-	<link rel="preload" href="${relativePath}client.tsx" as="script" crossorigin="anonymous" />
-	<script>
-		if (typeof global === "undefined") {
-			globalThis.global = globalThis;
-		}
-		
-		(function() {
-			try {
-				const savedTheme = localStorage.getItem("theme");
-				const media = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)");
-				const shouldBeDark = savedTheme === "dark" || (!savedTheme && media?.matches);
-				
-				document.documentElement.classList.toggle("dark", shouldBeDark);
-				document.documentElement.style.setProperty('--theme-transition', 'none');
-				requestAnimationFrame(() => {
-					document.documentElement.style.removeProperty('--theme-transition');
-				});
-				
-				media?.addEventListener("change", (event) => {
-					const currentTheme = localStorage.getItem("theme");
-					if (!currentTheme || currentTheme === "system") {
-						document.documentElement.classList.toggle("dark", event.matches);
-					}
-				});
-			} catch {}
-		})();
-		
-		const preloadScript = document.createElement('link');
-		preloadScript.rel = 'modulepreload';
-		preloadScript.href = '${relativePath}client.tsx';
-		document.head.appendChild(preloadScript);
-	</script>
-	<style>
-		html { visibility: hidden; opacity: 0; }
-		html.js-loaded { visibility: visible; opacity: 1; transition: opacity 0.1s; }
-		
-		.loading-skeleton { background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: loading 1.5s infinite; }
-		@keyframes loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-		
-		.dark .loading-skeleton { background: linear-gradient(90deg, #374151 25%, #4b5563 50%, #374151 75%); }
-	</style>
-	<script type="module" src="${relativePath}client.tsx" async></script>
-	<script>document.documentElement.classList.add('js-loaded');</script>
-</head>
-<body>
-	<div id="root"></div>
-</body>
-</html>`;
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<link rel="icon" type="image/svg+xml" href="${relativePath}logo.svg" />
+		<title>${title}</title>
+		<meta name="description" content="${description}" />
+		<meta name="keywords" content="CMRU, มหาวิทยาลัยราชภัฏเชียงใหม่, จองรถ, รถรับส่ง, รถบัส, Chiang Mai Rajabhat University, Bus Reservation" />
+		<meta name="author" content="CMRU Computer Science 66" />
+		<meta name="robots" content="index, follow" />
+		<meta name="language" content="Thai" />${additionalMetaTags}
+		<meta property="og:type" content="website" />
+		<meta property="og:url" content="${fullUrl}" />
+		<meta property="og:title" content="${title}" />
+		<meta property="og:description" content="${description}" />
+		<meta property="og:site_name" content="CMRU Bus Reservation" />
+		<meta property="og:locale" content="th_TH" />
+		<meta name="twitter:card" content="summary_large_image" />
+		<meta name="twitter:url" content="${fullUrl}" />
+		<meta name="twitter:title" content="${title}" />
+		<meta name="twitter:description" content="${description}" />
+		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+		<meta name="apple-mobile-web-app-title" content="CMRU Bus" />
+		<meta name="format-detection" content="telephone=no" />
+		<meta name="theme-color" content="#2563eb" media="(prefers-color-scheme: light)" />
+		<meta name="theme-color" content="#1e40af" media="(prefers-color-scheme: dark)" />
+
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="dns-prefetch" href="https://cmru-bus.vercel.app" />
+		<link rel="preload" href="${relativePath}fonts/LINE_Seed_Sans_TH/Web/WOFF2/LINESeedSansTH_W_Rg.woff2" as="font" type="font/woff2" crossorigin="anonymous" />
+		<link rel="preload" href="${relativePath}fonts/LINE_Seed_Sans_TH/Web/WOFF2/LINESeedSansTH_W_Bd.woff2" as="font" type="font/woff2" crossorigin="anonymous" />
+		${clientScriptPath ? `<link rel="preload" href="${relativePath}${clientScriptPath}" as="script" crossorigin="anonymous" />` : ""}
+
+		<script>
+			if (typeof global === "undefined") {
+				globalThis.global = globalThis;
+			}
+
+			(function () {
+				try {
+					const savedTheme = localStorage.getItem("theme");
+					const media = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)");
+					const shouldBeDark = savedTheme === "dark" || (!savedTheme && media?.matches);
+
+					document.documentElement.classList.toggle("dark", shouldBeDark);
+					document.documentElement.style.setProperty("--theme-transition", "none");
+					requestAnimationFrame(() => {
+						document.documentElement.style.removeProperty("--theme-transition");
+					});
+
+					media?.addEventListener("change", (event) => {
+						const currentTheme = localStorage.getItem("theme");
+						if (!currentTheme || currentTheme === "system") {
+							document.documentElement.classList.toggle("dark", event.matches);
+						}
+					});
+				} catch {}
+			})();
+		</script>
+
+		<style>
+			html {
+				visibility: hidden;
+				opacity: 0;
+			}
+			html.js-loaded {
+				visibility: visible;
+				opacity: 1;
+				transition: opacity 0.1s;
+			}
+
+			.loading-skeleton {
+				background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+				background-size: 200% 100%;
+				animation: loading 1.5s infinite;
+			}
+			@keyframes loading {
+				0% {
+					background-position: 200% 0;
+				}
+				100% {
+					background-position: -200% 0;
+				}
+			}
+
+			.dark .loading-skeleton {
+				background: linear-gradient(90deg, #374151 25%, #4b5563 50%, #374151 75%);
+			}
+		</style>
+
+		${clientScriptPath ? `<script type="module" src="${relativePath}${clientScriptPath}" async></script>` : ""}
+		<script>
+			document.documentElement.classList.add("js-loaded");
+		</script>
+	</head>
+	<body>
+		<div id="root"></div>
+	</body>
+</html>
+`;
 };
 
 const createPageHTMLFiles = async () => {
@@ -338,6 +367,20 @@ const outdir = cliConfig.outdir || path.join(process.cwd(), "dist");
 
 const generatedRoutes = await createPageHTMLFiles();
 
+console.log("📝  Generating index.html...");
+const indexPath = path.join("src", "index.html");
+const indexMetadata = {
+	title: "ระบบจองรถรับ-ส่ง | มหาวิทยาลัยราชภัฏเชียงใหม่",
+	description: "ระบบจองรถรับ-ส่ง มหาวิทยาลัยราชภัฏเชียงใหม่ - จองรถรับส่งนักศึกษาและบุคลากรได้อย่างสะดวกรวดเร็ว พร้อมตรวจสอบตารางเดินรถและประวัติการจอง",
+};
+if (!existsSync(indexPath)) {
+	await Bun.write(indexPath, generatePageHTML("index", "/", indexMetadata));
+	console.log("     ✅  Generated index.html");
+} else {
+	await Bun.write(indexPath, generatePageHTML("index", "/", indexMetadata));
+	console.log("     🔄  Updated index.html");
+}
+
 if (existsSync(outdir)) {
 	console.log("");
 	console.log(`🗑️  Cleaning previous build at ${outdir}`);
@@ -372,6 +415,7 @@ const result = await Bun.build({
 	splitting: true,
 	define: {
 		"process.env.NODE_ENV": JSON.stringify("production"),
+		"process.env.APP_VERSION": version,
 	},
 	naming: {
 		entry: "[dir]/[name].[ext]",
@@ -401,8 +445,36 @@ const outputTable = result.outputs.map((output) => ({
 	Size: formatFileSize(output.size),
 }));
 
+const clientScriptOutput = result.outputs.find((output) => output.path.includes("client") && output.kind === "entry-point" && output.path.endsWith(".js"));
+const clientScriptPath = clientScriptOutput ? path.relative(outdir, clientScriptOutput.path) : undefined;
+
 console.table(outputTable);
 const buildTime = (end - start).toFixed(2);
+
+if (clientScriptPath) {
+	console.log(`📝  Updating HTML files with client script: ${clientScriptPath}`);
+
+	const indexHtmlPath = path.join(outdir, "index.html");
+	if (existsSync(indexHtmlPath)) {
+		let indexContent = await Bun.file(indexHtmlPath).text();
+
+		const preloadTag = `<link rel="preload" href="./${clientScriptPath}" as="script" crossorigin="anonymous" />`;
+		indexContent = indexContent.replace(/(<link rel="preload" href="\.\/fonts\/.*?" \/>\s*)/, `$1\t\t${preloadTag}\n\t\t`);
+
+		const modulePreloadScript = `
+			const preloadScript = document.createElement("link");
+			preloadScript.rel = "modulepreload";
+			preloadScript.href = "./${clientScriptPath}";
+			document.head.appendChild(preloadScript);`;
+		indexContent = indexContent.replace(/(}\)\(\);\s*)/, `$1${modulePreloadScript}\n\t\t`);
+
+		const scriptTag = `<script type="module" src="./${clientScriptPath}" async></script>`;
+		indexContent = indexContent.replace(/(<script>\s*document\.documentElement\.classList\.add\("js-loaded"\);\s*<\/script>)/, `${scriptTag}\n\t\t$1`);
+
+		await Bun.write(indexHtmlPath, indexContent);
+		console.log("     🔄  Updated index.html with correct client script path");
+	}
+}
 
 console.log("📁  Copying static assets and setting up routing...");
 const staticPaths = [
@@ -448,7 +520,7 @@ for (const htmlFile of builtHTMLFiles) {
 	await cp(htmlFile, newPath);
 
 	const htmlContent = await Bun.file(newPath).text();
-	const fixedContent = htmlContent
+	let fixedContent = htmlContent
 		.replace(/href="\.\/chunks\//g, 'href="../chunks/')
 		.replace(/src="\.\/chunks\//g, 'src="../chunks/')
 		.replace(/href="\.\/assets\//g, 'href="../assets/')
@@ -457,6 +529,22 @@ for (const htmlFile of builtHTMLFiles) {
 		.replace(/src="\.\/client\./g, 'src="../client.')
 		.replace(/href="\.\/logo\.svg"/g, 'href="../logo.svg"')
 		.replace(/href="\.\/fonts\//g, 'href="../fonts/');
+
+	if (clientScriptPath) {
+		const preloadTag = `<link rel="preload" href="../${clientScriptPath}" as="script" crossorigin="anonymous" />`;
+		fixedContent = fixedContent.replace(/(<link rel="preload" href="\.\.\/fonts\/.*?" \/>\s*)/, `$1\t\t${preloadTag}\n\t\t`);
+
+		const modulePreloadScript = `
+			const preloadScript = document.createElement("link");
+			preloadScript.rel = "modulepreload";
+			preloadScript.href = "../${clientScriptPath}";
+			document.head.appendChild(preloadScript);`;
+		fixedContent = fixedContent.replace(/(}\)\(\);\s*)/, `$1${modulePreloadScript}\n\t\t`);
+
+		const scriptTag = `<script type="module" src="../${clientScriptPath}" async></script>`;
+		fixedContent = fixedContent.replace(/(<script>\s*document\.documentElement\.classList\.add\("js-loaded"\);\s*<\/script>)/, `${scriptTag}\n\t\t$1`);
+		fixedContent = fixedContent.replace(/client\.tsx/g, `../${clientScriptPath}`).replace(/href="\.\.\/client\./g, `href="../${clientScriptPath.replace(".js", ".")}`);
+	}
 
 	await Bun.write(newPath, fixedContent);
 	await rm(htmlFile);
@@ -477,5 +565,12 @@ console.log("     ✅  Generated _redirects file for hosting platforms");
 
 await generateSitemap(outdir);
 await cleanupGeneratedHTMLFiles(generatedRoutes);
+
+console.log("🧹  Cleaning up generated index.html...");
+const generatedIndexPath = path.join("src", "index.html");
+if (existsSync(generatedIndexPath)) {
+	await rm(generatedIndexPath);
+	console.log("     ✅  Deleted generated index.html");
+}
 
 console.log(`\n✅ Build completed in ${buildTime}ms\n`);
