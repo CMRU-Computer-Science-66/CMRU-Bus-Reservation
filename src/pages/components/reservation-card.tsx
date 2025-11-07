@@ -9,7 +9,6 @@ import { Dialog, DialogContent } from "../../components/ui/dialog";
 import { Separator } from "../../components/ui/separator";
 import { Skeleton } from "../../components/ui/skeleton";
 import { API_CONFIG, getApiUrl } from "../../config/api";
-import { getSessionManager } from "../../lib/session-manager";
 import { formatTime } from "../../lib/time-formatter";
 
 interface ReservationCardProperties {
@@ -29,10 +28,8 @@ export function ReservationCard({ actionLoading, isLoading = false, item, onCanc
 	const [qrImageError, setQrImageError] = useState(false);
 	const [qrLoading, setQrLoading] = useState(false);
 	const [qrDialogOpen, setQrDialogOpen] = useState(false);
-	const [qrAutoReloadInterval, setQrAutoReloadInterval] = useState<NodeJS.Timeout | null>(null);
 	const [qrCountdownInterval, setQrCountdownInterval] = useState<NodeJS.Timeout | null>(null);
 	const [qrCountdown, setQrCountdown] = useState<number>(0);
-	const sessionManager = getSessionManager();
 
 	const loadQRCode = useCallback(async () => {
 		if (!item?.ticket.hasQRCode || !item?.ticket.id) {
