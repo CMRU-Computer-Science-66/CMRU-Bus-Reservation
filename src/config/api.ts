@@ -33,6 +33,7 @@ export const API_CONFIG = {
 			CANCEL: "/bus/cancel",
 			VALIDATE: "/bus/validate",
 			TICKET_QR: "/bus/ticket/qrcode",
+			TICKET_INFO: "/bus/ticket/info",
 		},
 	},
 } as const;
