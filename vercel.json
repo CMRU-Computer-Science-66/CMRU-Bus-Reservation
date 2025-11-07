@@ -39,29 +39,11 @@
 	],
 	"headers": [
 		{
-			"source": "/chunk-:name.(js|css)",
+			"source": "/assets/(.*)",
 			"headers": [
 				{
 					"key": "Cache-Control",
 					"value": "public, max-age=31536000, immutable"
-				}
-			]
-		},
-		{
-			"source": "/:name.(svg|png|jpg|jpeg|gif|ico|woff|woff2|ttf|eot)",
-			"headers": [
-				{
-					"key": "Cache-Control",
-					"value": "public, max-age=31536000, immutable"
-				}
-			]
-		},
-		{
-			"source": "/index.html",
-			"headers": [
-				{
-					"key": "Cache-Control",
-					"value": "no-cache, no-store, must-revalidate"
 				}
 			]
 		}
