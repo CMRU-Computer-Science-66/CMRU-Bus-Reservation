@@ -3,6 +3,9 @@ import plugin from "bun-plugin-tailwind";
 import { existsSync } from "fs";
 import { rm } from "fs/promises";
 import path from "path";
+import { cp } from "node:fs/promises";
+import { Readable } from "node:stream";
+import { SitemapStream, streamToPromise } from "sitemap";
 
 if (process.argv.includes("--help") || process.argv.includes("-h")) {
 	console.log(`
@@ -33,7 +36,7 @@ Example:
 	process.exit(0);
 }
 
-const toCamelCase = (str: string): string => str.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
+const toCamelCase = (str: string): string => str.replace(/-([a-z])/g, (g) => g[1]?.toUpperCase() || "");
 
 const parseValue = (value: string): any => {
 	if (value === "true") return true;
@@ -47,8 +50,8 @@ const parseValue = (value: string): any => {
 	return value;
 };
 
-function parseArgs(): Partial<Bun.BuildConfig> {
-	const config: Partial<Bun.BuildConfig> = {};
+function parseArgs(): Record<string, any> {
+	const config: Record<string, any> = {};
 	const args = process.argv.slice(2);
 
 	for (let i = 0; i < args.length; i++) {
@@ -81,9 +84,11 @@ function parseArgs(): Partial<Bun.BuildConfig> {
 		key = toCamelCase(key);
 
 		if (key.includes(".")) {
-			const [parentKey, childKey] = key.split(".");
-			config[parentKey] = config[parentKey] || {};
-			config[parentKey][childKey] = parseValue(value);
+			const [parentKey, childKey] = key.split(".", 2);
+			if (parentKey && childKey) {
+				config[parentKey] = config[parentKey] || {};
+				config[parentKey][childKey] = parseValue(value);
+			}
 		} else {
 			config[key] = parseValue(value);
 		}
@@ -105,30 +110,285 @@ const formatFileSize = (bytes: number): string => {
 	return `${size.toFixed(2)} ${units[unitIndex]}`;
 };
 
+interface SitemapUrl {
+	description?: string;
+	frequency?: "always" | "hourly" | "daily" | "weekly" | "monthly" | "yearly" | "never";
+	lastModified?: string;
+	priority?: number;
+	url: string;
+}
+
+const generateSitemap = async (outputDir: string) => {
+	try {
+		const { BASE_URL, ROUTE_METADATA, ROUTES } = await import("./src/config/routes");
+		console.log("");
+		console.log("🗺️  Generating sitemap...");
+		console.log(`📍  Base URL: ${BASE_URL}`);
+
+		const urls: SitemapUrl[] = Object.values(ROUTES).map((route) => {
+			const metadata = ROUTE_METADATA[route];
+			return {
+				url: route,
+				frequency: metadata.frequency,
+				priority: metadata.priority,
+				lastModified: new Date().toISOString(),
+				description: metadata.title,
+			};
+		});
+
+		const stream = new SitemapStream({ hostname: BASE_URL });
+		const sitemapUrls = urls.map((url) => ({
+			url: url.url,
+			changefreq: url.frequency,
+			priority: url.priority,
+			lastmod: url.lastModified,
+		}));
+
+		const xmlString = await streamToPromise(Readable.from(sitemapUrls).pipe(stream)).then((data) => data.toString());
+		const sitemapPath = path.join(outputDir, "sitemap.xml");
+		await Bun.write(sitemapPath, xmlString);
+
+		console.log("     📝  URLs included in sitemap:");
+		for (const url of urls) {
+			console.log(`         ${url.url} - ${url.description || "No description"} (Priority: ${url.priority})`);
+		}
+		console.log("     ✅  Sitemap generated successfully at sitemap.xml");
+	} catch (error) {
+		console.warn("⚠️  Could not generate sitemap using routes config, falling back to basic sitemap");
+	}
+};
+
+const generatePageHTML = (pageName: string, route: string, metadata?: { title: string; description: string }): string => {
+	const title = metadata?.title || `${pageName.charAt(0).toUpperCase() + pageName.slice(1)} - CMRU Bus`;
+	const description = metadata?.description || `${pageName} page for CMRU Bus Reservation System`;
+	const baseUrl = "https://cmru-bus.vercel.app";
+	const fullUrl = `${baseUrl}${route}`;
+	const relativePath = "./";
+
+	return `<!DOCTYPE html>
+<html lang="th">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<link rel="icon" type="image/svg+xml" href="${relativePath}logo.svg" />
+	<title>${title}</title>
+	<meta name="description" content="${description}" />
+	<meta name="keywords" content="CMRU, มหาวิทยาลัยราชภัฏเชียงใหม่, จองรถ, รถรับส่ง, รถบัส, Chiang Mai Rajabhat University, Bus Reservation" />
+	<meta name="author" content="CMRU Computer Science 66" />
+	<meta name="robots" content="index, follow" />
+	<meta name="language" content="Thai" />
+	<meta property="og:type" content="website" />
+	<meta property="og:url" content="${fullUrl}" />
+	<meta property="og:title" content="${title}" />
+	<meta property="og:description" content="${description}" />
+	<meta property="og:site_name" content="CMRU Bus Reservation" />
+	<meta property="og:locale" content="th_TH" />
+	<meta name="twitter:card" content="summary_large_image" />
+	<meta name="twitter:url" content="${fullUrl}" />
+	<meta name="twitter:title" content="${title}" />
+	<meta name="twitter:description" content="${description}" />
+	<meta name="apple-mobile-web-app-capable" content="yes" />
+	<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+	<meta name="apple-mobile-web-app-title" content="CMRU Bus" />
+	<meta name="format-detection" content="telephone=no" />
+	<meta name="theme-color" content="#2563eb" media="(prefers-color-scheme: light)" />
+	<meta name="theme-color" content="#1e40af" media="(prefers-color-scheme: dark)" />
+	<link rel="preconnect" href="https://fonts.googleapis.com" />
+	<link rel="dns-prefetch" href="https://cmru-bus.vercel.app" />
+	<link rel="preload" href="${relativePath}fonts/LINE_Seed_Sans_TH/Web/WOFF2/LINESeedSansTH_W_Rg.woff2" as="font" type="font/woff2" crossorigin="anonymous" />
+	<link rel="preload" href="${relativePath}fonts/LINE_Seed_Sans_TH/Web/WOFF2/LINESeedSansTH_W_Bd.woff2" as="font" type="font/woff2" crossorigin="anonymous" />
+	<link rel="preload" href="${relativePath}client.tsx" as="script" crossorigin="anonymous" />
+	<script>
+		if (typeof global === "undefined") {
+			globalThis.global = globalThis;
+		}
+		
+		(function() {
+			try {
+				const savedTheme = localStorage.getItem("theme");
+				const media = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)");
+				const shouldBeDark = savedTheme === "dark" || (!savedTheme && media?.matches);
+				
+				document.documentElement.classList.toggle("dark", shouldBeDark);
+				document.documentElement.style.setProperty('--theme-transition', 'none');
+				requestAnimationFrame(() => {
+					document.documentElement.style.removeProperty('--theme-transition');
+				});
+				
+				media?.addEventListener("change", (event) => {
+					const currentTheme = localStorage.getItem("theme");
+					if (!currentTheme || currentTheme === "system") {
+						document.documentElement.classList.toggle("dark", event.matches);
+					}
+				});
+			} catch {}
+		})();
+		
+		const preloadScript = document.createElement('link');
+		preloadScript.rel = 'modulepreload';
+		preloadScript.href = '${relativePath}client.tsx';
+		document.head.appendChild(preloadScript);
+	</script>
+	<style>
+		html { visibility: hidden; opacity: 0; }
+		html.js-loaded { visibility: visible; opacity: 1; transition: opacity 0.1s; }
+		
+		.loading-skeleton { background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: loading 1.5s infinite; }
+		@keyframes loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+		
+		.dark .loading-skeleton { background: linear-gradient(90deg, #374151 25%, #4b5563 50%, #374151 75%); }
+	</style>
+	<script type="module" src="${relativePath}client.tsx" async></script>
+	<script>document.documentElement.classList.add('js-loaded');</script>
+</head>
+<body>
+	<div id="root"></div>
+</body>
+</html>`;
+};
+
+const createPageHTMLFiles = async () => {
+	const routesConfigPath = path.join("src", "config", "routes.ts");
+
+	let defaultRoutes: Array<{
+		route: string;
+		pageName: string;
+		title: string;
+		description: string;
+	}> = [];
+
+	if (existsSync(routesConfigPath)) {
+		try {
+			const { ROUTES, ROUTE_METADATA } = await import("./src/config/routes");
+
+			console.log("📖  Found route metadata configuration");
+
+			defaultRoutes = Object.values(ROUTES)
+				.filter((route) => route !== "/")
+				.map((route) => {
+					const metadata = ROUTE_METADATA[route];
+					const pageName = `${route.slice(1)}-page`;
+
+					return {
+						route,
+						pageName,
+						title: metadata.title,
+						description: metadata.description,
+					};
+				});
+
+			console.log(`     🗺️  Auto-generated ${defaultRoutes.length} routes from configuration:`);
+			defaultRoutes.forEach(({ route, pageName }) => {
+				console.log(`         ${pageName}.html → ${route}`);
+			});
+		} catch (error) {
+			console.warn("⚠️  Could not load routes configuration, using fallback defaults");
+		}
+	}
+
+	console.log("");
+	const pagesDir = path.join("src", "pages");
+	if (existsSync(pagesDir)) {
+		const existingPageFiles = [...new Bun.Glob("**/*-page.{tsx,ts,jsx,js}").scanSync(pagesDir)]
+			.filter((file) => !file.includes("components/") && !file.endsWith(".d.ts"))
+			.map((file) => path.basename(file, path.extname(file)));
+
+		console.log(`📄  Found ${existingPageFiles.length} page components: ${existingPageFiles.join(", ")}`);
+	}
+
+	for (const { route, pageName, title, description } of defaultRoutes) {
+		const htmlFileName = `${pageName}.html`;
+		const htmlPath = path.join("src", htmlFileName);
+
+		if (!existsSync(htmlPath)) {
+			const htmlContent = generatePageHTML(pageName, route, { title, description });
+
+			await Bun.write(htmlPath, htmlContent);
+			console.log(`     📝  Created HTML template: ${htmlFileName} → ${route}`);
+		} else {
+			const htmlContent = generatePageHTML(pageName, route, { title, description });
+			await Bun.write(htmlPath, htmlContent);
+			console.log(`     🔄  Updated HTML template: ${htmlFileName} → ${route}`);
+		}
+	}
+
+	return defaultRoutes;
+};
+
+const cleanupGeneratedHTMLFiles = async (routesData: Array<{ pageName: string }>) => {
+	console.log("\n🧹  Cleaning up generated HTML files...");
+
+	for (const { pageName } of routesData) {
+		const htmlFileName = `${pageName}.html`;
+		const htmlPath = path.join("src", htmlFileName);
+
+		if (existsSync(htmlPath)) {
+			await rm(htmlPath);
+			console.log(`     ✅  Deleted: ${htmlFileName}`);
+		}
+	}
+
+	console.log("     🗑️  Generated HTML files cleaned up successfully");
+};
+
 console.log("\n🚀 Starting build process...\n");
 
 const cliConfig = parseArgs();
 const outdir = cliConfig.outdir || path.join(process.cwd(), "dist");
 
+const generatedRoutes = await createPageHTMLFiles();
+
 if (existsSync(outdir)) {
-	console.log(`🗑️ Cleaning previous build at ${outdir}`);
+	console.log("");
+	console.log(`🗑️  Cleaning previous build at ${outdir}`);
 	await rm(outdir, { recursive: true, force: true });
 }
 
 const start = performance.now();
 
-const entrypoints = [...new Bun.Glob("**.html").scanSync("src")].map((a) => path.resolve("src", a)).filter((dir) => !dir.includes("node_modules"));
-console.log(`📄 Found ${entrypoints.length} HTML ${entrypoints.length === 1 ? "file" : "files"} to process\n`);
+const htmlFiles = [...new Bun.Glob("**/*.html").scanSync("src")];
+const entrypoints = htmlFiles.map((file) => path.resolve("src", file)).filter((dir) => !dir.includes("node_modules"));
+const clientEntry = path.resolve("src", "client.tsx");
+const jsEntrypoints = existsSync(clientEntry) ? [clientEntry] : [];
+const allEntrypoints = [...entrypoints, ...jsEntrypoints];
+
+console.log(`📄  Found ${entrypoints.length} HTML ${entrypoints.length === 1 ? "file" : "files"} to process`);
+if (jsEntrypoints.length > 0) {
+	console.log(`📄  Found ${jsEntrypoints.length} client entry ${jsEntrypoints.length === 1 ? "file" : "files"} to process`);
+}
+console.log(`📦  Total entry points: ${allEntrypoints.length}\n`);
 
 const result = await Bun.build({
-	entrypoints,
+	entrypoints: allEntrypoints,
 	outdir,
 	plugins: [plugin],
-	minify: true,
+	minify: {
+		whitespace: true,
+		identifiers: true,
+		syntax: true,
+	},
 	target: "browser",
-	sourcemap: "linked",
+	sourcemap: cliConfig.sourcemap || "linked",
+	splitting: true,
 	define: {
 		"process.env.NODE_ENV": JSON.stringify("production"),
+	},
+	naming: {
+		entry: "[dir]/[name].[ext]",
+		chunk: "chunks/[name]-[hash].[ext]",
+		asset: "assets/[name]-[hash].[ext]",
+	},
+	loader: {
+		".woff": "file",
+		".woff2": "file",
+		".eot": "file",
+		".ttf": "file",
+		".svg": "file",
+		".png": "file",
+		".jpg": "file",
+		".jpeg": "file",
+		".webp": "file",
+		".avif": "file",
 	},
 	...cliConfig,
 });
@@ -143,5 +403,79 @@ const outputTable = result.outputs.map((output) => ({
 
 console.table(outputTable);
 const buildTime = (end - start).toFixed(2);
+
+console.log("📁  Copying static assets and setting up routing...");
+const staticPaths = [
+	{ src: "src/fonts", dest: path.join(outdir, "fonts") },
+	{ src: "src/logo.svg", dest: path.join(outdir, "logo.svg") },
+	{ src: "public", dest: outdir },
+];
+
+for (const { src, dest } of staticPaths) {
+	if (existsSync(src)) {
+		if (src === "public") {
+			const publicContents = await import("fs").then((fs) => fs.promises.readdir(src));
+			for (const item of publicContents) {
+				const srcPath = path.join(src, item);
+				const destPath = path.join(dest, item);
+				await cp(srcPath, destPath, { recursive: true });
+				console.log(`     ✅  ${path.relative(process.cwd(), srcPath)} → ${path.relative(process.cwd(), destPath)}`);
+			}
+		} else {
+			await cp(src, dest, { recursive: true });
+			console.log(`     ✅  ${path.relative(process.cwd(), src)} → ${path.relative(process.cwd(), dest)}`);
+		}
+	}
+}
+
+console.log("");
+console.log("🔗  Setting up page routing structure...");
+const builtHTMLFiles = result.outputs.filter((output) => output.path.endsWith(".html")).map((output) => output.path);
+
+for (const htmlFile of builtHTMLFiles) {
+	const fileName = path.basename(htmlFile, ".html");
+
+	if (fileName === "index") continue;
+
+	const cleanUrlName = fileName.replace(/-page$/, "");
+
+	const pageDir = path.join(outdir, cleanUrlName);
+	if (!existsSync(pageDir)) {
+		await import("fs").then((fs) => fs.promises.mkdir(pageDir, { recursive: true }));
+	}
+
+	const newPath = path.join(pageDir, "index.html");
+	await cp(htmlFile, newPath);
+
+	const htmlContent = await Bun.file(newPath).text();
+	const fixedContent = htmlContent
+		.replace(/href="\.\/chunks\//g, 'href="../chunks/')
+		.replace(/src="\.\/chunks\//g, 'src="../chunks/')
+		.replace(/href="\.\/assets\//g, 'href="../assets/')
+		.replace(/src="\.\/assets\//g, 'src="../assets/')
+		.replace(/href="\.\/client\./g, 'href="../client.')
+		.replace(/src="\.\/client\./g, 'src="../client.')
+		.replace(/href="\.\/logo\.svg"/g, 'href="../logo.svg"')
+		.replace(/href="\.\/fonts\//g, 'href="../fonts/');
+
+	await Bun.write(newPath, fixedContent);
+	await rm(htmlFile);
+
+	console.log(`     🔗  ${fileName}.html → ${cleanUrlName}/index.html (clean URL: /${cleanUrlName}/)`);
+}
+
+const redirectsContent = `
+/*    /index.html   200
+/booking-page  /booking/   301
+/login-page    /login/     301
+/schedule-page /schedule/  301
+/settings-page /settings/  301
+`;
+
+await Bun.write(path.join(outdir, "_redirects"), redirectsContent);
+console.log("     ✅  Generated _redirects file for hosting platforms");
+
+await generateSitemap(outdir);
+await cleanupGeneratedHTMLFiles(generatedRoutes);
 
 console.log(`\n✅ Build completed in ${buildTime}ms\n`);
