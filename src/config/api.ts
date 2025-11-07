@@ -1,13 +1,21 @@
 const getBaseUrl = (): string => {
-	if (process.env.NODE_ENV === "production" && process.env.API_URL) {
+	if (typeof process !== "undefined" && process.env?.API_URL) {
 		return process.env.API_URL;
+	}
+
+	if (import.meta.env?.API_URL) {
+		return import.meta.env.API_URL as string;
 	}
 
 	if (globalThis.window !== undefined && globalThis.location.hostname === "localhost") {
 		return "http://localhost:3000";
 	}
 
-	return "/api";
+	if (globalThis.window !== undefined) {
+		return "/api";
+	}
+
+	return process.env.API_URL || "/api";
 };
 
 export const API_CONFIG = {

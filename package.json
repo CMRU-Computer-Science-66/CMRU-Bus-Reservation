@@ -4,7 +4,7 @@
 	"type": "module",
 	"module": "src/index.tsx",
 	"scripts": {
-		"build": "bun run build.ts",
+		"build": "NODE_ENV=production bun run build.ts --sourcemap=none",
 		"build:dev": "bun run build.ts --dev",
 		"dev": "bun run build:dev && bun --hot --watch src/index.tsx",
 		"fix": "eslint . --fix",
@@ -12,9 +12,7 @@
 		"lint": "eslint .",
 		"prettier": "prettier --write . --ignore-unknown",
 		"shadcn:update": "bunx --bun shadcn@latest add --yes --overwrite alert badge button card checkbox dialog dropdown-menu form input label select separator skeleton tabs",
-		"start": "bun run build && NODE_ENV=production bun serve ./dist -p 4399",
-		"vercel:deploy": "vercel",
-		"vercel:deploy:prod": "vercel --prod"
+		"start": "bun run build && NODE_ENV=production bun serve ./dist -p 4399"
 	},
 	"prettier": {
 		"bracketSameLine": true,

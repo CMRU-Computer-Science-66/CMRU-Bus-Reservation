@@ -426,21 +426,23 @@ if (jsEntrypoints.length > 0) {
 }
 console.log(`📦  Total entry points: ${allEntrypoints.length}\n`);
 
+const isProduction = process.env.NODE_ENV === "production" || !isDev;
+
 const result = await Bun.build({
 	entrypoints: allEntrypoints,
 	outdir,
 	plugins: [plugin],
-	minify: {
+	minify: isProduction ? {
 		whitespace: true,
 		identifiers: true,
 		syntax: true,
-	},
+	} : false,
 	target: "browser",
-	sourcemap: cliConfig.sourcemap || "linked",
+	sourcemap: isProduction ? (cliConfig.sourcemap || "none") : "linked",
 	splitting: true,
 	env: "inline",
 	define: {
-		"process.env.NODE_ENV": JSON.stringify("production"),
+		"process.env.NODE_ENV": JSON.stringify(isProduction ? "production" : "development"),
 		"process.env.APP_VERSION": version,
 	},
 	naming: {
