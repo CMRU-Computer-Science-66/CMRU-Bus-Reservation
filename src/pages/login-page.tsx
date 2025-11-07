@@ -70,7 +70,7 @@ export function LoginPage() {
 				<div className="animation-delay-4000 animate-blob absolute -bottom-8 left-20 h-72 w-72 rounded-full bg-pink-300 opacity-70 mix-blend-multiply blur-xl filter dark:bg-pink-900 dark:opacity-30"></div>
 			</div>
 
-			<ThemeToggle isDark={isDark} onToggle={toggleTheme} className="absolute top-4 right-4 z-10 border-2 shadow-lg backdrop-blur-sm" />
+			<ThemeToggle isDark={isDark} onToggle={toggleTheme} className="absolute top-4 right-4 z-10 border-2 shadow-lg backdrop-blur-sm" aria-label="Toggle theme" />
 
 			<Card className="relative z-10 w-full max-w-md border-0 bg-white/95 shadow-2xl backdrop-blur-md dark:bg-gray-900/95">
 				<CardHeader className="space-y-4 pb-6 text-center">
@@ -133,8 +133,9 @@ export function LoginPage() {
 								<button
 									type="button"
 									onClick={() => setShowPassword(!showPassword)}
-									className="absolute top-1/2 right-3 -translate-y-1/2 text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-gray-300"
-									disabled={isLoading}>
+									className="absolute top-1/2 right-3 min-h-11 min-w-11 -translate-y-1/2 rounded-md p-2 text-gray-400 transition-colors hover:text-gray-600 focus:ring-2 focus:ring-blue-500 focus:outline-none dark:hover:text-gray-300"
+									disabled={isLoading}
+									aria-label={showPassword ? "Hide password" : "Show password"}>
 									{showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
 								</button>
 							</div>
@@ -143,7 +144,7 @@ export function LoginPage() {
 						<Button
 							type="submit"
 							disabled={isLoading || !username.trim() || !password.trim()}
-							className="h-13 w-full gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-base font-semibold shadow-lg transition-all hover:scale-[1.02] hover:from-blue-700 hover:to-indigo-700 hover:shadow-xl active:scale-[0.98] disabled:hover:scale-100 dark:from-blue-500 dark:to-indigo-500">
+							className="h-13 w-full gap-2 bg-linear-to-r from-blue-600 to-indigo-600 text-base font-semibold shadow-lg transition-all hover:scale-[1.02] hover:from-blue-700 hover:to-indigo-700 hover:shadow-xl active:scale-[0.98] disabled:hover:scale-100 dark:from-blue-500 dark:to-indigo-500">
 							{isLoading ? (
 								<>
 									<Loader2 className="h-5 w-5 animate-spin" />

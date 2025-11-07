@@ -4,19 +4,16 @@
 @layer base {
 	:root {
 		@apply font-sans;
+		font-family: "LINE Seed Sans TH", sans-serif !important;
+	}
+
+	* {
+		font-family: "LINE Seed Sans TH", sans-serif !important;
 	}
 
 	body {
 		@apply text-foreground relative m-0 min-h-screen min-w-[320px];
-		font-family:
-			"LINE Seed Sans TH",
-			"SF Pro Display",
-			-apple-system,
-			BlinkMacSystemFont,
-			"Segoe UI",
-			system-ui,
-			Roboto,
-			sans-serif;
+		font-family: "LINE Seed Sans TH", sans-serif !important;
 		font-optical-sizing: auto;
 		-webkit-font-smoothing: antialiased;
 		-moz-osx-font-smoothing: grayscale;
@@ -87,6 +84,7 @@
 	transition-property: background-color, border-color, color, fill, stroke;
 	transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 	transition-duration: 150ms;
+	font-family: "LINE Seed Sans TH", sans-serif !important;
 }
 
 .font-display-optional {
@@ -95,8 +93,19 @@
 
 @supports (font-display: optional) {
 	* {
-		font-display: optional;
+		font-display: swap;
+		font-family: "LINE Seed Sans TH", sans-serif !important;
 	}
+}
+
+.font-sans {
+	font-family: "LINE Seed Sans TH", sans-serif !important;
+}
+
+.font-mono,
+.font-serif,
+.font-display {
+	font-family: "LINE Seed Sans TH", sans-serif !important;
 }
 
 .disable-transitions * {

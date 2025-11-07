@@ -17,7 +17,15 @@
 @font-face {
 	font-family: "LINE Seed Sans TH";
 	src: url("./fonts/LINE_Seed_Sans_TH/Web/WOFF2/LINESeedSansTH_W_Bd.woff2") format("woff2");
-	font-weight: 700;
+	font-weight: 600 700;
 	font-style: normal;
-	font-display: optional;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: "LINE Seed Sans TH";
+	src: url("./fonts/LINE_Seed_Sans_TH/Web/WOFF2/LINESeedSansTH_W_Rg.woff2") format("woff2");
+	font-weight: 300 500;
+	font-style: normal;
+	font-display: swap;
 }

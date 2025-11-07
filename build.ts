@@ -202,6 +202,7 @@ const generatePageHTML = (
 		<meta name="twitter:url" content="${fullUrl}" />
 		<meta name="twitter:title" content="${title}" />
 		<meta name="twitter:description" content="${description}" />
+		<meta name="mobile-web-app-capable" content="yes" />
 		<meta name="apple-mobile-web-app-capable" content="yes" />
 		<meta name="apple-mobile-web-app-status-bar-style" content="default" />
 		<meta name="apple-mobile-web-app-title" content="CMRU Bus" />
@@ -213,6 +214,23 @@ const generatePageHTML = (
 		<link rel="dns-prefetch" href="https://cmru-bus.vercel.app" />
 		<link rel="preload" href="${relativePath}fonts/LINE_Seed_Sans_TH/Web/WOFF2/LINESeedSansTH_W_Rg.woff2" as="font" type="font/woff2" crossorigin="anonymous" />
 		<link rel="preload" href="${relativePath}fonts/LINE_Seed_Sans_TH/Web/WOFF2/LINESeedSansTH_W_Bd.woff2" as="font" type="font/woff2" crossorigin="anonymous" />
+		<style>
+			@font-face {
+				font-family: "LINE Seed Sans TH";
+				src: url("${relativePath}fonts/LINE_Seed_Sans_TH/Web/WOFF2/LINESeedSansTH_W_Rg.woff2") format("woff2");
+				font-weight: 300 500;
+				font-style: normal;
+				font-display: swap;
+			}
+			@font-face {
+				font-family: "LINE Seed Sans TH";
+				src: url("${relativePath}fonts/LINE_Seed_Sans_TH/Web/WOFF2/LINESeedSansTH_W_Bd.woff2") format("woff2");
+				font-weight: 600 700;
+				font-style: normal;
+				font-display: swap;
+			}
+			body { font-family: "LINE Seed Sans TH", sans-serif !important; }
+		</style>
 		${clientScriptPath ? `<link rel="preload" href="${relativePath}${clientScriptPath}" as="script" crossorigin="anonymous" />` : ""}
 
 		<script>
