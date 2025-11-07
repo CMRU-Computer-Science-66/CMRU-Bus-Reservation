@@ -13,13 +13,22 @@
 			"destination": "${API_URL}/:path*"
 		},
 		{
-			"source": "/((?!chunk-.*\\.js|chunk-.*\\.css|.*\\.svg|.*\\.png|.*\\.jpg|.*\\.jpeg|.*\\.gif|.*\\.ico|.*\\.woff|.*\\.woff2|.*\\.ttf|.*\\.eot|robots\\.txt|sitemap\\.xml|_redirects).*)",
+			"source": "/(.*)",
 			"destination": "/index.html"
 		}
 	],
 	"headers": [
 		{
-			"source": "/(chunk-.*\\.(js|css)|.*\\.(svg|png|jpg|jpeg|gif|ico|woff|woff2|ttf|eot))$",
+			"source": "/chunk-:name.(js|css)",
+			"headers": [
+				{
+					"key": "Cache-Control",
+					"value": "public, max-age=31536000, immutable"
+				}
+			]
+		},
+		{
+			"source": "/:name.(svg|png|jpg|jpeg|gif|ico|woff|woff2|ttf|eot)",
 			"headers": [
 				{
 					"key": "Cache-Control",
