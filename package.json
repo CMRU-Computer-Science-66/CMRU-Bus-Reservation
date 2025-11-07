@@ -131,6 +131,7 @@
 					"typescript-sort-keys/interface": "warn",
 					"typescript-sort-keys/string-enum": "warn",
 					"unicorn/no-array-reduce": "off",
+					"unicorn/no-nested-ternary": "off",
 					"unicorn/no-null": "off",
 					"unicorn/prefer-global-this": "off"
 				}
@@ -161,6 +162,7 @@
 					"typescript-sort-keys/interface": "warn",
 					"typescript-sort-keys/string-enum": "warn",
 					"unicorn/no-array-reduce": "off",
+					"unicorn/no-nested-ternary": "off",
 					"unicorn/no-null": "off",
 					"unicorn/prefer-global-this": "off"
 				}
@@ -175,7 +177,7 @@
 		]
 	},
 	"dependencies": {
-		"@cmru-comsci-66/cmru-api": "0.3.0",
+		"@cmru-comsci-66/cmru-api": "0.3.1",
 		"@hookform/resolvers": "^5.2.2",
 		"@radix-ui/react-checkbox": "^1.3.3",
 		"@radix-ui/react-dialog": "^1.1.15",

@@ -4,7 +4,7 @@
     "": {
       "name": "bun-react-template",
       "dependencies": {
-        "@cmru-comsci-66/cmru-api": "0.3.0",
+        "@cmru-comsci-66/cmru-api": "0.3.1",
         "@hookform/resolvers": "^5.2.2",
         "@radix-ui/react-checkbox": "^1.3.3",
         "@radix-ui/react-dialog": "^1.1.15",
@@ -323,7 +323,7 @@
 
     "@bcoe/v8-coverage": ["@bcoe/v8-coverage@0.2.3", "", {}, "sha512-0hYQ8SB4Db5zvZB4axdMHGwEaQjkZzFjQiN9LVYvIFB2nSUHW9tYpxWriPrWDASIxiaXax83REcLxuSdnGPZtw=="],
 
-    "@cmru-comsci-66/cmru-api": ["@cmru-comsci-66/cmru-api@0.3.0", "", { "dependencies": { "@faker-js/faker": "^10.1.0", "@types/user-agents": "^1.0.4", "axios": "^1.13.2", "cheerio": "^1.1.2", "user-agents": "^1.1.669" }, "peerDependencies": { "typescript": "^5.9.3" }, "bin": { "cmru-api": "dist/cli/index.js" } }, "sha512-qsQNAKbSbLh8gONfow7v4IRE1cAtAIgvPLrOoLL7egrQo745fQQ5BSXdLR2Dr4vBz2xh4RRKT9I89Qsf5mhk5w=="],
+    "@cmru-comsci-66/cmru-api": ["@cmru-comsci-66/cmru-api@0.3.1", "", { "dependencies": { "@faker-js/faker": "^10.1.0", "@types/user-agents": "^1.0.4", "axios": "^1.13.2", "cheerio": "^1.1.2", "user-agents": "^1.1.669" }, "peerDependencies": { "typescript": "^5.9.3" }, "bin": { "cmru-api": "dist/cli/index.js" } }, "sha512-FA2lpQsZsEZidRFMdqEjWUgqV5pRpBt4Vb4kWv7V8bAR7iWuuDC+1MoPsM2QxUKhpQd/mRyB+jmDQSen0Wx/Eg=="],
 
     "@csstools/normalize.css": ["@csstools/normalize.css@12.1.1", "", {}, "sha512-YAYeJ+Xqh7fUou1d1j9XHl44BmsuThiTr4iNrgCQ3J27IbhXsxXDGZ1cXv8Qvs99d4rBbLiSKy3+WZiet32PcQ=="],
 

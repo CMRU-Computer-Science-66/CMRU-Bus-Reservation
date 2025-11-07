@@ -4,6 +4,7 @@ import { Analytics } from "@vercel/analytics/react";
 import { HelmetProvider } from "react-helmet-async";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 
+import { ErrorBoundary } from "./components/error-boundary";
 import { ROUTES } from "./config/routes";
 import { ApiProvider, useApi } from "./contexts/api-context";
 import { BookingPage } from "./pages/booking-page";
@@ -76,14 +77,16 @@ function AppRoutes() {
 
 export function App() {
 	return (
-		<HelmetProvider>
-			<BrowserRouter>
-				<ApiProvider>
-					<AppRoutes />
-				</ApiProvider>
-			</BrowserRouter>
-			<Analytics />
-		</HelmetProvider>
+		<ErrorBoundary>
+			<HelmetProvider>
+				<BrowserRouter>
+					<ApiProvider>
+						<AppRoutes />
+					</ApiProvider>
+				</BrowserRouter>
+				<Analytics />
+			</HelmetProvider>
+		</ErrorBoundary>
 	);
 }
 

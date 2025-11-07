@@ -24,15 +24,21 @@ const ApiContext = createContext<ApiContextType | undefined>(undefined);
 const sessionManager = getSessionManager();
 
 export function ApiProvider({ children }: { children: ReactNode }) {
-	const [isAuthenticated, setIsAuthenticated] = useState(false);
-	const [isLoading, setIsLoading] = useState(true);
+	const [isAuthenticated, setIsAuthenticated] = useState(() => {
+		const session = sessionManager.loadSession();
+		return session?.isAuthenticated && sessionManager.isSessionValid() ? true : false;
+	});
+	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
 	useEffect(() => {
-		const autoLogin = async () => {
+		const validateSession = async () => {
 			const session = sessionManager.loadSession();
 			if (session && session.isAuthenticated) {
-				setIsLoading(true);
+				if (sessionManager.isSessionValid()) {
+					return;
+				}
+
 				try {
 					const response = await fetch(getApiUrl(API_CONFIG.ENDPOINTS.BUS.LOGIN), {
 						method: "POST",
@@ -45,20 +51,19 @@ export function ApiProvider({ children }: { children: ReactNode }) {
 					const data = await response.json();
 
 					if (response.ok && (data.success || data.valid === true)) {
-						setIsAuthenticated(true);
 						sessionManager.updateLastValidated();
+						setIsAuthenticated(true);
 					} else {
 						sessionManager.clearSession();
+						setIsAuthenticated(false);
 					}
 				} catch (error_) {
-					console.error("Auto-login failed:", error_);
-					sessionManager.clearSession();
+					console.error("Background session validation failed:", error_);
 				}
 			}
-			setIsLoading(false);
 		};
 
-		autoLogin();
+		validateSession();
 	}, []);
 
 	const login = useCallback(async (username: string, password: string, rememberMe: boolean = true): Promise<boolean> => {
@@ -115,11 +120,11 @@ export function ApiProvider({ children }: { children: ReactNode }) {
 			setError(null);
 
 			try {
-				const params = new URLSearchParams();
-				if (page) params.append("page", page.toString());
-				params.append("perPage", perPage.toString());
+				const parameters = new URLSearchParams();
+				if (page) parameters.append("page", page.toString());
+				parameters.append("perPage", perPage.toString());
 
-				const url = `${API_CONFIG.ENDPOINTS.BUS.SCHEDULE}?${params.toString()}`;
+				const url = `${API_CONFIG.ENDPOINTS.BUS.SCHEDULE}?${parameters.toString()}`;
 				const response = await fetch(getApiUrl(url), {
 					method: "GET",
 					headers: {

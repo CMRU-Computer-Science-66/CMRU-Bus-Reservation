@@ -11,7 +11,7 @@ interface ErrorScreenProperties {
 
 export function ErrorScreen({ error, onRetry }: ErrorScreenProperties) {
 	return (
-		<div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-4 dark:from-slate-950 dark:via-blue-950 dark:to-indigo-950">
+		<div className="flex min-h-screen items-center justify-center bg-linear-to-br from-blue-50 via-indigo-50 to-purple-50 p-4 dark:from-slate-950 dark:via-blue-950 dark:to-indigo-950">
 			<Card className="w-full max-w-md border-0 bg-white/90 shadow-2xl backdrop-blur-md dark:bg-gray-900/90">
 				<CardContent className="p-6">
 					<Alert variant="destructive" className="border-red-200 dark:border-red-900">

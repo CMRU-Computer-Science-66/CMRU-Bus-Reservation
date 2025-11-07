@@ -22,6 +22,10 @@ export class SessionManager {
 	}
 
 	public saveSession(username: string, password: string): void {
+		if (typeof window === "undefined" || !window.localStorage) {
+			return;
+		}
+
 		const sessionData: SessionData = {
 			username,
 			password,
@@ -39,6 +43,10 @@ export class SessionManager {
 
 	public loadSession(): SessionData | null {
 		try {
+			if (typeof window === "undefined" || !window.localStorage) {
+				return null;
+			}
+
 			const encrypted = localStorage.getItem(STORAGE_KEY);
 			if (!encrypted) return null;
 
@@ -90,6 +98,10 @@ export class SessionManager {
 	}
 
 	public clearSession(): void {
+		if (typeof window === "undefined" || !window.localStorage) {
+			return;
+		}
+
 		try {
 			localStorage.removeItem(STORAGE_KEY);
 		} catch (error) {

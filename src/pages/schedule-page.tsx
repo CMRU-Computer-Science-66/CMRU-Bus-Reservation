@@ -11,9 +11,9 @@ import { ROUTE_METADATA, ROUTES } from "../config/routes";
 import { useApi } from "../contexts/api-context";
 import { useSchedule } from "../hooks/use-schedule";
 import { getSessionManager } from "../lib/session-manager";
+import { DateSection } from "./components/date-section";
 import { formatThaiDateShort, getRelativeDay } from "./components/date-utils";
 import { ErrorScreen } from "./components/error-screen";
-import { LoadingScreen } from "./components/loading-screen";
 import { PageHeader } from "./components/page-header";
 import { ReservationCard } from "./components/reservation-card";
 import { StatCard } from "./components/stat-card";
@@ -149,10 +149,6 @@ export function SchedulePage() {
 		setActionLoading(null);
 	};
 
-	if (isLoading && !schedule) {
-		return <LoadingScreen />;
-	}
-
 	if (error) {
 		return <ErrorScreen error={error} onRetry={() => refetch(currentPage)} />;
 	}
@@ -171,7 +167,7 @@ export function SchedulePage() {
 			<Button
 				size="sm"
 				onClick={() => navigate(ROUTES.BOOKING)}
-				className="hidden gap-2 bg-gradient-to-r from-green-600 to-emerald-600 shadow-lg transition-all hover:scale-105 hover:from-green-700 hover:to-emerald-700 hover:shadow-xl md:flex dark:from-green-500 dark:to-emerald-500">
+				className="hidden gap-2 bg-linear-to-r from-green-600 to-emerald-600 shadow-lg transition-all hover:scale-105 hover:from-green-700 hover:to-emerald-700 hover:shadow-xl md:flex dark:from-green-500 dark:to-emerald-500">
 				<Plus className="h-4 w-4" />
 				จองรถ
 			</Button>
@@ -200,7 +196,7 @@ export function SchedulePage() {
 				onClick={() => navigate(ROUTES.BOOKING)}
 				size="icon"
 				className="h-10 w-10 rounded-full bg-white text-green-600 shadow-md transition-all hover:scale-110 hover:bg-orange-50 active:scale-95 md:hidden dark:bg-gray-800 dark:text-orange-400 dark:hover:bg-gray-700">
-				<Plus className="h-5 w-5" />
+				<Plus className="h-4 w-4 sm:h-5 sm:w-5" />
 			</Button>
 			<Button
 				variant="outline"
@@ -208,16 +204,16 @@ export function SchedulePage() {
 				onClick={() => refetch(currentPage)}
 				disabled={isLoading}
 				className="h-10 w-10 rounded-full transition-all hover:scale-110 active:scale-95 md:hidden">
-				<RefreshCw className={`h-5 w-5 ${isLoading ? "animate-spin" : ""}`} />
+				<RefreshCw className={`h-4 w-4 sm:h-5 sm:w-5 ${isLoading ? "animate-spin" : ""}`} />
 			</Button>
 			<Button variant="outline" size="icon" onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="h-10 w-10 transition-all hover:scale-110 active:scale-95 md:hidden">
-				{mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+				{mobileMenuOpen ? <X className="h-4 w-4 sm:h-5 sm:w-5" /> : <Menu className="h-4 w-4 sm:h-5 sm:w-5" />}
 			</Button>
 		</>
 	);
 
 	return (
-		<div className="relative min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-slate-950 dark:via-blue-950 dark:to-indigo-950">
+		<div className="relative min-h-screen bg-linear-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-slate-950 dark:via-blue-950 dark:to-indigo-950">
 			<Helmet>
 				<title>{ROUTE_METADATA["/schedule"].title}</title>
 				<meta name="description" content={ROUTE_METADATA["/schedule"].description} />
@@ -255,48 +251,50 @@ export function SchedulePage() {
 				</div>
 			)}
 
-			{schedule && schedule.reservations && (
-				<div className="container mx-auto px-4 py-6 sm:px-6">
-					<div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-						<StatCard
-							label="ยืนยันแล้ว"
-							value={schedule.reservations.filter((r) => r.confirmation.isConfirmed).length}
-							icon={CheckCircle2}
-							gradient="from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400"
-							iconBg="bg-blue-100 dark:bg-blue-900"
-							onClick={() => setFilterStatus(filterStatus === "confirmed" ? "all" : "confirmed")}
-							isActive={filterStatus === "confirmed"}
-						/>
-						<StatCard
-							label="เดินทางแล้ว"
-							value={schedule.reservations.filter((r) => r.travelStatus.hasCompleted === true).length}
-							icon={TrendingUp}
-							gradient="from-green-600 to-emerald-600 dark:from-green-400 dark:to-emerald-400"
-							iconBg="bg-green-100 dark:bg-green-900"
-							onClick={() => setFilterStatus(filterStatus === "completed" ? "all" : "completed")}
-							isActive={filterStatus === "completed"}
-						/>
-						<StatCard
-							label="มี QR Code"
-							value={schedule.reservations.filter((r) => r.ticket.hasQRCode).length}
-							icon={QrCode}
-							gradient="from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400"
-							iconBg="bg-purple-100 dark:bg-purple-900"
-							onClick={() => setFilterStatus(filterStatus === "hasQR" ? "all" : "hasQR")}
-							isActive={filterStatus === "hasQR"}
-						/>
-						<StatCard
-							label="ทั้งหมด"
-							value={schedule.totalReservations}
-							icon={User}
-							gradient="from-orange-600 to-red-600 dark:from-orange-400 dark:to-red-400"
-							iconBg="bg-orange-100 dark:bg-orange-900"
-							onClick={() => setFilterStatus("all")}
-							isActive={filterStatus === "all"}
-						/>
-					</div>
+			<div className="container mx-auto px-4 py-6 sm:px-6">
+				<div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+					<StatCard
+						label="ยืนยันแล้ว"
+						value={schedule?.reservations ? schedule.reservations.filter((r) => r.confirmation.isConfirmed).length : 0}
+						icon={CheckCircle2}
+						gradient="from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400"
+						iconBg="bg-blue-100 dark:bg-blue-900"
+						onClick={() => setFilterStatus(filterStatus === "confirmed" ? "all" : "confirmed")}
+						isActive={filterStatus === "confirmed"}
+						isLoading={isLoading}
+					/>
+					<StatCard
+						label="เดินทางแล้ว"
+						value={schedule?.reservations ? schedule.reservations.filter((r) => r.travelStatus.hasCompleted === true).length : 0}
+						icon={TrendingUp}
+						gradient="from-green-600 to-emerald-600 dark:from-green-400 dark:to-emerald-400"
+						iconBg="bg-green-100 dark:bg-green-900"
+						onClick={() => setFilterStatus(filterStatus === "completed" ? "all" : "completed")}
+						isActive={filterStatus === "completed"}
+						isLoading={isLoading}
+					/>
+					<StatCard
+						label="มี QR Code"
+						value={schedule?.reservations ? schedule.reservations.filter((r) => r.ticket.hasQRCode).length : 0}
+						icon={QrCode}
+						gradient="from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400"
+						iconBg="bg-purple-100 dark:bg-purple-900"
+						onClick={() => setFilterStatus(filterStatus === "hasQR" ? "all" : "hasQR")}
+						isActive={filterStatus === "hasQR"}
+						isLoading={isLoading}
+					/>
+					<StatCard
+						label="ทั้งหมด"
+						value={schedule?.totalReservations || 0}
+						icon={User}
+						gradient="from-orange-600 to-red-600 dark:from-orange-400 dark:to-red-400"
+						iconBg="bg-orange-100 dark:bg-orange-900"
+						onClick={() => setFilterStatus("all")}
+						isActive={filterStatus === "all"}
+						isLoading={isLoading}
+					/>
 				</div>
-			)}
+			</div>
 
 			{schedule &&
 				schedule.reservations &&
@@ -357,7 +355,7 @@ export function SchedulePage() {
 			<div className="container mx-auto px-4 pb-8 sm:px-6">
 				<div className="mb-4 flex items-center justify-between">
 					<div>
-						<h2 className="text-lg font-semibold text-gray-900 dark:text-white">รายการจองทั้งหมด</h2>
+						<h2 className="text-lg font-semibold text-gray-900 dark:text-white">ประวัติรายการจองทั้งหมด</h2>
 						{groupedByDate && groupedByDate.length > 0 && (
 							<p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
 								{(() => {
@@ -378,7 +376,13 @@ export function SchedulePage() {
 				</div>
 
 				<div className="space-y-6">
-					{groupedByDate && groupedByDate.length > 0 ? (
+					{isLoading && !groupedByDate ? (
+						<>
+							{Array.from({ length: 3 }).map((_, index) => (
+								<DateSection key={index} isLoading={true} />
+							))}
+						</>
+					) : groupedByDate && groupedByDate.length > 0 ? (
 						<>
 							{groupedByDate.map((group) => (
 								<div key={group.date} className="space-y-4">
@@ -525,7 +529,7 @@ export function SchedulePage() {
 									</div>
 									<Button
 										onClick={() => navigate(ROUTES.BOOKING)}
-										className="mt-4 gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 shadow-lg hover:from-blue-700 hover:to-indigo-700">
+										className="mt-4 gap-2 bg-linear-to-r from-blue-600 to-indigo-600 shadow-lg hover:from-blue-700 hover:to-indigo-700">
 										<Plus className="h-4 w-4" />
 										จองรถบัสเลย
 									</Button>

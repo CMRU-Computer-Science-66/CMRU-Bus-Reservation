@@ -7,19 +7,21 @@ import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { Dialog, DialogContent } from "../../components/ui/dialog";
 import { Separator } from "../../components/ui/separator";
+import { Skeleton } from "../../components/ui/skeleton";
 import { API_CONFIG, getApiUrl } from "../../config/api";
 import { formatTime } from "../../lib/time-formatter";
 
 interface ReservationCardProperties {
 	actionLoading: number | null;
-	item: ScheduleReservation;
+	isLoading?: boolean;
+	item?: ScheduleReservation;
 	onCancel?: (item: ScheduleReservation) => void;
 	onConfirm?: (item: ScheduleReservation) => void;
 	oneClickMode?: boolean;
 	showTimeLeft?: boolean;
 }
 
-export function ReservationCard({ actionLoading, item, onCancel, onConfirm, oneClickMode = false, showTimeLeft }: ReservationCardProperties) {
+export function ReservationCard({ actionLoading, isLoading = false, item, onCancel, onConfirm, oneClickMode = false, showTimeLeft }: ReservationCardProperties) {
 	const [currentTime, setCurrentTime] = useState(new Date());
 	const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
 	const [qrLoading, setQrLoading] = useState(false);
@@ -36,6 +38,8 @@ export function ReservationCard({ actionLoading, item, onCancel, onConfirm, oneC
 	}, [showTimeLeft]);
 
 	useEffect(() => {
+		if (!item) return;
+
 		const loadQRCode = async () => {
 			if (item.ticket.hasQRCode && item.ticket.id) {
 				setQrLoading(true);
@@ -64,10 +68,11 @@ export function ReservationCard({ actionLoading, item, onCancel, onConfirm, oneC
 				URL.revokeObjectURL(qrCodeUrl);
 			}
 		};
-	}, [item.ticket.hasQRCode, item.ticket.id]);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [item?.ticket.hasQRCode, item?.ticket.id, qrCodeUrl]);
 
 	const getTimeLeft = () => {
-		if (!showTimeLeft) return null;
+		if (!showTimeLeft || !item) return null;
 
 		const [hours, minutes] = (item.departureTime?.replace(".", ":") || "00:00").split(":");
 		const departureTime = new Date();
@@ -81,6 +86,44 @@ export function ReservationCard({ actionLoading, item, onCancel, onConfirm, oneC
 
 		return { hoursLeft, minutesLeft };
 	};
+
+	if (isLoading || !item) {
+		return (
+			<Card className="group border-0 bg-white/90 shadow-md backdrop-blur-md dark:bg-gray-900/90">
+				<CardHeader>
+					<div className="flex items-start justify-between gap-2">
+						<div className="min-w-0 flex-1">
+							<CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+								<Skeleton className="h-4 w-4" />
+								<Skeleton className="h-5 w-32" />
+							</CardTitle>
+							<Skeleton className="mt-1.5 h-3 w-20" />
+						</div>
+						<Skeleton className="h-6 w-20 rounded-full" />
+					</div>
+				</CardHeader>
+
+				<Separator className="dark:bg-gray-800" />
+
+				<CardContent className="space-y-4">
+					<div className="flex items-center gap-2">
+						<div className="rounded-lg bg-gray-100 p-2 dark:bg-gray-800">
+							<Skeleton className="h-4 w-4" />
+						</div>
+						<div className="flex-1">
+							<Skeleton className="mb-1 h-3 w-8" />
+							<Skeleton className="h-4 w-16" />
+						</div>
+					</div>
+
+					<div className="flex flex-col gap-2 sm:flex-row">
+						<Skeleton className="h-11 flex-1" />
+						<Skeleton className="h-11 flex-1" />
+					</div>
+				</CardContent>
+			</Card>
+		);
+	}
 
 	const timeLeft = getTimeLeft();
 	const getStatusBadge = (item: ScheduleReservation) => {
@@ -167,7 +210,8 @@ export function ReservationCard({ actionLoading, item, onCancel, onConfirm, oneC
 							<div className="flex h-48 w-48 items-center justify-center">
 								<Loader2 className="h-8 w-8 animate-spin text-gray-400" />
 							</div>
-						) : qrCodeUrl ? (
+						) : // eslint-disable-next-line unicorn/no-nested-ternary
+						qrCodeUrl ? (
 							<button type="button" onClick={() => setQrDialogOpen(true)} className="cursor-pointer transition-transform hover:scale-105">
 								<img src={qrCodeUrl} alt="QR Code สำหรับขึ้นรถ" className="h-48 w-48 rounded-lg" />
 							</button>
@@ -266,7 +310,6 @@ export function ReservationCard({ actionLoading, item, onCancel, onConfirm, oneC
 				)}
 			</CardContent>
 
-			{/* QR Code Dialog */}
 			<Dialog open={qrDialogOpen} onOpenChange={setQrDialogOpen}>
 				<DialogContent className="max-w-md">
 					<div className="flex flex-col items-center gap-4 p-4">

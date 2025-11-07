@@ -91,7 +91,7 @@ export function SettingsPage() {
 	};
 
 	return (
-		<div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-slate-950 dark:via-blue-950 dark:to-indigo-950">
+		<div className="min-h-screen bg-linear-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-slate-950 dark:via-blue-950 dark:to-indigo-950">
 			<Helmet>
 				<title>{ROUTE_METADATA["/settings"].title}</title>
 				<meta name="description" content={ROUTE_METADATA["/schedule"].description} />
@@ -101,9 +101,9 @@ export function SettingsPage() {
 					<div className="flex items-center justify-between gap-4">
 						<div className="flex min-w-0 flex-1 items-center gap-3">
 							<Button variant="ghost" size="icon" onClick={() => navigate(ROUTES.SCHEDULE)} className="h-10 w-10 shrink-0 rounded-full hover:scale-110">
-								<ArrowLeft className="h-5 w-5" />
+								<ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
 							</Button>
-							<div className="rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 p-2 shadow-lg transition-all duration-300 hover:scale-110 hover:shadow-xl">
+							<div className="rounded-xl bg-linear-to-br from-blue-600 to-indigo-600 p-2 shadow-lg transition-all duration-300 hover:scale-110 hover:shadow-xl">
 								<Settings className="h-5 w-5 text-white sm:h-6 sm:w-6" />
 							</div>
 							<div className="min-w-0 flex-1">

@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import type { AvailableBusData, AvailableBusSchedule } from "@cmru-comsci-66/cmru-api";
-import { AlertCircle, ArrowLeft, Bus, Calendar, CheckCircle2, Clock, Loader2, LogOut, MapPin, RefreshCw, X } from "lucide-react";
+import { AlertCircle, ArrowLeft, Bus, Calendar, CheckCircle2, Clock, Loader2, LogOut, MapPin, RefreshCw, TrendingUp, User, Users, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Helmet } from "react-helmet-async";
 import { useNavigate } from "react-router-dom";
@@ -15,6 +15,8 @@ import { Skeleton } from "../components/ui/skeleton";
 import { ROUTE_METADATA, ROUTES } from "../config/routes";
 import { useApi } from "../contexts/api-context";
 import { formatTime } from "../lib/time-formatter";
+import { PageHeader } from "./components/page-header";
+import { StatCard } from "./components/stat-card";
 
 interface GroupedSchedule {
 	canReserveCount: number;
@@ -207,42 +209,104 @@ export function BookingPage() {
 
 	if (isLoading && !availableBuses) {
 		return (
-			<div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-slate-950 dark:via-blue-950 dark:to-indigo-950">
-				<div className="container mx-auto space-y-4 p-4 sm:space-y-6 sm:p-6">
-					<Card className="border-0 bg-white/90 shadow-lg backdrop-blur-md dark:bg-gray-900/90">
-						<CardContent className="p-4 sm:p-6">
-							<div className="flex items-center justify-between">
-								<Skeleton className="h-8 w-48" />
-								<div className="flex gap-2">
-									<Skeleton className="h-10 w-10 rounded-md" />
-									<Skeleton className="h-10 w-32 rounded-md" />
-								</div>
-							</div>
-						</CardContent>
-					</Card>
+			<div className="relative min-h-screen bg-linear-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-slate-950 dark:via-blue-950 dark:to-indigo-950">
+				<Helmet>
+					<title>{ROUTE_METADATA["/booking"].title}</title>
+					<meta name="description" content={ROUTE_METADATA["/booking"].description} />
+				</Helmet>
+				<PageHeader
+					title="จองรถบัส"
+					subtitle="กำลังโหลดข้อมูล..."
+					actions={
+						<>
+							<Button variant="ghost" size="icon" onClick={() => navigate(ROUTES.SCHEDULE)} className="h-10 w-10 shrink-0 rounded-full hover:scale-110">
+								<ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
+							</Button>
+							<Button variant="outline" size="icon" disabled className="h-10 w-10 rounded-full">
+								<RefreshCw className="h-4 w-4 animate-spin sm:h-5 sm:w-5" />
+							</Button>
+							<Button
+								variant="outline"
+								size="icon"
+								onClick={logout}
+								className="h-10 w-10 rounded-full hover:scale-110 hover:border-red-300 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950">
+								<LogOut className="h-4 w-4 sm:h-5 sm:w-5" />
+							</Button>
+						</>
+					}
+				/>
 
-					<div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-						{[1, 2, 3, 4].map((index) => (
-							<Card key={index} className="border-0 bg-white/90 shadow-md backdrop-blur-md dark:bg-gray-900/90">
-								<CardContent className="p-4">
-									<Skeleton className="mb-2 h-4 w-20" />
-									<Skeleton className="h-8 w-16" />
-								</CardContent>
-							</Card>
-						))}
+				<div className="container mx-auto px-4 py-6 sm:px-6">
+					<div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+						<StatCard
+							label="วันที่มีรถ"
+							value={0}
+							icon={CheckCircle2}
+							gradient="from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400"
+							iconBg="bg-blue-100 dark:bg-blue-900"
+							isLoading={true}
+						/>
+						<StatCard
+							label="มีรอบว่าง"
+							value={0}
+							icon={TrendingUp}
+							gradient="from-green-600 to-emerald-600 dark:from-green-400 dark:to-emerald-400"
+							iconBg="bg-green-100 dark:bg-green-900"
+							isLoading={true}
+						/>
+						<StatCard
+							label="รอบทั้งหมด"
+							value={0}
+							icon={Bus}
+							gradient="from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400"
+							iconBg="bg-purple-100 dark:bg-purple-900"
+							isLoading={true}
+						/>
+						<StatCard
+							label="จองได้"
+							value={0}
+							icon={User}
+							gradient="from-orange-600 to-red-600 dark:from-orange-400 dark:to-red-400"
+							iconBg="bg-orange-100 dark:bg-orange-900"
+							isLoading={true}
+						/>
+					</div>
+				</div>
+
+				<div className="container mx-auto px-4 pb-8 sm:px-6">
+					<div className="mb-4 flex items-center justify-between">
+						<div className="flex items-center gap-2">
+							<h2 className="text-lg font-semibold text-gray-900 dark:text-white">รอบรถที่เปิดจอง</h2>
+							<div className="inline-flex h-6 min-w-0"></div>
+						</div>
 					</div>
 
 					<div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
 						{[1, 2, 3, 4, 5, 6].map((index) => (
-							<Card key={index} className="border-0 bg-white/90 shadow-md backdrop-blur-md dark:bg-gray-900/90">
-								<CardContent className="space-y-3 p-4">
-									<div className="flex justify-between">
-										<Skeleton className="h-6 w-40" />
-										<Skeleton className="h-6 w-24 rounded-full" />
+							<Card key={index} className="group border-0 bg-white/90 shadow-md backdrop-blur-md transition-all hover:scale-[1.02] hover:shadow-xl dark:bg-gray-900/90">
+								<CardContent className="space-y-4 p-4">
+									<div className="flex items-start justify-between gap-2">
+										<div className="min-w-0 flex-1">
+											<div className="flex flex-wrap items-center gap-2">
+												<Skeleton className="h-4 w-4 shrink-0" />
+												<Skeleton className="h-5 w-32" />
+											</div>
+											<Skeleton className="mt-1.5 h-3 w-20" />
+										</div>
+										<Skeleton className="h-6 w-20 rounded-full" />
 									</div>
-									<div className="space-y-2">
-										<Skeleton className="h-10 w-full rounded-md" />
-										<Skeleton className="h-10 w-full rounded-md" />
+									<div className="h-px bg-gray-200 dark:bg-gray-800"></div>
+									<div className="flex items-center gap-2">
+										<div className="rounded-lg bg-indigo-50 p-2 dark:bg-indigo-900">
+											<Skeleton className="h-4 w-4" />
+										</div>
+										<div className="flex-1">
+											<Skeleton className="mb-1 h-3 w-8" />
+											<Skeleton className="h-4 w-16" />
+										</div>
+									</div>
+									<div className="flex flex-col gap-3 sm:flex-row sm:gap-2">
+										<Skeleton className="h-11 flex-1 rounded-md" />
 									</div>
 								</CardContent>
 							</Card>
@@ -255,7 +319,7 @@ export function BookingPage() {
 
 	if (error) {
 		return (
-			<div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-4 dark:from-slate-950 dark:via-blue-950 dark:to-indigo-950">
+			<div className="flex min-h-screen items-center justify-center bg-linear-to-br from-blue-50 via-indigo-50 to-purple-50 p-4 dark:from-slate-950 dark:via-blue-950 dark:to-indigo-950">
 				<Card className="w-full max-w-md border-0 bg-white/90 shadow-2xl backdrop-blur-md dark:bg-gray-900/90">
 					<CardContent className="p-6">
 						<Alert variant="destructive" className="border-red-200 dark:border-red-900">
@@ -274,182 +338,128 @@ export function BookingPage() {
 	}
 
 	return (
-		<div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-slate-950 dark:via-blue-950 dark:to-indigo-950">
+		<div className="relative min-h-screen bg-linear-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-slate-950 dark:via-blue-950 dark:to-indigo-950">
 			<Helmet>
-				<title>${ROUTE_METADATA["/booking"].title}</title>
+				<title>{ROUTE_METADATA["/booking"].title}</title>
 				<meta name="description" content={ROUTE_METADATA["/booking"].description} />
 			</Helmet>
-			<div className="sticky top-0 z-30 border-b border-gray-200 bg-white/80 backdrop-blur-md dark:border-gray-800 dark:bg-gray-900/80">
-				<div className="container mx-auto px-4 py-4 sm:px-6">
-					<div className="flex items-center justify-between gap-4">
-						<div className="flex min-w-0 flex-1 items-center gap-3">
-							<Button variant="ghost" size="icon" onClick={() => navigate(ROUTES.SCHEDULE)} className="h-10 w-10 shrink-0 rounded-full hover:scale-110">
-								<ArrowLeft className="h-5 w-5" />
-							</Button>
-							<div className="rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 p-2 shadow-lg transition-all duration-300 hover:scale-110 hover:shadow-xl">
-								<Bus className="h-5 w-5 text-white sm:h-6 sm:w-6" />
-							</div>
-							<div className="min-w-0 flex-1">
-								<h1 className="truncate text-lg font-bold text-gray-900 sm:text-xl dark:text-white">จองรถบัส</h1>
-								<p className="truncate text-xs text-gray-600 sm:text-sm dark:text-gray-400">
-									{groupedSchedules.length > 0 ? (
-										<>
-											<span>
-												{groupedSchedules.length} วัน • {availableBuses?.totalAvailable || 0} รอบ
-											</span>
-										</>
-									) : (
-										<span>ไม่มีรอบรถที่เปิดจอง</span>
-									)}
-								</p>
-							</div>
-						</div>
+			<PageHeader
+				title="จองรถบัส"
+				subtitle={
+					groupedSchedules.length > 0 ? (
+						<>
+							{groupedSchedules.length} วัน • {availableBuses?.totalAvailable || 0} รอบ
+						</>
+					) : (
+						"ไม่มีรอบรถที่เปิดจอง"
+					)
+				}
+				actions={
+					<>
+						<Button variant="ghost" size="icon" onClick={() => navigate(ROUTES.SCHEDULE)} className="h-10 w-10 shrink-0 rounded-full hover:scale-110">
+							<ArrowLeft className="h-5 w-5" />
+						</Button>
+						<Button variant="outline" size="icon" onClick={fetchAvailableBuses} disabled={isLoading} className="h-10 w-10 rounded-full hover:scale-110">
+							<RefreshCw className={`h-4 w-4 transition-transform sm:h-5 sm:w-5 ${isLoading ? "animate-spin" : "hover:rotate-180"}`} />
+						</Button>
+						<Button
+							variant="outline"
+							size="icon"
+							onClick={logout}
+							className="h-10 w-10 rounded-full hover:scale-110 hover:border-red-300 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950">
+							<LogOut className="h-4 w-4 sm:h-5 sm:w-5" />
+						</Button>
+					</>
+				}
+			/>
 
-						<div className="flex items-center gap-2">
-							<Button variant="outline" size="icon" onClick={fetchAvailableBuses} disabled={isLoading} className="h-10 w-10 rounded-full hover:scale-110">
-								<RefreshCw className={`h-5 w-5 transition-transform ${isLoading ? "animate-spin" : "hover:rotate-180"}`} />
-							</Button>
-
-							<Button
-								variant="outline"
-								size="icon"
-								onClick={logout}
-								className="h-10 w-10 rounded-full hover:scale-110 hover:border-red-300 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950">
-								<LogOut className="h-5 w-5" />
-							</Button>
-						</div>
-					</div>
+			<div className="container mx-auto px-4 py-6 sm:px-6">
+				<div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+					<StatCard
+						label="วันที่มีรถ"
+						value={
+							availableBuses?.availableSchedules
+								? Object.keys(
+										availableBuses.availableSchedules.reduce(
+											(accumulator, schedule) => {
+												const dateKey = new Date(schedule.date).toISOString().split("T")[0] || "";
+												const groupDate = new Date(schedule.date);
+												groupDate.setHours(0, 0, 0, 0);
+												const today = new Date();
+												today.setHours(0, 0, 0, 0);
+												if (groupDate.getTime() >= today.getTime()) {
+													accumulator[dateKey] = true;
+												}
+												return accumulator;
+											},
+											{} as Record<string, boolean>,
+										),
+									).length
+								: 0
+						}
+						icon={CheckCircle2}
+						gradient="from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400"
+						iconBg="bg-blue-100 dark:bg-blue-900"
+						onClick={() => setFilterMode(filterMode === "all" ? "all" : "all")}
+						isActive={filterMode === "all"}
+						isLoading={isLoading}
+					/>
+					<StatCard
+						label="มีรอบว่าง"
+						value={
+							availableBuses?.availableSchedules
+								? Object.values(
+										availableBuses.availableSchedules.reduce(
+											(accumulator, schedule) => {
+												const dateKey = new Date(schedule.date).toISOString().split("T")[0] || "";
+												const groupDate = new Date(schedule.date);
+												groupDate.setHours(0, 0, 0, 0);
+												const today = new Date();
+												today.setHours(0, 0, 0, 0);
+												if (groupDate.getTime() >= today.getTime()) {
+													if (!accumulator[dateKey]) {
+														accumulator[dateKey] = { canReserveCount: 0 };
+													}
+													if (schedule.canReserve) {
+														accumulator[dateKey].canReserveCount++;
+													}
+												}
+												return accumulator;
+											},
+											{} as Record<string, { canReserveCount: number }>,
+										),
+									).filter((g) => g.canReserveCount > 0).length
+								: 0
+						}
+						icon={TrendingUp}
+						gradient="from-green-600 to-emerald-600 dark:from-green-400 dark:to-emerald-400"
+						iconBg="bg-green-100 dark:bg-green-900"
+						onClick={() => setFilterMode(filterMode === "available" ? "all" : "available")}
+						isActive={filterMode === "available"}
+						isLoading={isLoading}
+					/>
+					<StatCard
+						label="รอบทั้งหมด"
+						value={availableBuses?.totalAvailable || 0}
+						icon={Bus}
+						gradient="from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400"
+						iconBg="bg-purple-100 dark:bg-purple-900"
+						onClick={() => setFilterMode("all")}
+						isActive={filterMode === "all"}
+						isLoading={isLoading}
+					/>
+					<StatCard
+						label="จองได้"
+						value={availableBuses?.availableSchedules?.filter((s) => s.canReserve).length || 0}
+						icon={User}
+						gradient="from-orange-600 to-red-600 dark:from-orange-400 dark:to-red-400"
+						iconBg="bg-orange-100 dark:bg-orange-900"
+						onClick={() => setFilterMode(filterMode === "canReserve" ? "all" : "canReserve")}
+						isActive={filterMode === "canReserve"}
+						isLoading={isLoading}
+					/>
 				</div>
 			</div>
-
-			{availableBuses && groupedSchedules.length > 0 && (
-				<div className="container mx-auto px-4 py-6 sm:px-6">
-					<div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-						<Card
-							className="group cursor-pointer border-0 bg-white/90 shadow-md backdrop-blur-md transition-all hover:scale-105 hover:shadow-xl dark:bg-gray-900/90"
-							onClick={() => setFilterMode("all")}
-							style={filterMode === "all" ? { outline: "2px solid rgb(37 99 235)", outlineOffset: "2px" } : {}}>
-							<CardContent className="p-4">
-								<div className="flex items-center justify-between">
-									<div>
-										<p className="mb-1 text-xs font-medium text-gray-600 dark:text-gray-400">วันที่มีรถ</p>
-										<p className="text-2xl font-bold">
-											<span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent dark:from-blue-400 dark:to-indigo-400">
-												{availableBuses.availableSchedules
-													? Object.keys(
-															availableBuses.availableSchedules.reduce(
-																(accumulator, schedule) => {
-																	const dateKey = new Date(schedule.date).toISOString().split("T")[0] || "";
-																	const groupDate = new Date(schedule.date);
-																	groupDate.setHours(0, 0, 0, 0);
-																	const today = new Date();
-																	today.setHours(0, 0, 0, 0);
-																	if (groupDate.getTime() >= today.getTime()) {
-																		accumulator[dateKey] = true;
-																	}
-																	return accumulator;
-																},
-																{} as Record<string, boolean>,
-															),
-														).length
-													: 0}
-											</span>
-										</p>
-									</div>
-									<div className="rounded-lg bg-blue-100 p-2 transition-all group-hover:scale-110 dark:bg-blue-900">
-										<Calendar className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-									</div>
-								</div>
-							</CardContent>
-						</Card>
-
-						<Card
-							className="group cursor-pointer border-0 bg-white/90 shadow-md backdrop-blur-md transition-all hover:scale-105 hover:shadow-xl dark:bg-gray-900/90"
-							onClick={() => setFilterMode("available")}
-							style={filterMode === "available" ? { outline: "2px solid rgb(34 197 94)", outlineOffset: "2px" } : {}}>
-							<CardContent className="p-4">
-								<div className="flex items-center justify-between">
-									<div>
-										<p className="mb-1 text-xs font-medium text-gray-600 dark:text-gray-400">มีรอบว่าง</p>
-										<p className="text-2xl font-bold">
-											<span className="bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent dark:from-green-400 dark:to-emerald-400">
-												{availableBuses.availableSchedules
-													? Object.values(
-															availableBuses.availableSchedules.reduce(
-																(accumulator, schedule) => {
-																	const dateKey = new Date(schedule.date).toISOString().split("T")[0] || "";
-																	const groupDate = new Date(schedule.date);
-																	groupDate.setHours(0, 0, 0, 0);
-																	const today = new Date();
-																	today.setHours(0, 0, 0, 0);
-																	if (groupDate.getTime() >= today.getTime()) {
-																		if (!accumulator[dateKey]) {
-																			accumulator[dateKey] = { canReserveCount: 0 };
-																		}
-																		if (schedule.canReserve) {
-																			accumulator[dateKey].canReserveCount++;
-																		}
-																	}
-																	return accumulator;
-																},
-																{} as Record<string, { canReserveCount: number }>,
-															),
-														).filter((g) => g.canReserveCount > 0).length
-													: 0}
-											</span>
-										</p>
-									</div>
-									<div className="rounded-lg bg-green-100 p-2 transition-all group-hover:scale-110 dark:bg-green-900">
-										<CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
-									</div>
-								</div>
-							</CardContent>
-						</Card>
-
-						<Card
-							className="group cursor-pointer border-0 bg-white/90 shadow-md backdrop-blur-md transition-all hover:scale-105 hover:shadow-xl dark:bg-gray-900/90"
-							onClick={() => setFilterMode("all")}
-							style={filterMode === "all" ? { outline: "2px solid rgb(37 99 235)", outlineOffset: "2px" } : {}}>
-							<CardContent className="p-4">
-								<div className="flex items-center justify-between">
-									<div>
-										<p className="mb-1 text-xs font-medium text-gray-600 dark:text-gray-400">รอบทั้งหมด</p>
-										<p className="text-2xl font-bold">
-											<span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent dark:from-purple-400 dark:to-pink-400">
-												{availableBuses.totalAvailable}
-											</span>
-										</p>
-									</div>
-									<div className="rounded-lg bg-purple-100 p-2 transition-all group-hover:scale-110 dark:bg-purple-900">
-										<Bus className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-									</div>
-								</div>
-							</CardContent>
-						</Card>
-
-						<Card
-							className="group cursor-pointer border-0 bg-white/90 shadow-md backdrop-blur-md transition-all hover:scale-105 hover:shadow-xl dark:bg-gray-900/90"
-							onClick={() => setFilterMode("canReserve")}
-							style={filterMode === "canReserve" ? { outline: "2px solid rgb(234 88 12)", outlineOffset: "2px" } : {}}>
-							<CardContent className="p-4">
-								<div className="flex items-center justify-between">
-									<div>
-										<p className="mb-1 text-xs font-medium text-gray-600 dark:text-gray-400">จองได้</p>
-										<p className="text-2xl font-bold">
-											<span className="bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent dark:from-orange-400 dark:to-red-400">
-												{availableBuses.availableSchedules.filter((s) => s.canReserve).length}
-											</span>
-										</p>
-									</div>
-									<div className="rounded-lg bg-orange-100 p-2 transition-all group-hover:scale-110 dark:bg-orange-900">
-										<CheckCircle2 className="h-5 w-5 text-orange-600 dark:text-orange-400" />
-									</div>
-								</div>
-							</CardContent>
-						</Card>
-					</div>
-				</div>
-			)}
 
 			<div className="container mx-auto px-4 pb-8 sm:px-6">
 				<div className="mb-4 flex items-center justify-between">
@@ -544,7 +554,7 @@ export function BookingPage() {
 										<CardContent className="space-y-4">
 											<div className="grid grid-cols-2 gap-3">
 												<div className="space-y-2">
-													<div className="flex min-h-[28px] items-center justify-between">
+													<div className="flex min-h-7 items-center justify-between">
 														<div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
 															<MapPin className="h-4 w-4 text-blue-600 dark:text-blue-400" />
 															<span>ไปแม่ริม</span>
@@ -635,7 +645,7 @@ export function BookingPage() {
 												</div>
 
 												<div className="space-y-2">
-													<div className="flex min-h-[28px] items-center justify-between">
+													<div className="flex min-h-7 items-center justify-between">
 														<div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
 															<MapPin className="h-4 w-4 text-purple-600 dark:text-purple-400" />
 															<span>กลับเวียงบัว</span>
@@ -760,7 +770,7 @@ export function BookingPage() {
 												<Button
 													onClick={() => handleBook(group.dateString)}
 													disabled={bookingLoading !== undefined}
-													className="h-12 w-full gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-base font-semibold shadow-lg transition-all hover:scale-[1.02] hover:from-blue-700 hover:to-indigo-700 hover:shadow-xl active:scale-[0.98] disabled:hover:scale-100 dark:from-blue-500 dark:to-indigo-500"
+													className="h-12 w-full gap-2 bg-linear-to-r from-blue-600 to-indigo-600 text-base font-semibold shadow-lg transition-all hover:scale-[1.02] hover:from-blue-700 hover:to-indigo-700 hover:shadow-xl active:scale-[0.98] disabled:hover:scale-100 dark:from-blue-500 dark:to-indigo-500"
 													size="lg">
 													{bookingLoading === undefined ? (
 														<>
@@ -798,7 +808,7 @@ export function BookingPage() {
 									</div>
 									<Button
 										onClick={() => navigate(ROUTES.SCHEDULE)}
-										className="mt-4 gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 shadow-lg hover:from-blue-700 hover:to-indigo-700">
+										className="mt-4 gap-2 bg-linear-to-r from-blue-600 to-indigo-600 shadow-lg hover:from-blue-700 hover:to-indigo-700">
 										<ArrowLeft className="h-4 w-4" />
 										กลับไปดูรายการจอง
 									</Button>

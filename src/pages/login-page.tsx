@@ -59,7 +59,7 @@ export function LoginPage() {
 	};
 
 	return (
-		<div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-4 dark:from-slate-950 dark:via-blue-950 dark:to-indigo-950">
+		<div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-linear-to-br from-blue-50 via-indigo-50 to-purple-50 p-4 dark:from-slate-950 dark:via-blue-950 dark:to-indigo-950">
 			<Helmet>
 				<title>{ROUTE_METADATA["/login"].title}</title>
 				<meta name="description" content={ROUTE_METADATA["/login"].description} />
@@ -75,7 +75,7 @@ export function LoginPage() {
 			<Card className="relative z-10 w-full max-w-md border-0 bg-white/95 shadow-2xl backdrop-blur-md dark:bg-gray-900/95">
 				<CardHeader className="space-y-4 pb-6 text-center">
 					<div className="flex justify-center">
-						<div className="rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 p-4 shadow-2xl">
+						<div className="rounded-2xl bg-linear-to-br from-blue-600 to-indigo-600 p-4 shadow-2xl">
 							<Bus className="h-12 w-12 text-white" />
 						</div>
 					</div>

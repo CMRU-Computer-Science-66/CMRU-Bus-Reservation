@@ -1,18 +1,27 @@
 import { type LucideIcon } from "lucide-react";
 
 import { Card, CardContent } from "../../components/ui/card";
+import { Skeleton } from "../../components/ui/skeleton";
 
 interface StatCardProperties {
 	gradient: string;
 	icon: LucideIcon;
-	iconBg: string;
+	iconBg?: string;
 	isActive?: boolean;
+	isLoading?: boolean;
 	label: string;
 	onClick?: () => void;
 	value: number | string;
 }
 
-export function StatCard({ gradient, icon: Icon, iconBg, isActive, label, onClick, value }: StatCardProperties) {
+function getIconColor(gradient: string): string {
+	if (gradient.includes("blue")) return "h-5 w-5 text-blue-600 dark:text-blue-400";
+	if (gradient.includes("green")) return "h-5 w-5 text-green-600 dark:text-green-400";
+	if (gradient.includes("purple")) return "h-5 w-5 text-purple-600 dark:text-purple-400";
+	return "h-5 w-5 text-orange-600 dark:text-orange-400";
+}
+
+export function StatCard({ gradient, icon: Icon, iconBg, isActive, isLoading = false, label, onClick, value }: StatCardProperties) {
 	return (
 		<Card
 			onClick={onClick}
@@ -20,17 +29,25 @@ export function StatCard({ gradient, icon: Icon, iconBg, isActive, label, onClic
 				onClick ? "cursor-pointer" : ""
 			} ${isActive ? "ring-2 ring-blue-500 ring-offset-2 dark:ring-blue-400" : ""}`}>
 			<CardContent className="p-4">
-				<div className="flex items-center justify-between">
-					<div>
-						<p className="mb-1 text-xs font-medium text-gray-600 dark:text-gray-400">{label}</p>
-						<p className="text-2xl font-bold">
-							<span className={`bg-gradient-to-r ${gradient} bg-clip-text text-transparent`}>{value}</span>
-						</p>
+				<div className="flex items-center justify-between gap-3">
+					<div className="flex-1">
+						<div className="mb-1 h-4">
+							<p className="text-xs font-medium text-gray-600 dark:text-gray-400">{label}</p>
+						</div>
+
+						<div className="flex h-9 items-center">
+							{isLoading ? (
+								<Skeleton className="h-9 w-16" />
+							) : (
+								<p className="text-2xl font-bold">
+									<span className={`bg-linear-to-r ${gradient} bg-clip-text text-transparent`}>{value}</span>
+								</p>
+							)}
+						</div>
 					</div>
-					<div className={`rounded-lg ${iconBg} p-2 transition-all group-hover:scale-110`}>
-						<Icon
-							className={`h-5 w-5 ${gradient.includes("blue") ? "text-blue-600 dark:text-blue-400" : gradient.includes("green") ? "text-green-600 dark:text-green-400" : gradient.includes("purple") ? "text-purple-600 dark:text-purple-400" : "text-orange-600 dark:text-orange-400"}`}
-						/>
+
+					<div className={`rounded-lg ${iconBg || "bg-gray-100 dark:bg-gray-800"} shrink-0 p-2 transition-all group-hover:scale-110`}>
+						<Icon className={getIconColor(gradient)} />
 					</div>
 				</div>
 			</CardContent>
