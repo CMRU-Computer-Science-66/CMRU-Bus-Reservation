@@ -13,6 +13,26 @@
 			"destination": "${API_URL}/:path*"
 		},
 		{
+			"source": "/schedule",
+			"destination": "/index.html"
+		},
+		{
+			"source": "/login",
+			"destination": "/index.html"
+		},
+		{
+			"source": "/booking",
+			"destination": "/index.html"
+		},
+		{
+			"source": "/settings",
+			"destination": "/index.html"
+		},
+		{
+			"source": "/",
+			"destination": "/index.html"
+		},
+		{
 			"source": "/(.*)",
 			"destination": "/index.html"
 		}
