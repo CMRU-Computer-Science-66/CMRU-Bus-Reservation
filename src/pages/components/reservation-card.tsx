@@ -10,6 +10,7 @@ import { Separator } from "../../components/ui/separator";
 import { Skeleton } from "../../components/ui/skeleton";
 import { API_CONFIG, getApiUrl } from "../../config/api";
 import { formatTime } from "../../lib/time-formatter";
+import { getSessionManager } from "../../lib/session-manager";
 
 interface ReservationCardProperties {
 	actionLoading: number | null;
@@ -24,8 +25,10 @@ interface ReservationCardProperties {
 export function ReservationCard({ actionLoading, isLoading = false, item, onCancel, onConfirm, oneClickMode = false, showTimeLeft }: ReservationCardProperties) {
 	const [currentTime, setCurrentTime] = useState(new Date());
 	const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
+	const [qrImageError, setQrImageError] = useState(false);
 	const [qrLoading, setQrLoading] = useState(false);
 	const [qrDialogOpen, setQrDialogOpen] = useState(false);
+	const sessionManager = getSessionManager();
 
 	useEffect(() => {
 		if (!showTimeLeft) return;
@@ -43,33 +46,42 @@ export function ReservationCard({ actionLoading, isLoading = false, item, onCanc
 		const loadQRCode = async () => {
 			if (item.ticket.hasQRCode && item.ticket.id) {
 				setQrLoading(true);
+				setQrImageError(false);
 				try {
-					const response = await fetch(getApiUrl(`${API_CONFIG.ENDPOINTS.BUS.TICKET_QR}?ticketId=${item.ticket.id}`), {
+					const response = await fetch(getApiUrl(`${API_CONFIG.ENDPOINTS.BUS.TICKET_INFO}?ticketId=${item.ticket.id}`), {
 						method: "GET",
+						headers: {
+							"Content-Type": "application/json",
+						},
 					});
 
 					if (response.ok) {
-						const blob = await response.blob();
-						const url = URL.createObjectURL(blob);
-						setQrCodeUrl(url);
+						const ticketInfo = await response.json();
+						if (ticketInfo?.qrCode?.imageUrl) {
+							const qrUrl = ticketInfo.qrCode.imageUrl.startsWith("http") ? ticketInfo.qrCode.imageUrl : `https://cmrubus.cmru.ac.th${ticketInfo.qrCode.imageUrl}`;
+
+							setQrCodeUrl(qrUrl);
+						} else {
+							setQrImageError(true);
+						}
+					} else {
+						console.error("Failed to get ticket info:", response.status);
+						setQrImageError(true);
 					}
 				} catch (error) {
 					console.error("Failed to load QR code:", error);
+					setQrImageError(true);
 				} finally {
 					setQrLoading(false);
 				}
+			} else {
+				setQrCodeUrl(null);
+				setQrImageError(false);
 			}
 		};
 
 		loadQRCode();
-
-		return () => {
-			if (qrCodeUrl) {
-				URL.revokeObjectURL(qrCodeUrl);
-			}
-		};
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [item?.ticket.hasQRCode, item?.ticket.id, qrCodeUrl]);
+	}, [item?.ticket.hasQRCode, item?.ticket.id]);
 
 	const getTimeLeft = () => {
 		if (!showTimeLeft || !item) return null;
@@ -204,20 +216,28 @@ export function ReservationCard({ actionLoading, isLoading = false, item, onCanc
 					)}
 				</div>
 
-				{item.ticket.hasQRCode && item.ticket.id && (
+				{item.ticket.hasQRCode && (
 					<div className="flex justify-center rounded-lg bg-gray-50 p-4 dark:bg-gray-800">
 						{qrLoading ? (
 							<div className="flex h-48 w-48 items-center justify-center">
 								<Loader2 className="h-8 w-8 animate-spin text-gray-400" />
 							</div>
-						) : // eslint-disable-next-line unicorn/no-nested-ternary
-						qrCodeUrl ? (
+						) : qrCodeUrl && !qrImageError ? (
 							<button type="button" onClick={() => setQrDialogOpen(true)} className="cursor-pointer transition-transform hover:scale-105">
-								<img src={qrCodeUrl} alt="QR Code สำหรับขึ้นรถ" className="h-48 w-48 rounded-lg" />
+								<img
+									src={qrCodeUrl}
+									alt="QR Code สำหรับขึ้นรถ"
+									className="h-48 w-48 rounded-lg"
+									onError={() => {
+										console.error("Failed to load QR code image:", qrCodeUrl);
+										setQrImageError(true);
+									}}
+								/>
 							</button>
 						) : (
-							<div className="flex h-48 w-48 items-center justify-center">
+							<div className="flex h-48 w-48 flex-col items-center justify-center gap-2">
 								<QrCode className="h-16 w-16 text-gray-400" />
+								{qrImageError && <p className="text-center text-xs text-gray-500 dark:text-gray-400">ไม่สามารถโหลด QR Code ได้</p>}
 							</div>
 						)}
 					</div>
@@ -314,12 +334,23 @@ export function ReservationCard({ actionLoading, isLoading = false, item, onCanc
 				<DialogContent className="max-w-md">
 					<div className="flex flex-col items-center gap-4 p-4">
 						<h3 className="text-lg font-semibold">QR Code สำหรับขึ้นรถ</h3>
-						{qrCodeUrl && (
+						{qrLoading ? (
+							<div className="flex h-64 w-64 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-800">
+								<Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+							</div>
+						) : qrCodeUrl && !qrImageError ? (
 							<div className="flex flex-col items-center gap-2">
-								<img src={qrCodeUrl} alt="QR Code สำหรับขึ้นรถ" className="w-full max-w-sm rounded-lg" />
+								<img src={qrCodeUrl} alt="QR Code สำหรับขึ้นรถ" className="w-full max-w-sm rounded-lg" onError={() => setQrImageError(true)} />
 								<p className="text-center text-sm text-gray-600 dark:text-gray-400">
 									{item.destination.name} - {formatTime(item.departureTime)}
 								</p>
+							</div>
+						) : (
+							<div className="flex flex-col items-center gap-2">
+								<div className="flex h-64 w-64 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-800">
+									<QrCode className="h-16 w-16 text-gray-400" />
+								</div>
+								<p className="text-center text-sm text-gray-500 dark:text-gray-400">ไม่สามารถโหลด QR Code ได้</p>
 							</div>
 						)}
 					</div>
