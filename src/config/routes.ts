@@ -18,8 +18,8 @@ export const EXTERNAL_URLS = {
 
 export const ROUTE_METADATA = {
 	[ROUTES.HOME]: {
-		title: "ระบบจองรถบัส - มหาวิทยาลัยราชภัฏเชียงใหม่",
-		description: "ระบบจองรถรับ-ส่ง มหาวิทยาลัยราชภัฏเชียงใหม่ - จองรถรับส่งนักศึกษาและบุคลากรได้อย่างสะดวกรวดเร็ว",
+		title: "CMRU Bus - มหาวิทยาลัยราชภัฏเชียงใหม่",
+		description: "CMRU Bus - ระบบจองรถรับส่ง มหาวิทยาลัยราชภัฏเชียงใหม่ จองรถรับส่งนักศึกษาและบุคลากรได้อย่างสะดวกรวดเร็ว",
 		priority: 1,
 		frequency: "daily" as const,
 	},

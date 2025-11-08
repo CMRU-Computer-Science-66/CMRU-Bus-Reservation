@@ -392,8 +392,8 @@ const cliConfig = parseArgs();
 const isDev = cliConfig.dev || false;
 const outdir = cliConfig.outdir || path.join(process.cwd(), isDev ? "dev-dist" : "dist");
 const indexMetadata = {
-	title: "ระบบจองรถรับ-ส่ง | มหาวิทยาลัยราชภัฏเชียงใหม่",
-	description: "ระบบจองรถรับ-ส่ง มหาวิทยาลัยราชภัฏเชียงใหม่ - จองรถรับส่งนักศึกษาและบุคลากรได้อย่างสะดวกรวดเร็ว พร้อมตรวจสอบตารางเดินรถและประวัติการจอง",
+	title: "CMRU Bus - มหาวิทยาลัยราชภัฏเชียงใหม่",
+	description: "CMRU Bus - ระบบจองรถรับส่ง มหาวิทยาลัยราชภัฏเชียงใหม่ จองรถรับส่งนักศึกษาและบุคลากรได้อย่างสะดวกรวดเร็ว พร้อมตรวจสอบตารางเดินรถและประวัติการจอง",
 };
 
 if (isDev) {
