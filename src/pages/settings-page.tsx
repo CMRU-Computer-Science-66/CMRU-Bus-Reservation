@@ -1,4 +1,26 @@
-import { ArrowLeft, Bell, BellOff, Check, ChevronDown, Clock, Github, Globe, LogOut, Moon, Palette, Settings, Sun, Tag, TrendingUp, User, UserCheck } from "lucide-react";
+import {
+	ArrowLeft,
+	Bell,
+	BellOff,
+	Bus,
+	Calendar,
+	Check,
+	ChevronDown,
+	Clock,
+	Github,
+	Globe,
+	LogOut,
+	Menu,
+	Moon,
+	Palette,
+	Settings,
+	Sun,
+	Tag,
+	TrendingUp,
+	User,
+	UserCheck,
+	X,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { Helmet } from "react-helmet-async";
 import { useNavigate } from "react-router-dom";
@@ -41,6 +63,8 @@ export function SettingsPage() {
 	const [showStatistics, setShowStatistics] = useState(() => {
 		return sessionManager.getShowStatistics();
 	});
+	const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+	const [mobileMenuClosing, setMobileMenuClosing] = useState(false);
 
 	useEffect(() => {
 		const session = sessionManager.loadSession();
@@ -99,6 +123,14 @@ export function SettingsPage() {
 		sessionManager.setShowStatistics(isShowStatistics);
 	};
 
+	const closeMobileMenu = () => {
+		setMobileMenuClosing(true);
+		setTimeout(() => {
+			setMobileMenuOpen(false);
+			setMobileMenuClosing(false);
+		}, 200);
+	};
+
 	return (
 		<div className="min-h-screen bg-linear-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-slate-950 dark:via-blue-950 dark:to-indigo-950">
 			<Helmet>
@@ -109,9 +141,6 @@ export function SettingsPage() {
 				<div className="container mx-auto px-4 py-4 sm:px-6">
 					<div className="flex items-center justify-between gap-4">
 						<div className="flex min-w-0 flex-1 items-center gap-3">
-							<Button variant="ghost" size="icon" onClick={() => navigate(ROUTES.SCHEDULE)} className="h-10 w-10 shrink-0 rounded-full hover:scale-110">
-								<ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
-							</Button>
 							<div className="rounded-xl bg-linear-to-br from-blue-600 to-indigo-600 p-2 shadow-lg transition-all duration-300 hover:scale-110 hover:shadow-xl">
 								<Settings className="h-5 w-5 text-white sm:h-6 sm:w-6" />
 							</div>
@@ -120,9 +149,97 @@ export function SettingsPage() {
 								<p className="truncate text-xs text-gray-600 sm:text-sm dark:text-gray-400">จัดการการตั้งค่าและข้อมูลส่วนตัว</p>
 							</div>
 						</div>
+						<div className="flex shrink-0 items-center gap-2">
+							<Button variant="ghost" size="icon" onClick={() => navigate(ROUTES.SCHEDULE)} className="h-10 w-10 shrink-0 rounded-full hover:scale-110">
+								<ArrowLeft className="h-5 w-5" />
+							</Button>
+							<Button variant="outline" size="sm" onClick={() => navigate(ROUTES.SCHEDULE)} className="hidden gap-2 shadow-sm hover:shadow-lg md:flex">
+								<Calendar className="h-4 w-4" />
+								รายการจอง
+							</Button>
+							<Button variant="outline" size="sm" onClick={() => navigate(ROUTES.BOOKING)} className="hidden gap-2 shadow-sm hover:shadow-lg md:flex">
+								<Bus className="h-4 w-4" />
+								จองรถบัส
+							</Button>
+							<Button variant="outline" size="sm" onClick={() => navigate(ROUTES.STATISTICS)} className="hidden gap-2 shadow-sm hover:shadow-lg md:flex">
+								<TrendingUp className="h-4 w-4" />
+								สถิติ
+							</Button>
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={logout}
+								className="hidden gap-2 shadow-sm hover:border-red-300 hover:bg-red-50 hover:text-red-600 hover:shadow-lg md:flex dark:hover:bg-red-950">
+								<LogOut className="h-4 w-4" />
+								ออกจากระบบ
+							</Button>
+							<Button
+								variant="outline"
+								size="icon"
+								onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+								className="h-10 w-10 transition-all hover:scale-110 active:scale-95 md:hidden">
+								{mobileMenuOpen ? <X className="h-4 w-4 sm:h-5 sm:w-5" /> : <Menu className="h-4 w-4 sm:h-5 sm:w-5" />}
+							</Button>
+						</div>
 					</div>
 				</div>
 			</div>
+
+			{mobileMenuOpen && (
+				<div
+					className={`sticky top-[73px] z-30 border-b border-gray-200 bg-white/80 backdrop-blur-md transition-all duration-200 md:hidden dark:border-gray-800 dark:bg-gray-900/80 ${
+						mobileMenuClosing ? "animate-out slide-out-to-top-4 fade-out-0" : "animate-in slide-in-from-top-4 fade-in-0"
+					}`}>
+					<div className="container mx-auto px-4 py-4">
+						<div className="space-y-2">
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={() => {
+									navigate(ROUTES.SCHEDULE);
+									closeMobileMenu();
+								}}
+								className="w-full justify-start gap-2">
+								<Calendar className="h-4 w-4" />
+								รายการจองรถบัส
+							</Button>
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={() => {
+									navigate(ROUTES.BOOKING);
+									closeMobileMenu();
+								}}
+								className="w-full justify-start gap-2">
+								<Bus className="h-4 w-4" />
+								จองรถบัส
+							</Button>
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={() => {
+									navigate(ROUTES.STATISTICS);
+									closeMobileMenu();
+								}}
+								className="w-full justify-start gap-2">
+								<TrendingUp className="h-4 w-4" />
+								สถิติการเดินทาง
+							</Button>
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={() => {
+									logout();
+									closeMobileMenu();
+								}}
+								className="w-full justify-start gap-2 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950">
+								<LogOut className="h-4 w-4" />
+								ออกจากระบบ
+							</Button>
+						</div>
+					</div>
+				</div>
+			)}
 
 			<div className="container mx-auto max-w-5xl px-3 py-4 sm:px-4">
 				<div className="space-y-4 md:grid md:grid-cols-2 md:gap-4 md:space-y-0">
@@ -549,14 +666,21 @@ export function SettingsPage() {
 
 					<Card className="border-0 border-red-200 bg-white/90 shadow-md backdrop-blur-md md:col-span-2 dark:border-red-900 dark:bg-gray-900/90">
 						<CardContent className="p-4">
-							<Button
-								onClick={logout}
-								variant="destructive"
-								size="default"
-								className="h-10 w-full gap-2 text-sm font-semibold shadow-lg transition-all hover:scale-[1.02] hover:shadow-xl active:scale-[0.98]">
-								<LogOut className="h-4 w-4" />
-								ออกจากระบบ
-							</Button>
+							<div className="hidden md:block">
+								<Button
+									onClick={logout}
+									variant="destructive"
+									size="default"
+									className="h-10 w-full gap-2 text-sm font-semibold shadow-lg transition-all hover:scale-[1.02] hover:shadow-xl active:scale-[0.98]">
+									<LogOut className="h-4 w-4" />
+									ออกจากระบบ
+								</Button>
+							</div>
+							<div className="block md:hidden">
+								<p className="text-center text-sm text-gray-600 dark:text-gray-400">
+									ใช้เมนู <Menu className="inline h-4 w-4" /> ด้านบนเพื่อออกจากระบบ
+								</p>
+							</div>
 						</CardContent>
 					</Card>
 				</div>

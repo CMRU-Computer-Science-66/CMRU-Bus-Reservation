@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import type { AvailableBusData, AvailableBusSchedule, ScheduleReservation } from "@cmru-comsci-66/cmru-api";
 import { useQueryClient } from "@tanstack/react-query";
-import { AlertCircle, ArrowLeft, Bus, Calendar, CheckCircle2, Clock, Loader2, LogOut, MapPin, RefreshCw, TrendingUp, User, Users, X } from "lucide-react";
+import { AlertCircle, ArrowLeft, Bus, Calendar, CheckCircle2, Clock, Loader2, LogOut, MapPin, Menu, RefreshCw, Settings, TrendingUp, User, Users, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Helmet } from "react-helmet-async";
 import { useNavigate } from "react-router-dom";
@@ -74,13 +74,22 @@ export function BookingPage() {
 	const [bookingLoading, setBookingLoading] = useState<number | undefined>();
 	const [bookingStatus, setBookingStatus] = useState<string>("");
 	const [selectedSchedules, setSelectedSchedules] = useState<Record<string, { toMaeRim: number | string | undefined; toWiangBua: number | string | undefined }>>({});
-	const [isDark, setIsDark] = useState(false);
+	const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+	const [mobileMenuClosing, setMobileMenuClosing] = useState(false);
 	const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 	const [filterMode, setFilterMode] = useState<"all" | "available" | "canReserve">("all");
 	const [showStatistics, setShowStatistics] = useState(() => {
 		return getSessionManager().getShowStatistics();
 	});
 	const [isRefreshing, setIsRefreshing] = useState(false);
+
+	const closeMobileMenu = () => {
+		setMobileMenuClosing(true);
+		setTimeout(() => {
+			setMobileMenuOpen(false);
+			setMobileMenuClosing(false);
+		}, 200);
+	};
 
 	const { isHighlighted: isCardHighlighted, scrollToElement: scrollToCard } = useAutoScroll<string>({
 		checkViewport: true,
@@ -108,7 +117,6 @@ export function BookingPage() {
 		const theme = localStorage.getItem("theme");
 		const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
 		const shouldBeDark = theme === "dark" || (theme === "system" && prefersDark);
-		setIsDark(shouldBeDark);
 		document.documentElement.classList.toggle("dark", shouldBeDark);
 	}, []);
 
@@ -397,19 +405,50 @@ export function BookingPage() {
 							<Button variant="ghost" size="icon" onClick={() => navigate(ROUTES.SCHEDULE)} className="h-10 w-10 shrink-0 rounded-full hover:scale-110">
 								<ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
 							</Button>
-							<Button variant="outline" size="icon" disabled className="h-10 w-10 rounded-full">
+							<Button variant="outline" size="icon" disabled className="hidden h-10 w-10 rounded-full md:flex">
+								<RefreshCw className="h-4 w-4 animate-spin sm:h-5 sm:w-5" />
+							</Button>
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={logout}
+								className="hidden gap-2 shadow-sm hover:border-red-300 hover:bg-red-50 hover:text-red-600 hover:shadow-lg md:flex dark:hover:bg-red-950">
+								<LogOut className="h-4 w-4" />
+								ออกจากระบบ
+							</Button>
+							<Button variant="outline" size="icon" disabled className="h-10 w-10 rounded-full transition-all active:scale-95 md:hidden">
 								<RefreshCw className="h-4 w-4 animate-spin sm:h-5 sm:w-5" />
 							</Button>
 							<Button
 								variant="outline"
 								size="icon"
-								onClick={logout}
-								className="h-10 w-10 rounded-full hover:scale-110 hover:border-red-300 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950">
-								<LogOut className="h-4 w-4 sm:h-5 sm:w-5" />
+								onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+								className="h-10 w-10 transition-all hover:scale-110 active:scale-95 md:hidden">
+								{mobileMenuOpen ? <X className="h-4 w-4 sm:h-5 sm:w-5" /> : <Menu className="h-4 w-4 sm:h-5 sm:w-5" />}
 							</Button>
 						</>
 					}
 				/>
+
+				{mobileMenuOpen && (
+					<div
+						className={`sticky top-[73px] z-30 border-b border-gray-200 bg-white/80 backdrop-blur-md transition-all duration-200 md:hidden dark:border-gray-800 dark:bg-gray-900/80 ${
+							mobileMenuClosing ? "animate-out slide-out-to-top-4 fade-out-0" : "animate-in slide-in-from-top-4 fade-in-0"
+						}`}>
+						<div className="container mx-auto px-4 py-4">
+							<div className="space-y-2">
+								<Button variant="outline" size="sm" disabled className="w-full justify-start gap-2">
+									<RefreshCw className="h-4 w-4 animate-spin" />
+									กำลังโหลด...
+								</Button>
+								<Button variant="outline" size="sm" onClick={logout} className="w-full justify-start gap-2 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950">
+									<LogOut className="h-4 w-4" />
+									ออกจากระบบ
+								</Button>
+							</div>
+						</div>
+					</div>
+				)}
 
 				{showStatistics ? (
 					<div className="container mx-auto px-4 py-6 sm:px-6">
@@ -547,24 +586,100 @@ export function BookingPage() {
 						</Button>
 						<Button
 							variant="outline"
-							size="icon"
+							size="sm"
 							onClick={handleForceRefresh}
 							disabled={isRefreshing || isLoading || isLoadingAvailableBuses || isLoadingSchedule}
-							className="h-10 w-10 rounded-full hover:scale-110">
-							<RefreshCw
-								className={`h-4 w-4 transition-transform sm:h-5 sm:w-5 ${isRefreshing || isLoadingAvailableBuses || isLoadingSchedule ? "animate-spin" : "hover:rotate-180"}`}
-							/>
+							className="hidden gap-2 shadow-sm hover:shadow-lg md:flex">
+							<RefreshCw className={`h-4 w-4 transition-transform ${isRefreshing || isLoadingAvailableBuses || isLoadingSchedule ? "animate-spin" : "hover:rotate-180"}`} />
+							{isRefreshing || isLoading || isLoadingAvailableBuses || isLoadingSchedule ? "กำลังรีเฟรช..." : "รีเฟรช"}
+						</Button>
+						<Button variant="outline" size="sm" onClick={() => navigate(ROUTES.SCHEDULE)} className="hidden gap-2 shadow-sm hover:shadow-lg md:flex">
+							<Calendar className="h-4 w-4" />
+							รายการจอง
+						</Button>
+						<Button variant="outline" size="sm" onClick={() => navigate(ROUTES.STATISTICS)} className="hidden gap-2 shadow-sm hover:shadow-lg md:flex">
+							<TrendingUp className="h-4 w-4" />
+							สถิติ
+						</Button>
+						<Button variant="outline" size="sm" onClick={() => navigate(ROUTES.SETTINGS)} className="hidden gap-2 shadow-sm hover:shadow-lg md:flex">
+							<Settings className="h-4 w-4" />
+							ตั้งค่า
+						</Button>
+						<Button
+							variant="outline"
+							size="sm"
+							onClick={logout}
+							className="hidden gap-2 shadow-sm hover:border-red-300 hover:bg-red-50 hover:text-red-600 hover:shadow-lg md:flex dark:hover:bg-red-950">
+							<LogOut className="h-4 w-4" />
+							ออกจากระบบ
 						</Button>
 						<Button
 							variant="outline"
 							size="icon"
-							onClick={logout}
-							className="h-10 w-10 rounded-full hover:scale-110 hover:border-red-300 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950">
-							<LogOut className="h-4 w-4 sm:h-5 sm:w-5" />
+							onClick={handleForceRefresh}
+							disabled={isRefreshing || isLoading || isLoadingAvailableBuses || isLoadingSchedule}
+							className="h-10 w-10 rounded-full transition-all hover:scale-110 active:scale-95 md:hidden">
+							<RefreshCw className={`h-4 w-4 transition-transform sm:h-5 sm:w-5 ${isRefreshing || isLoadingAvailableBuses || isLoadingSchedule ? "animate-spin" : ""}`} />
+						</Button>
+						<Button
+							variant="outline"
+							size="icon"
+							onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+							className="h-10 w-10 transition-all hover:scale-110 active:scale-95 md:hidden">
+							{mobileMenuOpen ? <X className="h-4 w-4 sm:h-5 sm:w-5" /> : <Menu className="h-4 w-4 sm:h-5 sm:w-5" />}
 						</Button>
 					</>
 				}
 			/>
+
+			{mobileMenuOpen && (
+				<div
+					className={`sticky top-[73px] z-30 border-b border-gray-200 bg-white/80 backdrop-blur-md transition-all duration-200 md:hidden dark:border-gray-800 dark:bg-gray-900/80 ${
+						mobileMenuClosing ? "animate-out slide-out-to-top-4 fade-out-0" : "animate-in slide-in-from-top-4 fade-in-0"
+					}`}>
+					<div className="container mx-auto px-4 py-4">
+						<div className="space-y-2">
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={() => {
+									navigate(ROUTES.SCHEDULE);
+									closeMobileMenu();
+								}}
+								className="w-full justify-start gap-2">
+								<Calendar className="h-4 w-4" />
+								รายการจอง
+							</Button>
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={() => {
+									navigate(ROUTES.STATISTICS);
+									closeMobileMenu();
+								}}
+								className="w-full justify-start gap-2">
+								<TrendingUp className="h-4 w-4" />
+								สถิติ
+							</Button>
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={() => {
+									navigate(ROUTES.SETTINGS);
+									closeMobileMenu();
+								}}
+								className="w-full justify-start gap-2">
+								<Settings className="h-4 w-4" />
+								ตั้งค่า
+							</Button>
+							<Button variant="outline" size="sm" onClick={logout} className="w-full justify-start gap-2 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950">
+								<LogOut className="h-4 w-4" />
+								ออกจากระบบ
+							</Button>
+						</div>
+					</div>
+				</div>
+			)}
 
 			{showStatistics ? (
 				<div className="container mx-auto px-4 py-6 sm:px-6">

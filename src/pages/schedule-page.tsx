@@ -19,7 +19,6 @@ import { ErrorScreen } from "./components/error-screen";
 import { PageHeader } from "./components/page-header";
 import { ReservationCard } from "./components/reservation-card";
 import { StatCard } from "./components/stat-card";
-import { ThemeToggle } from "./components/theme-toggle";
 
 export function SchedulePage() {
 	const navigate = useNavigate();
@@ -35,7 +34,6 @@ export function SchedulePage() {
 	const [oneClickMode, setOneClickMode] = useState(sessionManager.getOneClickEnabled());
 	const [showStatistics, setShowStatistics] = useState(sessionManager.getShowStatistics());
 	const [actionLoading, setActionLoading] = useState<number | null>(null);
-	const [isDark, setIsDark] = useState(false);
 	const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -92,7 +90,6 @@ export function SchedulePage() {
 		const theme = localStorage.getItem("theme");
 		const prefersDark = globalThis.matchMedia("(prefers-color-scheme: dark)").matches;
 		const shouldBeDark = theme === "dark" || (theme === "system" && prefersDark);
-		setIsDark(shouldBeDark);
 		document.documentElement.classList.toggle("dark", shouldBeDark);
 	}, []);
 
@@ -121,7 +118,7 @@ export function SchedulePage() {
 						}, 3000);
 						processedScrollTarget.current = null;
 					},
-					(id) => {
+					() => {
 						processedScrollTarget.current = null;
 					},
 				);
@@ -147,7 +144,7 @@ export function SchedulePage() {
 						processedScrollTarget.current = null;
 						isAutoPaginationActive.current = false;
 					},
-					(id) => {
+					() => {
 						processedScrollTarget.current = null;
 						isAutoPaginationActive.current = false;
 					},
@@ -155,13 +152,6 @@ export function SchedulePage() {
 			}
 		}
 	}, [schedule, isLoading, attemptCrossPageScrollWithPagination, setReservationHighlighted, currentPage]);
-
-	const toggleTheme = () => {
-		const userTheme = !isDark;
-		setIsDark(userTheme);
-		localStorage.setItem("theme", userTheme ? "dark" : "light");
-		document.documentElement.classList.toggle("dark", userTheme);
-	};
 
 	const getDisplayedReservationIds = () => {
 		if (!schedule?.reservations) return new Set();
@@ -307,7 +297,10 @@ export function SchedulePage() {
 
 	const desktopActions = (
 		<>
-			<ThemeToggle isDark={isDark} onToggle={toggleTheme} className="hidden md:flex" />
+			<Button variant="outline" size="sm" onClick={handleRefresh} disabled={isRefreshing || isLoading} className="hidden gap-2 shadow-sm hover:shadow-lg md:flex">
+				<RefreshCw className={`h-4 w-4 transition-transform ${isRefreshing || isLoading ? "animate-spin" : "hover:rotate-180"}`} />
+				{isRefreshing ? "กำลังรีเฟรช..." : isLoading ? "กำลังโหลด..." : "รีเฟรช"}
+			</Button>
 			<Button
 				size="sm"
 				onClick={() => navigate(ROUTES.BOOKING)}
@@ -315,10 +308,7 @@ export function SchedulePage() {
 				<Plus className="h-4 w-4" />
 				จองรถ
 			</Button>
-			<Button variant="outline" size="sm" onClick={handleRefresh} disabled={isRefreshing || isLoading} className="hidden gap-2 shadow-sm hover:shadow-lg md:flex">
-				<RefreshCw className={`h-4 w-4 transition-transform ${isRefreshing || isLoading ? "animate-spin" : "hover:rotate-180"}`} />
-				{isRefreshing ? "กำลังรีเฟรช..." : isLoading ? "กำลังโหลด..." : "รีเฟรช"}
-			</Button>
+
 			<Button variant="outline" size="sm" onClick={() => navigate(ROUTES.STATISTICS)} className="hidden gap-2 shadow-sm hover:shadow-lg md:flex">
 				<TrendingUp className="h-4 w-4" />
 				สถิติ
@@ -378,34 +368,36 @@ export function SchedulePage() {
 			/>
 
 			{mobileMenuOpen && (
-				<div className="animate-in slide-in-from-top-4 fade-in-0 container mx-auto border-b border-gray-200 bg-white/80 px-4 py-4 backdrop-blur-md duration-200 md:hidden dark:border-gray-800 dark:bg-gray-900/80">
-					<div className="space-y-2">
-						<Button
-							variant="outline"
-							size="sm"
-							onClick={() => {
-								navigate(ROUTES.STATISTICS);
-								setMobileMenuOpen(false);
-							}}
-							className="w-full justify-start gap-2">
-							<TrendingUp className="h-4 w-4" />
-							สถิติ
-						</Button>
-						<Button
-							variant="outline"
-							size="sm"
-							onClick={() => {
-								navigate(ROUTES.SETTINGS);
-								setMobileMenuOpen(false);
-							}}
-							className="w-full justify-start gap-2">
-							<Settings className="h-4 w-4" />
-							ตั้งค่า
-						</Button>
-						<Button variant="outline" size="sm" onClick={logout} className="w-full justify-start gap-2 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950">
-							<LogOut className="h-4 w-4" />
-							ออกจากระบบ
-						</Button>
+				<div className="animate-in slide-in-from-top-4 fade-in-0 sticky top-[73px] z-30 border-b border-gray-200 bg-white/80 backdrop-blur-md transition-all duration-200 md:hidden dark:border-gray-800 dark:bg-gray-900/80">
+					<div className="container mx-auto px-4 py-4">
+						<div className="space-y-2">
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={() => {
+									navigate(ROUTES.STATISTICS);
+									setMobileMenuOpen(false);
+								}}
+								className="w-full justify-start gap-2">
+								<TrendingUp className="h-4 w-4" />
+								สถิติ
+							</Button>
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={() => {
+									navigate(ROUTES.SETTINGS);
+									setMobileMenuOpen(false);
+								}}
+								className="w-full justify-start gap-2">
+								<Settings className="h-4 w-4" />
+								ตั้งค่า
+							</Button>
+							<Button variant="outline" size="sm" onClick={logout} className="w-full justify-start gap-2 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950">
+								<LogOut className="h-4 w-4" />
+								ออกจากระบบ
+							</Button>
+						</div>
 					</div>
 				</div>
 			)}

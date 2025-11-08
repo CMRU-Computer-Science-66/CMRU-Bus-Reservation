@@ -1,6 +1,6 @@
 import type { ParsedScheduleData } from "@cmru-comsci-66/cmru-api";
 import { useQueryClient } from "@tanstack/react-query";
-import { Calendar, Car, ChevronDown, ChevronUp, LogOut, MapPin, Menu, Plus, RefreshCw, Settings, TrendingUp, Users, X } from "lucide-react";
+import { ArrowLeft, Calendar, Car, ChevronDown, ChevronUp, LogOut, MapPin, Menu, Plus, RefreshCw, Settings, TrendingUp, Users, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Helmet } from "react-helmet-async";
 import { useNavigate } from "react-router-dom";
@@ -15,7 +15,6 @@ import { queryKeys, useAllSchedulesQuery } from "../hooks/use-queries";
 import { ErrorScreen } from "./components/error-screen";
 import { PageHeader } from "./components/page-header";
 import { StatCard } from "./components/stat-card";
-import { ThemeToggle } from "./components/theme-toggle";
 
 interface StatisticsData {
 	averageBookingsPerMonth: number;
@@ -192,9 +191,17 @@ export function StatisticsPage() {
 	const combinedLoading = isLoadingSchedules;
 	const allReservations = allSchedulesData?.reservations || [];
 	const statisticsData = allSchedulesData ? processScheduleData(allSchedulesData) : null;
-	const [isDark, setIsDark] = useState(false);
 	const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+	const [mobileMenuClosing, setMobileMenuClosing] = useState(false);
 	const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set());
+
+	const closeMobileMenu = () => {
+		setMobileMenuClosing(true);
+		setTimeout(() => {
+			setMobileMenuOpen(false);
+			setMobileMenuClosing(false);
+		}, 200);
+	};
 	const [isRefreshing, setIsRefreshing] = useState(false);
 	const { navigateWithPageAndScroll } = useCrossPageScroll();
 	const navigateToReservation = (reservationId: number) => {
@@ -208,35 +215,12 @@ export function StatisticsPage() {
 		navigateWithPageAndScroll(ROUTES.SCHEDULE, reservationId, targetPage, navigate);
 	};
 
-	const navigateToMonthReservations = (monthName: string) => {
-		const monthReservations = getReservationsForMonth(monthName);
-		if (monthReservations.length > 0) {
-			const firstReservation = monthReservations[0];
-			if (firstReservation) {
-				const sortedReservations = [...allReservations].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-				const reservationIndex = sortedReservations.findIndex((r) => r.id === firstReservation.id);
-				const targetPage = Math.floor(reservationIndex / 10) + 1;
-
-				navigateWithPageAndScroll(ROUTES.SCHEDULE, firstReservation.id, targetPage, navigate);
-			}
-		}
-	};
-
 	useEffect(() => {
 		const theme = localStorage.getItem("theme");
 		const prefersDark = globalThis.matchMedia("(prefers-color-scheme: dark)").matches;
 		const shouldBeDark = theme === "dark" || (theme === "system" && prefersDark);
-		// eslint-disable-next-line react-hooks/set-state-in-effect
-		setIsDark(shouldBeDark);
 		document.documentElement.classList.toggle("dark", shouldBeDark);
 	}, []);
-
-	const toggleTheme = () => {
-		const userTheme = !isDark;
-		setIsDark(userTheme);
-		localStorage.setItem("theme", userTheme ? "dark" : "light");
-		document.documentElement.classList.toggle("dark", userTheme);
-	};
 
 	const toggleMonthExpansion = (month: string) => {
 		const updatedExpanded = new Set(expandedMonths);
@@ -285,7 +269,9 @@ export function StatisticsPage() {
 
 	const desktopActions = (
 		<>
-			<ThemeToggle isDark={isDark} onToggle={toggleTheme} className="hidden md:flex" />
+			<Button variant="ghost" size="icon" onClick={() => navigate(ROUTES.SCHEDULE)} className="h-10 w-10 shrink-0 rounded-full hover:scale-110">
+				<ArrowLeft className="h-5 w-5" />
+			</Button>
 			<Button variant="outline" size="sm" onClick={handleRefresh} disabled={isRefreshing || combinedLoading} className="hidden gap-2 shadow-sm hover:shadow-lg md:flex">
 				<RefreshCw className={`h-4 w-4 transition-transform ${isRefreshing || combinedLoading ? "animate-spin" : "hover:rotate-180"}`} />
 				{isRefreshing ? "กำลังรีเฟรช..." : combinedLoading ? "กำลังโหลด..." : "รีเฟรช"}
@@ -319,10 +305,12 @@ export function StatisticsPage() {
 	const mobileMenuButton = (
 		<>
 			<Button
-				onClick={() => navigate(ROUTES.BOOKING)}
+				variant="outline"
 				size="icon"
-				className="h-10 w-10 rounded-full bg-white text-green-600 shadow-md transition-all hover:scale-110 hover:bg-orange-50 active:scale-95 md:hidden dark:bg-gray-800 dark:text-orange-400 dark:hover:bg-gray-700">
-				<Plus className="h-4 w-4 sm:h-5 sm:w-5" />
+				onClick={handleRefresh}
+				disabled={isRefreshing || isLoadingSchedules}
+				className="h-10 w-10 rounded-full transition-all hover:scale-110 active:scale-95 md:hidden">
+				<RefreshCw className={`h-4 w-4 transition-transform sm:h-5 sm:w-5 ${isRefreshing || isLoadingSchedules ? "animate-spin" : ""}`} />
 			</Button>
 			<Button variant="outline" size="icon" onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="h-10 w-10 transition-all hover:scale-110 active:scale-95 md:hidden">
 				{mobileMenuOpen ? <X className="h-4 w-4 sm:h-5 sm:w-5" /> : <Menu className="h-4 w-4 sm:h-5 sm:w-5" />}
@@ -348,46 +336,39 @@ export function StatisticsPage() {
 			/>
 
 			{mobileMenuOpen && (
-				<div className="animate-in slide-in-from-top-4 fade-in-0 container mx-auto border-b border-gray-200 bg-white/80 px-4 py-4 backdrop-blur-md duration-200 md:hidden dark:border-gray-800 dark:bg-gray-900/80">
-					<div className="space-y-2">
-						<Button
-							variant="outline"
-							size="sm"
-							onClick={() => {
-								handleRefresh();
-								setMobileMenuOpen(false);
-							}}
-							disabled={isRefreshing || combinedLoading}
-							className="w-full justify-start gap-2">
-							<RefreshCw className={`h-4 w-4 transition-transform ${isRefreshing || combinedLoading ? "animate-spin" : "hover:rotate-180"}`} />
-							{isRefreshing ? "กำลังรีเฟรช..." : combinedLoading ? "กำลังโหลด..." : "รีเฟรช"}
-						</Button>
-						<Button
-							variant="outline"
-							size="sm"
-							onClick={() => {
-								navigate(ROUTES.SCHEDULE);
-								setMobileMenuOpen(false);
-							}}
-							className="w-full justify-start gap-2">
-							<Calendar className="h-4 w-4" />
-							รายการจอง
-						</Button>
-						<Button
-							variant="outline"
-							size="sm"
-							onClick={() => {
-								navigate(ROUTES.SETTINGS);
-								setMobileMenuOpen(false);
-							}}
-							className="w-full justify-start gap-2">
-							<Settings className="h-4 w-4" />
-							ตั้งค่า
-						</Button>
-						<Button variant="outline" size="sm" onClick={logout} className="w-full justify-start gap-2 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950">
-							<LogOut className="h-4 w-4" />
-							ออกจากระบบ
-						</Button>
+				<div
+					className={`sticky top-[73px] z-30 border-b border-gray-200 bg-white/80 backdrop-blur-md transition-all duration-200 md:hidden dark:border-gray-800 dark:bg-gray-900/80 ${
+						mobileMenuClosing ? "animate-out slide-out-to-top-4 fade-out-0" : "animate-in slide-in-from-top-4 fade-in-0"
+					}`}>
+					<div className="container mx-auto px-4 py-4">
+						<div className="space-y-2">
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={() => {
+									navigate(ROUTES.SCHEDULE);
+									closeMobileMenu();
+								}}
+								className="w-full justify-start gap-2">
+								<Calendar className="h-4 w-4" />
+								รายการจอง
+							</Button>
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={() => {
+									navigate(ROUTES.SETTINGS);
+									closeMobileMenu();
+								}}
+								className="w-full justify-start gap-2">
+								<Settings className="h-4 w-4" />
+								ตั้งค่า
+							</Button>
+							<Button variant="outline" size="sm" onClick={logout} className="w-full justify-start gap-2 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950">
+								<LogOut className="h-4 w-4" />
+								ออกจากระบบ
+							</Button>
+						</div>
 					</div>
 				</div>
 			)}
@@ -587,14 +568,6 @@ export function StatisticsPage() {
 													<div className="text-sm text-gray-600 dark:text-gray-400">
 														จอง: {month.bookings} | เดินทาง: {month.completed}
 													</div>
-												</div>
-												<div className="flex gap-2">
-													<Badge variant="outline">เดินทางแล้ว: {month.bookings > 0 ? Math.round((month.completed / month.bookings) * 100) : 0}%</Badge>
-													<button
-														onClick={() => navigateToMonthReservations(month.month)}
-														className="ml-2 rounded-md bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700 transition-colors hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-300 dark:hover:bg-blue-800">
-														ไปดูรายการ →
-													</button>
 												</div>
 
 												{isExpanded && (
