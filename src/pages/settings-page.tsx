@@ -24,12 +24,12 @@ export function SettingsPage() {
 	const [showAllContributors, setShowAllContributors] = useState(false);
 	const [themeMode, setThemeMode] = useState<ThemeMode>(() => {
 		const theme = localStorage.getItem("theme") as ThemeMode | null;
-		return theme || "system";
+		return theme || "light";
 	});
 	const [isDark, setIsDark] = useState(() => {
 		const theme = localStorage.getItem("theme") as ThemeMode | null;
 		const prefersDark = globalThis.matchMedia("(prefers-color-scheme: dark)").matches;
-		return theme === "dark" || (!theme && prefersDark);
+		return theme === "dark" || (theme === "system" && prefersDark);
 	});
 	const [timeFormat, setTimeFormat] = useState<TimeFormat>(() => {
 		const format = localStorage.getItem("timeFormat") as TimeFormat | null;

@@ -60,9 +60,7 @@ export function initializeApiClient(): ReturnType<typeof createResilientApiClien
 			maxDelay: 8000,
 			backoffFactor: 2,
 		},
-		onRetry: (attempt, error) => {
-			console.warn(`API retry attempt ${attempt}:`, error);
-		},
+		onRetry: () => {},
 		onConnectionLost: () => {
 			toast.error("การเชื่อมต่อกับเซิร์ฟเวอร์ขาดหาย กำลังพยายามเชื่อมต่อใหม่...", {
 				id: "connection-lost",

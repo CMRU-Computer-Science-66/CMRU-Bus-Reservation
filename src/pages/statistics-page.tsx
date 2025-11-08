@@ -10,6 +10,7 @@ import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { ROUTE_METADATA, ROUTES } from "../config/routes";
 import { useApi } from "../contexts/api-context";
+import { useCrossPageScroll } from "../hooks/use-auto-scroll";
 import { queryKeys, useAllSchedulesQuery } from "../hooks/use-queries";
 import { ErrorScreen } from "./components/error-screen";
 import { PageHeader } from "./components/page-header";
@@ -195,11 +196,36 @@ export function StatisticsPage() {
 	const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 	const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set());
 	const [isRefreshing, setIsRefreshing] = useState(false);
+	const { navigateWithPageAndScroll } = useCrossPageScroll();
+	const navigateToReservation = (reservationId: number) => {
+		const sortedReservations = [...allReservations].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+		const reservationIndex = sortedReservations.findIndex((r) => r.id === reservationId);
+		let targetPage: number | undefined;
+		if (reservationIndex !== -1) {
+			targetPage = Math.floor(reservationIndex / 10) + 1;
+		}
+
+		navigateWithPageAndScroll(ROUTES.SCHEDULE, reservationId, targetPage, navigate);
+	};
+
+	const navigateToMonthReservations = (monthName: string) => {
+		const monthReservations = getReservationsForMonth(monthName);
+		if (monthReservations.length > 0) {
+			const firstReservation = monthReservations[0];
+			if (firstReservation) {
+				const sortedReservations = [...allReservations].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+				const reservationIndex = sortedReservations.findIndex((r) => r.id === firstReservation.id);
+				const targetPage = Math.floor(reservationIndex / 10) + 1;
+
+				navigateWithPageAndScroll(ROUTES.SCHEDULE, firstReservation.id, targetPage, navigate);
+			}
+		}
+	};
 
 	useEffect(() => {
 		const theme = localStorage.getItem("theme");
 		const prefersDark = globalThis.matchMedia("(prefers-color-scheme: dark)").matches;
-		const shouldBeDark = theme === "dark" || (!theme && prefersDark);
+		const shouldBeDark = theme === "dark" || (theme === "system" && prefersDark);
 		// eslint-disable-next-line react-hooks/set-state-in-effect
 		setIsDark(shouldBeDark);
 		document.documentElement.classList.toggle("dark", shouldBeDark);
@@ -367,13 +393,14 @@ export function StatisticsPage() {
 			)}
 
 			<div className="container mx-auto px-4 py-6 sm:px-6">
-				<div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+				<div className="mb-8 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
 					<StatCard
 						label="จองทั้งหมด"
 						value={statisticsData?.totalBookings?.toString() || "0"}
 						icon={Calendar}
 						gradient="from-blue-600 to-indigo-600"
 						isLoading={combinedLoading}
+						onClick={() => navigate(ROUTES.SCHEDULE)}
 					/>
 					<StatCard
 						label="ยกเลิกแล้ว"
@@ -381,6 +408,9 @@ export function StatisticsPage() {
 						icon={Users}
 						gradient="from-green-600 to-emerald-600"
 						isLoading={combinedLoading}
+						onClick={() => {
+							navigate(`${ROUTES.SCHEDULE}?filter=cancelled`);
+						}}
 					/>
 					<StatCard
 						label="เดินทางแล้ว"
@@ -388,6 +418,9 @@ export function StatisticsPage() {
 						icon={MapPin}
 						gradient="from-purple-600 to-pink-600"
 						isLoading={combinedLoading}
+						onClick={() => {
+							navigate(`${ROUTES.SCHEDULE}?filter=completed`);
+						}}
 					/>
 					<StatCard
 						label="เฉลีย/เดือน"
@@ -395,13 +428,14 @@ export function StatisticsPage() {
 						icon={TrendingUp}
 						gradient="from-orange-600 to-red-600"
 						isLoading={combinedLoading}
+						onClick={() => navigate(ROUTES.SCHEDULE)}
 					/>
 				</div>
 
 				{combinedLoading ? (
 					<div className="grid gap-6 md:grid-cols-2">
 						{[1, 2, 3, 4].map((index) => (
-							<Card key={index}>
+							<Card key={index} className="border-0 bg-white/90 shadow-md backdrop-blur-md dark:bg-gray-900/90">
 								<CardHeader>
 									<CardTitle className="flex items-center gap-2">
 										<div className="h-5 w-5 animate-pulse rounded bg-gray-300 dark:bg-gray-600" />
@@ -427,7 +461,7 @@ export function StatisticsPage() {
 					</div>
 				) : (
 					<div className="grid gap-6 md:grid-cols-2">
-						<Card>
+						<Card className="border-0 bg-white/90 shadow-md backdrop-blur-md dark:bg-gray-900/90">
 							<CardHeader>
 								<CardTitle className="flex items-center gap-2">
 									<MapPin className="h-5 w-5" />
@@ -461,7 +495,7 @@ export function StatisticsPage() {
 							</CardContent>
 						</Card>
 
-						<Card>
+						<Card className="border-0 bg-white/90 shadow-md backdrop-blur-md dark:bg-gray-900/90">
 							<CardHeader>
 								<CardTitle className="flex items-center gap-2">
 									<TrendingUp className="h-5 w-5" />
@@ -494,7 +528,7 @@ export function StatisticsPage() {
 							</CardContent>
 						</Card>
 
-						<Card>
+						<Card className="border-0 bg-white/90 shadow-md backdrop-blur-md dark:bg-gray-900/90">
 							<CardHeader>
 								<CardTitle className="flex items-center gap-2">
 									<Calendar className="h-5 w-5" />
@@ -528,7 +562,7 @@ export function StatisticsPage() {
 							</CardContent>
 						</Card>
 
-						<Card>
+						<Card className="border-0 bg-white/90 shadow-md backdrop-blur-md dark:bg-gray-900/90">
 							<CardHeader>
 								<CardTitle className="flex items-center gap-2">
 									<TrendingUp className="h-5 w-5" />
@@ -556,15 +590,21 @@ export function StatisticsPage() {
 												</div>
 												<div className="flex gap-2">
 													<Badge variant="outline">เดินทางแล้ว: {month.bookings > 0 ? Math.round((month.completed / month.bookings) * 100) : 0}%</Badge>
+													<button
+														onClick={() => navigateToMonthReservations(month.month)}
+														className="ml-2 rounded-md bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700 transition-colors hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-300 dark:hover:bg-blue-800">
+														ไปดูรายการ →
+													</button>
 												</div>
 
 												{isExpanded && (
 													<div className="mt-3 ml-6 space-y-2 border-l-2 border-blue-200 pl-4 dark:border-blue-800">
 														{monthReservations.length > 0 ? (
 															monthReservations.map((reservation) => (
-																<div
+																<button
 																	key={`${reservation.date}-${reservation.departureTime}`}
-																	className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2 dark:bg-gray-800">
+																	onClick={() => navigateToReservation(reservation.id)}
+																	className="flex w-full items-center justify-between rounded-lg bg-gray-50 px-3 py-2 text-left transition-all hover:bg-gray-100 hover:shadow-sm active:scale-[0.98] dark:bg-gray-800 dark:hover:bg-gray-700">
 																	<div className="flex items-center gap-3">
 																		<div className="text-sm">
 																			<div className="font-medium">
@@ -590,7 +630,7 @@ export function StatisticsPage() {
 																			</Badge>
 																		)}
 																	</div>
-																</div>
+																</button>
 															))
 														) : (
 															<div className="text-sm text-gray-500 italic dark:text-gray-400">ไม่มีข้อมูลการจองในเดือนนี้</div>

@@ -15,6 +15,7 @@ import { Separator } from "../components/ui/separator";
 import { Skeleton } from "../components/ui/skeleton";
 import { ROUTE_METADATA, ROUTES } from "../config/routes";
 import { useApi } from "../contexts/api-context";
+import { useAutoScroll, useCrossPageScroll } from "../hooks/use-auto-scroll";
 import { queryKeys, useAvailableBusesQuery, useBookBusMutation, useScheduleQuery } from "../hooks/use-queries";
 import { getSessionManager } from "../lib/session-manager";
 import { formatTime } from "../lib/time-formatter";
@@ -81,38 +82,32 @@ export function BookingPage() {
 	});
 	const [isRefreshing, setIsRefreshing] = useState(false);
 
-	const scrollToCard = useCallback((dateString: string) => {
-		if (window.innerWidth < 768) {
-			setTimeout(() => {
-				// eslint-disable-next-line unicorn/prefer-query-selector
-				const cardElement = document.getElementById(`card-${dateString}`);
+	const { isHighlighted: isCardHighlighted, scrollToElement: scrollToCard } = useAutoScroll<string>({
+		checkViewport: true,
+		highlightDuration: 2000,
+		mobileOnly: true,
+	});
 
-				if (cardElement) {
-					cardElement.scrollIntoView({
-						behavior: "smooth",
-						block: "center",
-						inline: "nearest",
-					});
-				}
-			}, 100);
-		}
-	}, []);
+	const handleScrollToCard = useCallback(
+		(dateString: string, event?: React.MouseEvent | React.KeyboardEvent) => {
+			scrollToCard(dateString, `#card-${dateString}`, event);
+		},
+		[scrollToCard],
+	);
+
+	const { navigateWithScroll } = useCrossPageScroll();
 
 	const navigateToScheduleWithScroll = useCallback(
 		(reservationId?: number) => {
-			// Store scroll target in sessionStorage
-			if (reservationId) {
-				sessionStorage.setItem("scrollToReservation", reservationId.toString());
-			}
-			navigate(ROUTES.SCHEDULE);
+			navigateWithScroll(ROUTES.SCHEDULE, reservationId, navigate);
 		},
-		[navigate],
+		[navigate, navigateWithScroll],
 	);
 
 	useEffect(() => {
 		const theme = localStorage.getItem("theme");
 		const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-		const shouldBeDark = theme === "dark" || (!theme && prefersDark);
+		const shouldBeDark = theme === "dark" || (theme === "system" && prefersDark);
 		setIsDark(shouldBeDark);
 		document.documentElement.classList.toggle("dark", shouldBeDark);
 	}, []);
@@ -378,7 +373,6 @@ export function BookingPage() {
 				delete updatedState[dateString];
 				return updatedState;
 			});
-			// Cache will be automatically invalidated by the mutation
 			await refetchSchedule();
 		} catch {
 			setBookingStatus("เกิดข้อผิดพลาด");
@@ -673,7 +667,7 @@ export function BookingPage() {
 						}).length > 1;
 					return multipleSelections ? "pb-40 sm:pb-32" : "pb-8";
 				})()}`}>
-				<div className="mb-4 flex items-center justify-between">
+				<div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
 					<div className="flex items-center gap-2">
 						<h2 className="text-lg font-semibold text-gray-900 dark:text-white">รอบรถที่เปิดจอง</h2>
 						{filterMode !== "all" && (
@@ -684,6 +678,7 @@ export function BookingPage() {
 							</Badge>
 						)}
 					</div>
+					<div className="text-xs text-gray-500 md:hidden dark:text-gray-400">💡 แตะที่บัตรเพื่อ auto scroll</div>
 					{/* <div className="flex gap-2">
 						<Button variant={viewMode === "grid" ? "default" : "outline"} size="sm" onClick={() => setViewMode("grid")} className="gap-2">
 							<Grid3x3 className="h-4 w-4" />
@@ -698,7 +693,6 @@ export function BookingPage() {
 
 				<div className={viewMode === "grid" ? "grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3" : "space-y-4"}>
 					{isLoadingAvailableBuses || isLoadingSchedule ? (
-						// แสดง Loading Skeleton เมื่อกำลังโหลดข้อมูล
 						[1, 2, 3, 4, 5, 6].map((index) => (
 							<Card key={index} className="group border-0 bg-white/90 shadow-md backdrop-blur-md transition-all hover:scale-[1.02] hover:shadow-xl dark:bg-gray-900/90">
 								<CardContent className="space-y-4 p-4">
@@ -750,7 +744,19 @@ export function BookingPage() {
 									<Card
 										key={group.dateString}
 										id={`card-${group.dateString}`}
-										className={`group bg-white/90 shadow-md backdrop-blur-md transition-all hover:scale-[1.02] hover:shadow-xl dark:bg-gray-900/90 ${(() => {
+										role="button"
+										tabIndex={0}
+										onClick={(event) => handleScrollToCard(group.dateString, event)}
+										onKeyDown={(event) => {
+											if (event.key === "Enter" || event.key === " ") {
+												handleScrollToCard(group.dateString, event);
+											}
+										}}
+										className={`group cursor-pointer bg-white/90 shadow-md backdrop-blur-md transition-all hover:scale-[1.02] hover:shadow-xl md:cursor-default dark:bg-gray-900/90 ${(() => {
+											if (isCardHighlighted(group.dateString)) {
+												return "border-2 border-blue-400 bg-blue-50/95 dark:border-blue-500 dark:bg-blue-950/95";
+											}
+
 											const current = selectedSchedules[group.dateString];
 											const hasCancellation = current?.toMaeRim === "__CANCEL__" || current?.toWiangBua === "__CANCEL__";
 											const hasNewBooking = (current?.toMaeRim && current.toMaeRim !== "__CANCEL__") || (current?.toWiangBua && current.toWiangBua !== "__CANCEL__");
@@ -873,7 +879,7 @@ export function BookingPage() {
 																		toWiangBua: previous[group.dateString]?.toWiangBua,
 																	},
 																}));
-																scrollToCard(group.dateString);
+																handleScrollToCard(group.dateString);
 															} else if (value) {
 																const numberValue = Number.parseInt(value);
 																const selectedSchedule = group.schedules.find((s) => s.id === numberValue);
@@ -903,7 +909,7 @@ export function BookingPage() {
 																		toWiangBua: previous[group.dateString]?.toWiangBua,
 																	},
 																}));
-																scrollToCard(group.dateString);
+																handleScrollToCard(group.dateString);
 															}
 														}}>
 														<SelectTrigger className="h-11 border-gray-200 transition-all hover:border-blue-300 dark:border-gray-700 dark:bg-gray-800">
@@ -1025,7 +1031,7 @@ export function BookingPage() {
 																		toWiangBua: "__CANCEL__",
 																	},
 																}));
-																scrollToCard(group.dateString);
+																handleScrollToCard(group.dateString);
 															} else if (value) {
 																const numberValue = Number.parseInt(value);
 																const selectedSchedule = group.schedules.find((s) => s.id === numberValue);
@@ -1054,7 +1060,7 @@ export function BookingPage() {
 																		toWiangBua: numberValue,
 																	},
 																}));
-																scrollToCard(group.dateString);
+																handleScrollToCard(group.dateString);
 															}
 														}}>
 														<SelectTrigger className="h-11 border-gray-200 transition-all hover:border-purple-300 dark:border-gray-700 dark:bg-gray-800">

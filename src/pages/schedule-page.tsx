@@ -1,7 +1,7 @@
 import type { ScheduleReservation } from "@cmru-comsci-66/cmru-api";
 import { useQueryClient } from "@tanstack/react-query";
 import { Calendar, CheckCircle2, LogOut, Menu, Plus, QrCode, RefreshCw, Settings, TrendingUp, User, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Helmet } from "react-helmet-async";
 import { useNavigate } from "react-router-dom";
 
@@ -10,6 +10,7 @@ import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
 import { ROUTE_METADATA, ROUTES } from "../config/routes";
 import { useApi } from "../contexts/api-context";
+import { useAutoScroll, useCrossPageScroll } from "../hooks/use-auto-scroll";
 import { queryKeys, useCancelReservationMutation, useConfirmReservationMutation, useDeleteReservationMutation, useScheduleQuery } from "../hooks/use-queries";
 import { getSessionManager } from "../lib/session-manager";
 import { DateSection } from "./components/date-section";
@@ -41,7 +42,27 @@ export function SchedulePage() {
 	const [filterStatus, setFilterStatus] = useState<"all" | "confirmed" | "completed" | "hasQR">("all");
 	const [qrRefreshTrigger, setQrRefreshTrigger] = useState(0);
 	const [isRefreshing, setIsRefreshing] = useState(false);
-	const [highlightedReservationId, setHighlightedReservationId] = useState<number | null>(null);
+	const isAutoPaginationActive = useRef(false);
+	const processedScrollTarget = useRef<string | null>(null);
+
+	const {
+		isHighlighted: isReservationHighlighted,
+		scrollToElement: scrollToReservation,
+		setHighlighted: setReservationHighlighted,
+	} = useAutoScroll<number>({
+		checkViewport: true,
+		highlightDuration: 3000,
+		mobileOnly: true,
+	});
+
+	const { attemptCrossPageScrollWithPagination } = useCrossPageScroll();
+
+	const handleScrollToReservation = useCallback(
+		(reservationId: number, event?: React.MouseEvent | React.KeyboardEvent) => {
+			scrollToReservation(reservationId, `[data-reservation-id="${reservationId}"]`, event);
+		},
+		[scrollToReservation],
+	);
 
 	const handleRefresh = async () => {
 		setIsRefreshing(true);
@@ -55,19 +76,6 @@ export function SchedulePage() {
 	useEffect(() => {
 		setOneClickMode(sessionManager.getOneClickEnabled());
 		setShowStatistics(sessionManager.getShowStatistics());
-
-		// ตรวจสอบว่ามาจากหน้า booking หรือไม่
-		const scrollTarget = sessionStorage.getItem("scrollToReservation");
-		if (scrollTarget) {
-			const reservationId = Number.parseInt(scrollTarget, 10);
-			setHighlightedReservationId(reservationId);
-			sessionStorage.removeItem("scrollToReservation");
-
-			// ลบ highlight หลัง 3 วินาที
-			setTimeout(() => {
-				setHighlightedReservationId(null);
-			}, 3000);
-		}
 	}, [sessionManager]);
 
 	useEffect(() => {
@@ -83,33 +91,70 @@ export function SchedulePage() {
 	useEffect(() => {
 		const theme = localStorage.getItem("theme");
 		const prefersDark = globalThis.matchMedia("(prefers-color-scheme: dark)").matches;
-		const shouldBeDark = theme === "dark" || (!theme && prefersDark);
-		// eslint-disable-next-line react-hooks/set-state-in-effect
+		const shouldBeDark = theme === "dark" || (theme === "system" && prefersDark);
 		setIsDark(shouldBeDark);
 		document.documentElement.classList.toggle("dark", shouldBeDark);
 	}, []);
 
 	useEffect(() => {
-		// Check for scroll target from booking page
 		const scrollToReservationId = sessionStorage.getItem("scrollToReservation");
-		if (scrollToReservationId && schedule?.reservations) {
+
+		if (scrollToReservationId && processedScrollTarget.current === scrollToReservationId) {
+			return;
+		}
+
+		if (scrollToReservationId && schedule?.reservations && !isLoading && !isAutoPaginationActive.current) {
+			processedScrollTarget.current = scrollToReservationId;
+
 			const targetReservation = schedule.reservations.find((r) => r.id.toString() === scrollToReservationId);
 			if (targetReservation) {
-				setTimeout(() => {
-					const cardElement = document.querySelector(`[data-reservation-id="${scrollToReservationId}"]`);
-					if (cardElement) {
-						cardElement.scrollIntoView({
-							behavior: "smooth",
-							block: "center",
-							inline: "nearest",
-						});
-						// Clear the scroll target
-						sessionStorage.removeItem("scrollToReservation");
-					}
-				}, 500); // Wait for render
+				attemptCrossPageScrollWithPagination(
+					scrollToReservationId,
+					(id) => `[data-reservation-id="${id}"]`,
+					undefined,
+					schedule.totalPages,
+					(id) => {
+						const reservationId = Number.parseInt(id, 10);
+						setReservationHighlighted(reservationId);
+						setTimeout(() => {
+							setReservationHighlighted(null);
+						}, 3000);
+						processedScrollTarget.current = null;
+					},
+					(id) => {
+						processedScrollTarget.current = null;
+					},
+				);
+			} else {
+				isAutoPaginationActive.current = true;
+
+				attemptCrossPageScrollWithPagination(
+					scrollToReservationId,
+					(id) => `[data-reservation-id="${id}"]`,
+					(page) => {
+						setCurrentPage(page);
+						setTimeout(() => {
+							isAutoPaginationActive.current = false;
+						}, 1200);
+					},
+					schedule.totalPages,
+					(id) => {
+						const reservationId = Number.parseInt(id, 10);
+						setReservationHighlighted(reservationId);
+						setTimeout(() => {
+							setReservationHighlighted(null);
+						}, 3000);
+						processedScrollTarget.current = null;
+						isAutoPaginationActive.current = false;
+					},
+					(id) => {
+						processedScrollTarget.current = null;
+						isAutoPaginationActive.current = false;
+					},
+				);
 			}
 		}
-	}, [schedule]);
+	}, [schedule, isLoading, attemptCrossPageScrollWithPagination, setReservationHighlighted, currentPage]);
 
 	const toggleTheme = () => {
 		const userTheme = !isDark;
@@ -226,10 +271,7 @@ export function SchedulePage() {
 		try {
 			await confirmMutation.mutateAsync(item.confirmation.confirmData);
 			setQrRefreshTrigger((previous) => previous + 1);
-			// Force refresh to ensure UI is updated
 			await refetch();
-		} catch (error) {
-			console.error("Error confirming reservation:", error);
 		} finally {
 			setActionLoading(null);
 		}
@@ -245,10 +287,7 @@ export function SchedulePage() {
 				await deleteMutation.mutateAsync(Number(item.actions.reservationId));
 			}
 			setQrRefreshTrigger((previous) => previous + 1);
-			// Force refresh to ensure UI is updated
 			await refetch();
-		} catch (error) {
-			console.error("Error canceling reservation:", error);
 		} finally {
 			setActionLoading(null);
 		}
@@ -484,13 +523,12 @@ export function SchedulePage() {
 							})
 							.slice(0, 6);
 
-						sectionTitle = "รายการจองในเวลาที่ใกล้จะถึง";
+						sectionTitle = "รายการจองที่ใกล้จะถึง";
 					}
 
 					const displayReservations = todayReservations.length > 0 ? todayReservations : upcomingReservations;
 
 					if (displayReservations.length === 0) {
-						// แสดงข้อความ "ไม่พบรายการจอง" เฉพาะหน้าแรกเท่านั้น
 						if (currentPage === 1) {
 							return (
 								<div className="container mx-auto px-4 pb-8 sm:px-6">
@@ -518,7 +556,6 @@ export function SchedulePage() {
 								</div>
 							);
 						}
-						// หน้าอื่นๆ ไม่แสดงข้อความแต่ return null
 						return null;
 					}
 
@@ -581,7 +618,18 @@ export function SchedulePage() {
 
 										<div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
 											{group.items.map((item) => (
-												<div key={item.id} data-reservation-id={item.id}>
+												<div
+													key={item.id}
+													data-reservation-id={item.id}
+													role="button"
+													tabIndex={0}
+													onClick={(event) => handleScrollToReservation(item.id, event)}
+													onKeyDown={(event) => {
+														if (event.key === "Enter" || event.key === " ") {
+															handleScrollToReservation(item.id, event);
+														}
+													}}
+													className="cursor-pointer md:cursor-default">
 													<ReservationCard
 														item={item}
 														actionLoading={actionLoading}
@@ -590,7 +638,7 @@ export function SchedulePage() {
 														oneClickMode={oneClickMode}
 														showTimeLeft={todayReservations.length > 0}
 														refreshTrigger={qrRefreshTrigger}
-														isHighlighted={highlightedReservationId === item.id}
+														isHighlighted={isReservationHighlighted(item.id)}
 													/>
 												</div>
 											))}
@@ -655,7 +703,18 @@ export function SchedulePage() {
 
 									<div className={viewMode === "grid" ? "grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3" : "space-y-4"}>
 										{group.items.map((item) => (
-											<div key={item.id} data-reservation-id={item.id}>
+											<div
+												key={item.id}
+												data-reservation-id={item.id}
+												role="button"
+												tabIndex={0}
+												onClick={(event) => handleScrollToReservation(item.id, event)}
+												onKeyDown={(event) => {
+													if (event.key === "Enter" || event.key === " ") {
+														handleScrollToReservation(item.id, event);
+													}
+												}}
+												className="cursor-pointer md:cursor-default">
 												<ReservationCard
 													item={item}
 													actionLoading={actionLoading}
@@ -663,7 +722,7 @@ export function SchedulePage() {
 													onCancel={handleCancel}
 													oneClickMode={oneClickMode}
 													refreshTrigger={qrRefreshTrigger}
-													isHighlighted={highlightedReservationId === item.id}
+													isHighlighted={isReservationHighlighted(item.id)}
 												/>
 											</div>
 										))}

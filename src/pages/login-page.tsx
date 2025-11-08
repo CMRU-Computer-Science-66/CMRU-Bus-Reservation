@@ -26,7 +26,9 @@ export function LoginPage() {
 	const [autoLogin, setAutoLogin] = useState(true);
 	const [isDark, setIsDark] = useState(() => {
 		const theme = localStorage.getItem("theme");
-		return theme === "dark" || (!theme && window.matchMedia("(prefers-color-scheme: dark)").matches);
+		// return theme === "dark" || (!theme && window.matchMedia("(prefers-color-scheme: dark)").matches);
+		const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+		return theme === "dark" || (theme === "system" && prefersDark);
 	});
 
 	useState(() => {

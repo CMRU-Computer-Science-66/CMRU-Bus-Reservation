@@ -65,8 +65,7 @@ export function ApiProvider({ children }: { children: ReactNode }) {
 			}
 
 			return null;
-		} catch (error_) {
-			console.warn("Auto relogin failed:", error_);
+		} catch {
 			return null;
 		}
 	}, []);
@@ -81,8 +80,7 @@ export function ApiProvider({ children }: { children: ReactNode }) {
 			try {
 				const token = await autoRelogin(username, password);
 				return !!token;
-			} catch (error_) {
-				console.warn("Auto login failed:", error_);
+			} catch {
 				return false;
 			}
 		},

@@ -52,7 +52,6 @@ export function useAllSchedulesQuery(enabled: boolean = true) {
 						const pageReservations = scheduleData.reservations;
 
 						if (allReservations.length + pageReservations.length > maxReservations) {
-							console.warn(`Statistics: Approaching maximum reservation limit. Stopping at ${allReservations.length} reservations.`);
 							break;
 						}
 

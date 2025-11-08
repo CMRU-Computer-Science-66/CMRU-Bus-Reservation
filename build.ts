@@ -242,7 +242,8 @@ const generatePageHTML = (
 				try {
 					const savedTheme = localStorage.getItem("theme");
 					const media = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)");
-					const shouldBeDark = savedTheme === "dark" || (!savedTheme && media?.matches);
+               // const shouldBeDark = savedTheme === "dark" || (!savedTheme && media?.matches);
+					const shouldBeDark = savedTheme === "dark" || (savedTheme === "system" && media?.matches);
 
 					document.documentElement.classList.toggle("dark", shouldBeDark);
 					document.documentElement.style.setProperty("--theme-transition", "none");
