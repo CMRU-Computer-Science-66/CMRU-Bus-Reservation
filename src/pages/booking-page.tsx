@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import type { AvailableBusData, AvailableBusSchedule, ScheduleReservation } from "@cmru-comsci-66/cmru-api";
+import { useQueryClient } from "@tanstack/react-query";
 import { AlertCircle, ArrowLeft, Bus, Calendar, CheckCircle2, Clock, Loader2, LogOut, MapPin, RefreshCw, TrendingUp, User, Users, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Helmet } from "react-helmet-async";
@@ -14,6 +15,7 @@ import { Separator } from "../components/ui/separator";
 import { Skeleton } from "../components/ui/skeleton";
 import { ROUTE_METADATA, ROUTES } from "../config/routes";
 import { useApi } from "../contexts/api-context";
+import { queryKeys, useAvailableBusesQuery, useBookBusMutation, useScheduleQuery } from "../hooks/use-queries";
 import { getSessionManager } from "../lib/session-manager";
 import { formatTime } from "../lib/time-formatter";
 import { PageHeader } from "./components/page-header";
@@ -58,8 +60,12 @@ const getRelativeDay = (date: Date) => {
 
 export function BookingPage() {
 	const navigate = useNavigate();
-	const { bookBus, cancelReservation, deleteReservation, getAvailableBuses, getSchedule, isAuthenticated, logout } = useApi();
-	const [availableBuses, setAvailableBuses] = useState<AvailableBusData | undefined>();
+	const { cancelReservation, deleteReservation, isAuthenticated, logout } = useApi();
+	const queryClient = useQueryClient();
+	const { data: availableBuses, isLoading: isLoadingAvailableBuses, refetch: refetchAvailableBuses } = useAvailableBusesQuery(isAuthenticated);
+	const { data: scheduleData, isLoading: isLoadingSchedule, refetch: refetchSchedule } = useScheduleQuery(1, isAuthenticated);
+	const bookMutation = useBookBusMutation();
+
 	const [bookedScheduleIds, setBookedScheduleIds] = useState<Set<string>>(new Set());
 	const [bookedReservations, setBookedReservations] = useState<Map<string, ScheduleReservation>>(new Map());
 	const [isLoading, setIsLoading] = useState(false);
@@ -73,6 +79,7 @@ export function BookingPage() {
 	const [showStatistics, setShowStatistics] = useState(() => {
 		return getSessionManager().getShowStatistics();
 	});
+	const [isRefreshing, setIsRefreshing] = useState(false);
 
 	const scrollToCard = useCallback((dateString: string) => {
 		if (window.innerWidth < 768) {
@@ -90,6 +97,17 @@ export function BookingPage() {
 			}, 100);
 		}
 	}, []);
+
+	const navigateToScheduleWithScroll = useCallback(
+		(reservationId?: number) => {
+			// Store scroll target in sessionStorage
+			if (reservationId) {
+				sessionStorage.setItem("scrollToReservation", reservationId.toString());
+			}
+			navigate(ROUTES.SCHEDULE);
+		},
+		[navigate],
+	);
 
 	useEffect(() => {
 		const theme = localStorage.getItem("theme");
@@ -112,52 +130,44 @@ export function BookingPage() {
 		return () => window.removeEventListener("focus", handleFocus);
 	}, []);
 
-	const fetchAvailableBuses = useCallback(async () => {
-		setIsLoading(true);
-		setError(undefined);
-
+	const handleForceRefresh = useCallback(async () => {
+		setIsRefreshing(true);
 		try {
-			const data = await getAvailableBuses();
-			setAvailableBuses(data ?? undefined);
-		} catch (error_) {
-			const errorMessage = error_ instanceof Error ? error_.message : "ไม่สามารถดึงข้อมูลตารางรถได้";
-			setError(errorMessage);
+			await Promise.all([
+				queryClient.refetchQueries({ queryKey: queryKeys.availableBuses() }),
+				queryClient.refetchQueries({ queryKey: queryKeys.schedule() }),
+				new Promise((resolve) => setTimeout(resolve, 500)),
+			]);
 		} finally {
-			setIsLoading(false);
+			setIsRefreshing(false);
 		}
-	}, [getAvailableBuses]);
+	}, [queryClient]);
 
 	const fetchBookedSchedules = useCallback(async () => {
-		try {
-			const schedule = await getSchedule();
-			if (schedule?.reservations) {
-				const bookedKeys = new Set<string>();
-				const reservationMap = new Map<string, ScheduleReservation>();
+		if (scheduleData?.reservations) {
+			const bookedKeys = new Set<string>();
+			const reservationMap = new Map<string, ScheduleReservation>();
 
-				for (const r of schedule.reservations) {
-					const date = new Date(r.date).toISOString().split("T")[0];
-					const time = r.departureTime.replace(".", ":");
-					const destinationType = r.destination.name.toLowerCase().includes("เวียงบัว") ? "2" : "1";
-					const bookingKey = `${date}_${time}_${destinationType}`;
+			for (const r of scheduleData.reservations) {
+				const date = new Date(r.date).toISOString().split("T")[0];
+				const time = r.departureTime.replace(".", ":");
+				const destinationType = r.destination.name.toLowerCase().includes("เวียงบัว") ? "2" : "1";
+				const bookingKey = `${date}_${time}_${destinationType}`;
 
-					bookedKeys.add(bookingKey);
-					reservationMap.set(bookingKey, r);
-				}
-
-				setBookedScheduleIds(bookedKeys);
-				setBookedReservations(reservationMap);
+				bookedKeys.add(bookingKey);
+				reservationMap.set(bookingKey, r);
 			}
-		} catch {
-			/* empty */
+
+			setBookedScheduleIds(bookedKeys);
+			setBookedReservations(reservationMap);
 		}
-	}, [getSchedule]);
+	}, [scheduleData]);
 
 	useEffect(() => {
 		if (isAuthenticated) {
-			fetchAvailableBuses();
 			fetchBookedSchedules();
 		}
-	}, [isAuthenticated, fetchAvailableBuses, fetchBookedSchedules]);
+	}, [isAuthenticated, fetchBookedSchedules]);
 
 	const groupedSchedules: GroupedSchedule[] = availableBuses?.availableSchedules
 		? Object.values(
@@ -224,8 +234,8 @@ export function BookingPage() {
 
 			setSelectedSchedules({});
 
-			await fetchAvailableBuses();
-			await fetchBookedSchedules();
+			await refetchAvailableBuses();
+			await refetchSchedule();
 		} finally {
 			setBookingLoading(undefined);
 			setBookingStatus("");
@@ -328,7 +338,11 @@ export function BookingPage() {
 					if (!schedule || !schedule.canReserve) continue;
 
 					const bookingDateString = typeof schedule.date === "string" ? schedule.date : new Date(schedule.date).toISOString();
-					await bookBus(schedule.id, bookingDateString, schedule.destinationType);
+					await bookMutation.mutateAsync({
+						scheduleId: schedule.id,
+						date: bookingDateString,
+						destinationType: schedule.destinationType,
+					});
 				}
 			}
 		} catch {
@@ -364,8 +378,8 @@ export function BookingPage() {
 				delete updatedState[dateString];
 				return updatedState;
 			});
-			await fetchAvailableBuses();
-			await fetchBookedSchedules();
+			// Cache will be automatically invalidated by the mutation
+			await refetchSchedule();
 		} catch {
 			setBookingStatus("เกิดข้อผิดพลาด");
 		} finally {
@@ -498,9 +512,16 @@ export function BookingPage() {
 							<AlertTitle className="mb-2 text-lg font-semibold">เกิดข้อผิดพลาด</AlertTitle>
 							<AlertDescription className="mb-4 text-sm">{error}</AlertDescription>
 						</Alert>
-						<Button onClick={fetchAvailableBuses} className="mt-4 w-full" size="lg">
-							<RefreshCw className="mr-2 h-5 w-5" />
-							ลองอีกครั้ง
+						<Button
+							onClick={async () => {
+								await refetchAvailableBuses();
+								await refetchSchedule();
+							}}
+							className="mt-4 w-full"
+							size="lg"
+							disabled={isLoadingAvailableBuses || isLoadingSchedule}>
+							<RefreshCw className={`mr-2 h-5 w-5 ${isLoadingAvailableBuses || isLoadingSchedule ? "animate-spin" : ""}`} />
+							{isLoadingAvailableBuses || isLoadingSchedule ? "กำลังโหลด..." : "ลองอีกครั้ง"}
 						</Button>
 					</CardContent>
 				</Card>
@@ -530,8 +551,15 @@ export function BookingPage() {
 						<Button variant="ghost" size="icon" onClick={() => navigate(ROUTES.SCHEDULE)} className="h-10 w-10 shrink-0 rounded-full hover:scale-110">
 							<ArrowLeft className="h-5 w-5" />
 						</Button>
-						<Button variant="outline" size="icon" onClick={fetchAvailableBuses} disabled={isLoading} className="h-10 w-10 rounded-full hover:scale-110">
-							<RefreshCw className={`h-4 w-4 transition-transform sm:h-5 sm:w-5 ${isLoading ? "animate-spin" : "hover:rotate-180"}`} />
+						<Button
+							variant="outline"
+							size="icon"
+							onClick={handleForceRefresh}
+							disabled={isRefreshing || isLoading || isLoadingAvailableBuses || isLoadingSchedule}
+							className="h-10 w-10 rounded-full hover:scale-110">
+							<RefreshCw
+								className={`h-4 w-4 transition-transform sm:h-5 sm:w-5 ${isRefreshing || isLoadingAvailableBuses || isLoadingSchedule ? "animate-spin" : "hover:rotate-180"}`}
+							/>
 						</Button>
 						<Button
 							variant="outline"
@@ -669,7 +697,38 @@ export function BookingPage() {
 				</div>
 
 				<div className={viewMode === "grid" ? "grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3" : "space-y-4"}>
-					{groupedSchedules && groupedSchedules.length > 0 ? (
+					{isLoadingAvailableBuses || isLoadingSchedule ? (
+						// แสดง Loading Skeleton เมื่อกำลังโหลดข้อมูล
+						[1, 2, 3, 4, 5, 6].map((index) => (
+							<Card key={index} className="group border-0 bg-white/90 shadow-md backdrop-blur-md transition-all hover:scale-[1.02] hover:shadow-xl dark:bg-gray-900/90">
+								<CardContent className="space-y-4 p-4">
+									<div className="flex items-start justify-between gap-2">
+										<div className="min-w-0 flex-1">
+											<div className="flex flex-wrap items-center gap-2">
+												<Skeleton className="h-4 w-4 shrink-0" />
+												<Skeleton className="h-5 w-32" />
+											</div>
+											<Skeleton className="mt-1.5 h-3 w-20" />
+										</div>
+										<Skeleton className="h-6 w-20 rounded-full" />
+									</div>
+									<div className="h-px bg-gray-200 dark:bg-gray-800"></div>
+									<div className="flex items-center gap-2">
+										<div className="rounded-lg bg-indigo-50 p-2 dark:bg-indigo-900">
+											<Skeleton className="h-4 w-4" />
+										</div>
+										<div className="flex-1">
+											<Skeleton className="mb-1 h-3 w-8" />
+											<Skeleton className="h-4 w-16" />
+										</div>
+									</div>
+									<div className="flex flex-col gap-3 sm:flex-row sm:gap-2">
+										<Skeleton className="h-11 flex-1 rounded-md" />
+									</div>
+								</CardContent>
+							</Card>
+						))
+					) : groupedSchedules && groupedSchedules.length > 0 ? (
 						<>
 							{filterMode !== "all" && (
 								<div className="col-span-full mb-2">
@@ -1098,19 +1157,32 @@ export function BookingPage() {
 																		const bookingKey = `${date}_${time}_${destinationType}`;
 																		return bookedScheduleIds.has(bookingKey);
 																	})
-																	.map((bookedSchedule) => (
-																		<div key={bookedSchedule.id} className="flex flex-wrap items-center gap-2 rounded bg-white p-2 dark:bg-gray-900">
-																			<Badge
-																				className={`text-xs ${
-																					bookedSchedule.destinationType === 1
-																						? "bg-blue-600 hover:bg-blue-700 dark:bg-blue-500"
-																						: "bg-purple-600 hover:bg-purple-700 dark:bg-purple-500"
-																				}`}>
-																				{bookedSchedule.destinationType === 1 ? "ไปแม่ริม" : "กลับเวียงบัว"}
-																			</Badge>
-																			<span className="text-sm font-semibold text-gray-900 dark:text-white">{formatTime(bookedSchedule.departureTime)}</span>
-																		</div>
-																	))}
+																	.map((bookedSchedule) => {
+																		const date = new Date(bookedSchedule.date).toISOString().split("T")[0];
+																		const time = bookedSchedule.departureTime;
+																		const destinationType = bookedSchedule.destinationType.toString();
+																		const bookingKey = `${date}_${time}_${destinationType}`;
+																		const reservationData = bookedReservations.get(bookingKey);
+
+																		return (
+																			<button
+																				key={bookedSchedule.id}
+																				type="button"
+																				className="flex w-full cursor-pointer flex-wrap items-center gap-2 rounded bg-white p-2 text-left transition-all hover:bg-gray-50 hover:shadow-sm active:scale-[0.98] dark:bg-gray-900 dark:hover:bg-gray-800"
+																				onClick={() => navigateToScheduleWithScroll(reservationData?.id)}
+																				title="คลิกเพื่อดูรายละเอียดในหน้าจองรถบัส">
+																				<Badge
+																					className={`text-xs ${
+																						bookedSchedule.destinationType === 1
+																							? "bg-blue-600 hover:bg-blue-700 dark:bg-blue-500"
+																							: "bg-purple-600 hover:bg-purple-700 dark:bg-purple-500"
+																					}`}>
+																					{bookedSchedule.destinationType === 1 ? "ไปแม่ริม" : "กลับเวียงบัว"}
+																				</Badge>
+																				<span className="text-sm font-semibold text-gray-900 dark:text-white">{formatTime(bookedSchedule.departureTime)}</span>
+																			</button>
+																		);
+																	})}
 															</div>
 														)}
 
@@ -1336,7 +1408,7 @@ export function BookingPage() {
 
 					return (
 						<div className="fixed right-0 bottom-0 left-0 z-50">
-							<div className="bg-gradient-to-t from-white/95 to-transparent p-4 pb-6 dark:from-gray-950/95">
+							<div className="bg-linear-to-t from-white/95 to-transparent p-4 pb-6 dark:from-gray-950/95">
 								<div className="mx-auto max-w-4xl">
 									<div
 										className={`rounded-2xl border-2 p-4 shadow-2xl backdrop-blur-md ${
@@ -1365,10 +1437,10 @@ export function BookingPage() {
 											disabled={bookingLoading !== undefined}
 											className={`h-14 w-full gap-3 text-base font-bold shadow-lg transition-all hover:scale-[1.02] hover:shadow-xl active:scale-[0.98] disabled:hover:scale-100 ${
 												hasBothTypes
-													? "bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 dark:from-orange-500 dark:to-amber-500"
+													? "bg-linear-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 dark:from-orange-500 dark:to-amber-500"
 													: hasOnlyCancellation
-														? "bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 dark:from-red-500 dark:to-red-600"
-														: "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 dark:from-blue-500 dark:to-indigo-500"
+														? "bg-linear-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 dark:from-red-500 dark:to-red-600"
+														: "bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 dark:from-blue-500 dark:to-indigo-500"
 											}`}
 											size="lg">
 											{bookingLoading === undefined ? (

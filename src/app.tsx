@@ -12,6 +12,7 @@ import { LoginPage } from "./pages/login-page";
 import { SchedulePage } from "./pages/schedule-page";
 import { SettingsPage } from "./pages/settings-page";
 import { StatisticsPage } from "./pages/statistics-page";
+import { QueryProvider } from "./providers/query-provider";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
 	const { isAuthenticated } = useApi();
@@ -89,9 +90,11 @@ export function App() {
 		<ErrorBoundary>
 			<HelmetProvider>
 				<BrowserRouter>
-					<ApiProvider>
-						<AppRoutes />
-					</ApiProvider>
+					<QueryProvider>
+						<ApiProvider>
+							<AppRoutes />
+						</ApiProvider>
+					</QueryProvider>
 				</BrowserRouter>
 				{process.env.NODE_ENV === "production" && <Analytics />}
 			</HelmetProvider>

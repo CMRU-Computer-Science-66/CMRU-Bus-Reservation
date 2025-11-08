@@ -1,7 +1,6 @@
 import type { ScheduleReservation } from "@cmru-comsci-66/cmru-api";
 import { Calendar } from "lucide-react";
 
-import { Skeleton } from "../../components/ui/skeleton";
 import { ReservationCard } from "./reservation-card";
 
 interface DateSectionProperties {
@@ -32,17 +31,17 @@ export function DateSection({
 	if (isLoading) {
 		return (
 			<div className="space-y-4">
-				<div className="flex items-center gap-3 rounded-lg bg-white/80 p-4 shadow-sm backdrop-blur-md dark:bg-gray-900/80">
-					<div className="rounded-lg bg-blue-100 p-2 dark:bg-blue-900">
-						<Skeleton className="h-4 w-4" />
+				<div className="flex items-center gap-3">
+					<div className="flex items-center gap-2 rounded-lg bg-gray-200 px-4 py-2.5 shadow-md dark:bg-gray-700">
+						<Calendar className="h-4 w-4 text-gray-400 dark:text-gray-600" />
+						<div className="h-5 w-28 rounded bg-gray-300 dark:bg-gray-600" />
+						<div className="h-4 w-12 rounded-full bg-gray-300 dark:bg-gray-600" />
 					</div>
-					<div>
-						<Skeleton className="mb-1 h-5 w-24" />
-						<Skeleton className="h-4 w-16" />
-					</div>
+					<div className="h-px flex-1 bg-gray-200 dark:bg-gray-700"></div>
+					<div className="h-5 w-10 rounded bg-gray-200 dark:bg-gray-700" />
 				</div>
 
-				<div className="space-y-4">
+				<div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
 					{Array.from({ length: 2 }).map((_, index) => (
 						<ReservationCard key={index} actionLoading={null} isLoading={true} />
 					))}

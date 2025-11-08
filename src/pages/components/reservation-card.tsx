@@ -7,12 +7,12 @@ import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { Dialog, DialogContent } from "../../components/ui/dialog";
 import { Separator } from "../../components/ui/separator";
-import { Skeleton } from "../../components/ui/skeleton";
 import { API_CONFIG, getApiUrl } from "../../config/api";
 import { formatTime } from "../../lib/time-formatter";
 
 interface ReservationCardProperties {
 	actionLoading: number | null;
+	isHighlighted?: boolean;
 	isLoading?: boolean;
 	item?: ScheduleReservation;
 	onCancel?: (item: ScheduleReservation) => void;
@@ -22,7 +22,17 @@ interface ReservationCardProperties {
 	showTimeLeft?: boolean;
 }
 
-export function ReservationCard({ actionLoading, isLoading = false, item, onCancel, onConfirm, oneClickMode = false, refreshTrigger, showTimeLeft }: ReservationCardProperties) {
+export function ReservationCard({
+	actionLoading,
+	isHighlighted = false,
+	isLoading = false,
+	item,
+	onCancel,
+	onConfirm,
+	oneClickMode = false,
+	refreshTrigger,
+	showTimeLeft,
+}: ReservationCardProperties) {
 	const [currentTime, setCurrentTime] = useState(new Date());
 	const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
 	const [qrImageError, setQrImageError] = useState(false);
@@ -164,12 +174,12 @@ export function ReservationCard({ actionLoading, isLoading = false, item, onCanc
 					<div className="flex items-start justify-between gap-2">
 						<div className="min-w-0 flex-1">
 							<CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-								<Skeleton className="h-4 w-4" />
-								<Skeleton className="h-5 w-32" />
+								<MapPin className="h-4 w-4 shrink-0 text-gray-300 dark:text-gray-600" />
+								<div className="h-5 w-20 rounded bg-gray-200 dark:bg-gray-700" />
 							</CardTitle>
-							<Skeleton className="mt-1.5 h-3 w-20" />
+							<div className="mt-1.5 h-3 w-16 rounded bg-gray-200 dark:bg-gray-700" />
 						</div>
-						<Skeleton className="h-6 w-20 rounded-full" />
+						<div className="h-7 w-20 rounded-full bg-gray-200 dark:bg-gray-700" />
 					</div>
 				</CardHeader>
 
@@ -177,18 +187,18 @@ export function ReservationCard({ actionLoading, isLoading = false, item, onCanc
 
 				<CardContent className="space-y-4">
 					<div className="flex items-center gap-2">
-						<div className="rounded-lg bg-gray-100 p-2 dark:bg-gray-800">
-							<Skeleton className="h-4 w-4" />
+						<div className="rounded-lg bg-indigo-50 p-2 dark:bg-indigo-900">
+							<Clock className="h-4 w-4 text-gray-300 dark:text-gray-600" />
 						</div>
 						<div className="flex-1">
-							<Skeleton className="mb-1 h-3 w-8" />
-							<Skeleton className="h-4 w-16" />
+							<div className="mb-1 h-3 w-8 rounded bg-gray-200 dark:bg-gray-700" />
+							<div className="h-4 w-12 rounded bg-gray-200 dark:bg-gray-700" />
 						</div>
 					</div>
 
 					<div className="flex flex-col gap-2 sm:flex-row">
-						<Skeleton className="h-11 flex-1" />
-						<Skeleton className="h-11 flex-1" />
+						<div className="h-11 flex-1 rounded bg-gray-200 dark:bg-gray-700" />
+						<div className="h-11 flex-1 rounded bg-gray-200 dark:bg-gray-700" />
 					</div>
 				</CardContent>
 			</Card>
@@ -233,7 +243,10 @@ export function ReservationCard({ actionLoading, isLoading = false, item, onCanc
 	};
 
 	return (
-		<Card className="group border-0 bg-white/90 shadow-md backdrop-blur-md transition-all hover:scale-[1.02] hover:shadow-xl dark:bg-gray-900/90">
+		<Card
+			className={`group shadow-md backdrop-blur-md transition-all hover:scale-[1.02] hover:shadow-xl ${
+				isHighlighted ? "border-2 border-blue-400 bg-blue-50/95 dark:border-blue-500 dark:bg-blue-950/95" : "border-0 bg-white/90 dark:bg-gray-900/90"
+			}`}>
 			<CardHeader>
 				<div className="flex items-start justify-between gap-2">
 					<div className="min-w-0 flex-1">

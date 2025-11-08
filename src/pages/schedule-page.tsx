@@ -1,4 +1,5 @@
 import type { ScheduleReservation } from "@cmru-comsci-66/cmru-api";
+import { useQueryClient } from "@tanstack/react-query";
 import { Calendar, CheckCircle2, LogOut, Menu, Plus, QrCode, RefreshCw, Settings, TrendingUp, User, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Helmet } from "react-helmet-async";
@@ -9,7 +10,7 @@ import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
 import { ROUTE_METADATA, ROUTES } from "../config/routes";
 import { useApi } from "../contexts/api-context";
-import { useSchedule } from "../hooks/use-schedule";
+import { queryKeys, useCancelReservationMutation, useConfirmReservationMutation, useDeleteReservationMutation, useScheduleQuery } from "../hooks/use-queries";
 import { getSessionManager } from "../lib/session-manager";
 import { DateSection } from "./components/date-section";
 import { formatThaiDateShort, getRelativeDay } from "./components/date-utils";
@@ -22,9 +23,13 @@ import { ThemeToggle } from "./components/theme-toggle";
 export function SchedulePage() {
 	const navigate = useNavigate();
 	const { logout } = useApi();
+	const queryClient = useQueryClient();
 	const [currentPage, setCurrentPage] = useState(1);
-	const { error, isLoading, refetch, schedule } = useSchedule(true, currentPage);
-	const { cancelReservation, confirmReservation, deleteReservation } = useApi();
+	const { data: schedule, error, isLoading, refetch } = useScheduleQuery(currentPage, true);
+	const confirmMutation = useConfirmReservationMutation();
+	const cancelMutation = useCancelReservationMutation();
+	const deleteMutation = useDeleteReservationMutation();
+
 	const sessionManager = getSessionManager();
 	const [oneClickMode, setOneClickMode] = useState(sessionManager.getOneClickEnabled());
 	const [showStatistics, setShowStatistics] = useState(sessionManager.getShowStatistics());
@@ -35,15 +40,34 @@ export function SchedulePage() {
 	const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 	const [filterStatus, setFilterStatus] = useState<"all" | "confirmed" | "completed" | "hasQR">("all");
 	const [qrRefreshTrigger, setQrRefreshTrigger] = useState(0);
+	const [isRefreshing, setIsRefreshing] = useState(false);
+	const [highlightedReservationId, setHighlightedReservationId] = useState<number | null>(null);
 
 	const handleRefresh = async () => {
-		await refetch(currentPage);
-		setQrRefreshTrigger((previous) => previous + 1);
+		setIsRefreshing(true);
+		try {
+			await Promise.all([queryClient.refetchQueries({ queryKey: queryKeys.schedule() }), new Promise((resolve) => setTimeout(resolve, 500))]);
+		} finally {
+			setIsRefreshing(false);
+		}
 	};
 
 	useEffect(() => {
 		setOneClickMode(sessionManager.getOneClickEnabled());
 		setShowStatistics(sessionManager.getShowStatistics());
+
+		// ตรวจสอบว่ามาจากหน้า booking หรือไม่
+		const scrollTarget = sessionStorage.getItem("scrollToReservation");
+		if (scrollTarget) {
+			const reservationId = Number.parseInt(scrollTarget, 10);
+			setHighlightedReservationId(reservationId);
+			sessionStorage.removeItem("scrollToReservation");
+
+			// ลบ highlight หลัง 3 วินาที
+			setTimeout(() => {
+				setHighlightedReservationId(null);
+			}, 3000);
+		}
 	}, [sessionManager]);
 
 	useEffect(() => {
@@ -64,6 +88,28 @@ export function SchedulePage() {
 		setIsDark(shouldBeDark);
 		document.documentElement.classList.toggle("dark", shouldBeDark);
 	}, []);
+
+	useEffect(() => {
+		// Check for scroll target from booking page
+		const scrollToReservationId = sessionStorage.getItem("scrollToReservation");
+		if (scrollToReservationId && schedule?.reservations) {
+			const targetReservation = schedule.reservations.find((r) => r.id.toString() === scrollToReservationId);
+			if (targetReservation) {
+				setTimeout(() => {
+					const cardElement = document.querySelector(`[data-reservation-id="${scrollToReservationId}"]`);
+					if (cardElement) {
+						cardElement.scrollIntoView({
+							behavior: "smooth",
+							block: "center",
+							inline: "nearest",
+						});
+						// Clear the scroll target
+						sessionStorage.removeItem("scrollToReservation");
+					}
+				}, 500); // Wait for render
+			}
+		}
+	}, [schedule]);
 
 	const toggleTheme = () => {
 		const userTheme = !isDark;
@@ -177,34 +223,39 @@ export function SchedulePage() {
 		if (!item.confirmation.confirmData) return;
 
 		setActionLoading(item.id);
-		const success = await confirmReservation(item.confirmation.confirmData);
-
-		if (success) {
-			await refetch(currentPage);
+		try {
+			await confirmMutation.mutateAsync(item.confirmation.confirmData);
 			setQrRefreshTrigger((previous) => previous + 1);
+			// Force refresh to ensure UI is updated
+			await refetch();
+		} catch (error) {
+			console.error("Error confirming reservation:", error);
+		} finally {
+			setActionLoading(null);
 		}
-		setActionLoading(null);
 	};
 
 	const handleCancel = async (item: ScheduleReservation) => {
 		setActionLoading(item.id);
-		let success = false;
 
-		if (item.confirmation.unconfirmData) {
-			success = await cancelReservation(item.confirmation.unconfirmData);
-		} else if (item.confirmation.canConfirm && item.actions.reservationId) {
-			success = await deleteReservation(item.actions.reservationId);
-		}
-
-		if (success) {
-			await refetch(currentPage);
+		try {
+			if (item.confirmation.unconfirmData) {
+				await cancelMutation.mutateAsync(item.confirmation.unconfirmData);
+			} else if (item.confirmation.canConfirm && item.actions.reservationId) {
+				await deleteMutation.mutateAsync(Number(item.actions.reservationId));
+			}
 			setQrRefreshTrigger((previous) => previous + 1);
+			// Force refresh to ensure UI is updated
+			await refetch();
+		} catch (error) {
+			console.error("Error canceling reservation:", error);
+		} finally {
+			setActionLoading(null);
 		}
-		setActionLoading(null);
 	};
 
 	if (error) {
-		return <ErrorScreen error={error} onRetry={handleRefresh} />;
+		return <ErrorScreen error={error.message} onRetry={handleRefresh} />;
 	}
 
 	const subtitle = (
@@ -225,9 +276,9 @@ export function SchedulePage() {
 				<Plus className="h-4 w-4" />
 				จองรถ
 			</Button>
-			<Button variant="outline" size="sm" onClick={handleRefresh} disabled={isLoading} className="hidden gap-2 shadow-sm hover:shadow-lg md:flex">
-				<RefreshCw className={`h-4 w-4 transition-transform ${isLoading ? "animate-spin" : "hover:rotate-180"}`} />
-				รีเฟรช
+			<Button variant="outline" size="sm" onClick={handleRefresh} disabled={isRefreshing || isLoading} className="hidden gap-2 shadow-sm hover:shadow-lg md:flex">
+				<RefreshCw className={`h-4 w-4 transition-transform ${isRefreshing || isLoading ? "animate-spin" : "hover:rotate-180"}`} />
+				{isRefreshing ? "กำลังรีเฟรช..." : isLoading ? "กำลังโหลด..." : "รีเฟรช"}
 			</Button>
 			<Button variant="outline" size="sm" onClick={() => navigate(ROUTES.STATISTICS)} className="hidden gap-2 shadow-sm hover:shadow-lg md:flex">
 				<TrendingUp className="h-4 w-4" />
@@ -260,9 +311,9 @@ export function SchedulePage() {
 				variant="outline"
 				size="icon"
 				onClick={handleRefresh}
-				disabled={isLoading}
+				disabled={isRefreshing || isLoading}
 				className="h-10 w-10 rounded-full transition-all hover:scale-110 active:scale-95 md:hidden">
-				<RefreshCw className={`h-4 w-4 sm:h-5 sm:w-5 ${isLoading ? "animate-spin" : ""}`} />
+				<RefreshCw className={`h-4 w-4 transition-transform sm:h-5 sm:w-5 ${isRefreshing || isLoading ? "animate-spin" : ""}`} />
 			</Button>
 			<Button variant="outline" size="icon" onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="h-10 w-10 transition-all hover:scale-110 active:scale-95 md:hidden">
 				{mobileMenuOpen ? <X className="h-4 w-4 sm:h-5 sm:w-5" /> : <Menu className="h-4 w-4 sm:h-5 sm:w-5" />}
@@ -369,7 +420,23 @@ export function SchedulePage() {
 				<div className="py-2"></div>
 			)}
 
-			{schedule &&
+			{isLoading ? (
+				<div className="container mx-auto px-4 pb-8 sm:px-6">
+					<div className="mb-6">
+						<div className="h-7 w-60 rounded bg-gray-200 dark:bg-gray-700" />
+						<div className="mt-2 flex items-center gap-2">
+							<div className="h-5 w-20 rounded bg-gray-200 dark:bg-gray-700" />
+							<div className="h-5 w-40 rounded bg-gray-200 dark:bg-gray-700" />
+						</div>
+					</div>
+					<div className="space-y-6">
+						{Array.from({ length: 2 }).map((_, index) => (
+							<DateSection key={index} isLoading={true} />
+						))}
+					</div>
+				</div>
+			) : (
+				schedule &&
 				schedule.reservations &&
 				(() => {
 					const now = new Date();
@@ -423,31 +490,36 @@ export function SchedulePage() {
 					const displayReservations = todayReservations.length > 0 ? todayReservations : upcomingReservations;
 
 					if (displayReservations.length === 0) {
-						return (
-							<div className="container mx-auto px-4 pb-8 sm:px-6">
-								<Card className="col-span-full border-0 bg-white/90 shadow-md backdrop-blur-md dark:bg-gray-900/90">
-									<CardContent className="py-16">
-										<div className="space-y-4 text-center">
-											<div className="flex justify-center">
-												<div className="rounded-full bg-gray-100 p-4 dark:bg-gray-800">
-													<Calendar className="h-12 w-12 text-gray-400 dark:text-gray-600" />
+						// แสดงข้อความ "ไม่พบรายการจอง" เฉพาะหน้าแรกเท่านั้น
+						if (currentPage === 1) {
+							return (
+								<div className="container mx-auto px-4 pb-8 sm:px-6">
+									<Card className="col-span-full border-0 bg-white/90 shadow-md backdrop-blur-md dark:bg-gray-900/90">
+										<CardContent className="py-16">
+											<div className="space-y-4 text-center">
+												<div className="flex justify-center">
+													<div className="rounded-full bg-gray-100 p-4 dark:bg-gray-800">
+														<Calendar className="h-12 w-12 text-gray-400 dark:text-gray-600" />
+													</div>
 												</div>
+												<div>
+													<p className="text-lg font-semibold text-gray-700 dark:text-gray-300">ไม่พบรายการจอง</p>
+													<p className="mt-2 text-sm text-gray-500 dark:text-gray-400">คุณยังไม่มีรายการจองรถบัส</p>
+												</div>
+												<Button
+													onClick={() => navigate(ROUTES.BOOKING)}
+													className="mt-4 gap-2 bg-linear-to-r from-blue-600 to-indigo-600 shadow-lg hover:from-blue-700 hover:to-indigo-700">
+													<Plus className="h-4 w-4" />
+													จองรถบัสเลย
+												</Button>
 											</div>
-											<div>
-												<p className="text-lg font-semibold text-gray-700 dark:text-gray-300">ไม่พบรายการจอง</p>
-												<p className="mt-2 text-sm text-gray-500 dark:text-gray-400">คุณยังไม่มีรายการจองรถบัส</p>
-											</div>
-											<Button
-												onClick={() => navigate(ROUTES.BOOKING)}
-												className="mt-4 gap-2 bg-linear-to-r from-blue-600 to-indigo-600 shadow-lg hover:from-blue-700 hover:to-indigo-700">
-												<Plus className="h-4 w-4" />
-												จองรถบัสเลย
-											</Button>
-										</div>
-									</CardContent>
-								</Card>
-							</div>
-						);
+										</CardContent>
+									</Card>
+								</div>
+							);
+						}
+						// หน้าอื่นๆ ไม่แสดงข้อความแต่ return null
+						return null;
 					}
 
 					const groupedDisplayReservations = Object.values(
@@ -509,16 +581,18 @@ export function SchedulePage() {
 
 										<div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
 											{group.items.map((item) => (
-												<ReservationCard
-													key={item.id}
-													item={item}
-													actionLoading={actionLoading}
-													onConfirm={handleConfirm}
-													onCancel={handleCancel}
-													oneClickMode={oneClickMode}
-													showTimeLeft={todayReservations.length > 0}
-													refreshTrigger={qrRefreshTrigger}
-												/>
+												<div key={item.id} data-reservation-id={item.id}>
+													<ReservationCard
+														item={item}
+														actionLoading={actionLoading}
+														onConfirm={handleConfirm}
+														onCancel={handleCancel}
+														oneClickMode={oneClickMode}
+														showTimeLeft={todayReservations.length > 0}
+														refreshTrigger={qrRefreshTrigger}
+														isHighlighted={highlightedReservationId === item.id}
+													/>
+												</div>
 											))}
 										</div>
 									</div>
@@ -526,7 +600,8 @@ export function SchedulePage() {
 							</div>
 						</div>
 					);
-				})()}
+				})()
+			)}
 
 			<div className="container mx-auto px-4 pb-8 sm:px-6">
 				<div className="mb-4 flex items-center justify-between">
@@ -552,7 +627,7 @@ export function SchedulePage() {
 				</div>
 
 				<div className="space-y-6">
-					{isLoading && !groupedByDate ? (
+					{isLoading ? (
 						<>
 							{Array.from({ length: 3 }).map((_, index) => (
 								<DateSection key={index} isLoading={true} />
@@ -580,15 +655,17 @@ export function SchedulePage() {
 
 									<div className={viewMode === "grid" ? "grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3" : "space-y-4"}>
 										{group.items.map((item) => (
-											<ReservationCard
-												key={item.id}
-												item={item}
-												actionLoading={actionLoading}
-												onConfirm={handleConfirm}
-												onCancel={handleCancel}
-												oneClickMode={oneClickMode}
-												refreshTrigger={qrRefreshTrigger}
-											/>
+											<div key={item.id} data-reservation-id={item.id}>
+												<ReservationCard
+													item={item}
+													actionLoading={actionLoading}
+													onConfirm={handleConfirm}
+													onCancel={handleCancel}
+													oneClickMode={oneClickMode}
+													refreshTrigger={qrRefreshTrigger}
+													isHighlighted={highlightedReservationId === item.id}
+												/>
+											</div>
 										))}
 									</div>
 								</div>

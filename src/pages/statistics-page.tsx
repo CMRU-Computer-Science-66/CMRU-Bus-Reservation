@@ -1,4 +1,5 @@
-import type { ParsedScheduleData, ScheduleReservation } from "@cmru-comsci-66/cmru-api";
+import type { ParsedScheduleData } from "@cmru-comsci-66/cmru-api";
+import { useQueryClient } from "@tanstack/react-query";
 import { Calendar, Car, ChevronDown, ChevronUp, LogOut, MapPin, Menu, Plus, RefreshCw, Settings, TrendingUp, Users, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Helmet } from "react-helmet-async";
@@ -9,6 +10,7 @@ import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { ROUTE_METADATA, ROUTES } from "../config/routes";
 import { useApi } from "../contexts/api-context";
+import { queryKeys, useAllSchedulesQuery } from "../hooks/use-queries";
 import { ErrorScreen } from "./components/error-screen";
 import { PageHeader } from "./components/page-header";
 import { StatCard } from "./components/stat-card";
@@ -183,18 +185,22 @@ function processScheduleData(scheduleData: ParsedScheduleData): StatisticsData {
 
 export function StatisticsPage() {
 	const navigate = useNavigate();
-	const { error, getSchedule, logout } = useApi();
-	const [statisticsData, setStatisticsData] = useState<StatisticsData | null>(null);
-	const [allReservations, setAllReservations] = useState<ScheduleReservation[]>([]);
-	const [isLoading, setIsLoading] = useState(true);
+	const { error, isAuthenticated, logout } = useApi();
+	const queryClient = useQueryClient();
+	const { data: allSchedulesData, isLoading: isLoadingSchedules } = useAllSchedulesQuery(isAuthenticated);
+	const combinedLoading = isLoadingSchedules;
+	const allReservations = allSchedulesData?.reservations || [];
+	const statisticsData = allSchedulesData ? processScheduleData(allSchedulesData) : null;
 	const [isDark, setIsDark] = useState(false);
 	const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 	const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set());
+	const [isRefreshing, setIsRefreshing] = useState(false);
 
 	useEffect(() => {
 		const theme = localStorage.getItem("theme");
 		const prefersDark = globalThis.matchMedia("(prefers-color-scheme: dark)").matches;
 		const shouldBeDark = theme === "dark" || (!theme && prefersDark);
+		// eslint-disable-next-line react-hooks/set-state-in-effect
 		setIsDark(shouldBeDark);
 		document.documentElement.classList.toggle("dark", shouldBeDark);
 	}, []);
@@ -228,48 +234,14 @@ export function StatisticsPage() {
 			.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 	};
 
-	useEffect(() => {
-		const loadAllScheduleData = async () => {
-			setIsLoading(true);
-
-			try {
-				const allReservations: ScheduleReservation[] = [];
-				let currentPage = 1;
-				let hasMore = true;
-
-				while (hasMore) {
-					const scheduleData = await getSchedule(currentPage, 50);
-					if (scheduleData && scheduleData.reservations && scheduleData.reservations.length > 0) {
-						allReservations.push(...scheduleData.reservations);
-
-						currentPage++;
-						hasMore = scheduleData.hasNextPage || false;
-					} else {
-						hasMore = false;
-					}
-				}
-
-				if (allReservations.length > 0) {
-					setAllReservations(allReservations);
-					const mockScheduleData: ParsedScheduleData = {
-						reservations: allReservations,
-						totalReservations: allReservations.length,
-						userInfo: { name: "" },
-						currentPage: 1,
-						totalPages: 1,
-						hasNextPage: false,
-						hasPrevPage: false,
-					};
-					const stats = processScheduleData(mockScheduleData);
-					setStatisticsData(stats);
-				}
-			} finally {
-				setIsLoading(false);
-			}
-		};
-
-		loadAllScheduleData();
-	}, [getSchedule]);
+	const handleRefresh = async () => {
+		setIsRefreshing(true);
+		try {
+			await Promise.all([queryClient.refetchQueries({ queryKey: queryKeys.allSchedules() }), new Promise((resolve) => setTimeout(resolve, 500))]);
+		} finally {
+			setIsRefreshing(false);
+		}
+	};
 
 	if (error) {
 		return <ErrorScreen error={error} onRetry={() => window.location.reload()} />;
@@ -279,7 +251,7 @@ export function StatisticsPage() {
 
 	const subtitle = (
 		<>
-			<span className="font-medium text-blue-600 dark:text-blue-400">{isLoading ? "กำลังโหลด..." : "ข้อมูลสถิติ"}</span>
+			<span className="font-medium text-blue-600 dark:text-blue-400">{combinedLoading ? "กำลังโหลด..." : "ข้อมูลสถิติ"}</span>
 			{" • "}
 			<span>{statisticsData?.totalBookings || 0} รายการ</span>
 		</>
@@ -288,6 +260,10 @@ export function StatisticsPage() {
 	const desktopActions = (
 		<>
 			<ThemeToggle isDark={isDark} onToggle={toggleTheme} className="hidden md:flex" />
+			<Button variant="outline" size="sm" onClick={handleRefresh} disabled={isRefreshing || combinedLoading} className="hidden gap-2 shadow-sm hover:shadow-lg md:flex">
+				<RefreshCw className={`h-4 w-4 transition-transform ${isRefreshing || combinedLoading ? "animate-spin" : "hover:rotate-180"}`} />
+				{isRefreshing ? "กำลังรีเฟรช..." : combinedLoading ? "กำลังโหลด..." : "รีเฟรช"}
+			</Button>
 			<Button
 				size="sm"
 				onClick={() => navigate(ROUTES.BOOKING)}
@@ -352,11 +328,23 @@ export function StatisticsPage() {
 							variant="outline"
 							size="sm"
 							onClick={() => {
+								handleRefresh();
+								setMobileMenuOpen(false);
+							}}
+							disabled={isRefreshing || combinedLoading}
+							className="w-full justify-start gap-2">
+							<RefreshCw className={`h-4 w-4 transition-transform ${isRefreshing || combinedLoading ? "animate-spin" : "hover:rotate-180"}`} />
+							{isRefreshing ? "กำลังรีเฟรช..." : combinedLoading ? "กำลังโหลด..." : "รีเฟรช"}
+						</Button>
+						<Button
+							variant="outline"
+							size="sm"
+							onClick={() => {
 								navigate(ROUTES.SCHEDULE);
 								setMobileMenuOpen(false);
 							}}
 							className="w-full justify-start gap-2">
-							<RefreshCw className="h-4 w-4" />
+							<Calendar className="h-4 w-4" />
 							รายการจอง
 						</Button>
 						<Button
@@ -380,25 +368,37 @@ export function StatisticsPage() {
 
 			<div className="container mx-auto px-4 py-6 sm:px-6">
 				<div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-					<StatCard label="จองทั้งหมด" value={statisticsData?.totalBookings?.toString() || "0"} icon={Calendar} gradient="from-blue-600 to-indigo-600" isLoading={isLoading} />
 					<StatCard
-						label="ยืนยันแล้ว"
-						value={statisticsData?.confirmedBookings?.toString() || "0"}
+						label="จองทั้งหมด"
+						value={statisticsData?.totalBookings?.toString() || "0"}
+						icon={Calendar}
+						gradient="from-blue-600 to-indigo-600"
+						isLoading={combinedLoading}
+					/>
+					<StatCard
+						label="ยกเลิกแล้ว"
+						value={statisticsData?.cancelledBookings?.toString() || "0"}
 						icon={Users}
 						gradient="from-green-600 to-emerald-600"
-						isLoading={isLoading}
+						isLoading={combinedLoading}
 					/>
-					<StatCard label="เดินทางแล้ว" value={statisticsData?.completedTrips?.toString() || "0"} icon={MapPin} gradient="from-purple-600 to-pink-600" isLoading={isLoading} />
+					<StatCard
+						label="เดินทางแล้ว"
+						value={statisticsData?.completedTrips?.toString() || "0"}
+						icon={MapPin}
+						gradient="from-purple-600 to-pink-600"
+						isLoading={combinedLoading}
+					/>
 					<StatCard
 						label="เฉลีย/เดือน"
 						value={statisticsData?.averageBookingsPerMonth?.toString() || "0"}
 						icon={TrendingUp}
 						gradient="from-orange-600 to-red-600"
-						isLoading={isLoading}
+						isLoading={combinedLoading}
 					/>
 				</div>
 
-				{isLoading ? (
+				{combinedLoading ? (
 					<div className="grid gap-6 md:grid-cols-2">
 						{[1, 2, 3, 4].map((index) => (
 							<Card key={index}>

@@ -187,6 +187,8 @@
 		"@radix-ui/react-separator": "^1.1.8",
 		"@radix-ui/react-slot": "^1.2.4",
 		"@radix-ui/react-tabs": "^1.1.13",
+		"@tanstack/react-query": "^5.90.7",
+		"@tanstack/react-query-devtools": "^5.90.2",
 		"@vercel/analytics": "^1.5.0",
 		"axios": "^1.13.2",
 		"bump": "^0.2.5",

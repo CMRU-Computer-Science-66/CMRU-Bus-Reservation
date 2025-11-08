@@ -1,7 +1,6 @@
 import { type LucideIcon } from "lucide-react";
 
 import { Card, CardContent } from "../../components/ui/card";
-import { Skeleton } from "../../components/ui/skeleton";
 
 interface StatCardProperties {
 	gradient: string;
@@ -37,7 +36,7 @@ export function StatCard({ gradient, icon: Icon, iconBg, isActive, isLoading = f
 
 						<div className="flex h-9 items-center">
 							{isLoading ? (
-								<Skeleton className="h-9 w-16" />
+								<div className="h-8 w-16 rounded bg-gray-200 dark:bg-gray-700" />
 							) : (
 								<p className="text-2xl font-bold">
 									<span className={`bg-linear-to-r ${gradient} bg-clip-text text-transparent`}>{value}</span>
