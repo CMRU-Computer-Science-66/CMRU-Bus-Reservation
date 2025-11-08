@@ -72,6 +72,40 @@ export function SchedulePage() {
 		document.documentElement.classList.toggle("dark", userTheme);
 	};
 
+	const getDisplayedReservationIds = () => {
+		if (!schedule?.reservations) return new Set();
+
+		const now = new Date();
+		const today = new Date();
+		today.setHours(0, 0, 0, 0);
+
+		const todayReservations = schedule.reservations.filter((item) => {
+			const itemDate = new Date(item.date);
+			itemDate.setHours(0, 0, 0, 0);
+			if (itemDate.getTime() !== today.getTime()) return false;
+			const [hours, minutes] = (item.departureTime?.replace(".", ":") || "00:00").split(":");
+			const departureTime = new Date();
+			departureTime.setHours(Number.parseInt(hours || "0", 10), Number.parseInt(minutes || "0", 10), 0, 0);
+			return departureTime > now;
+		});
+
+		if (todayReservations.length === 0) {
+			const upcomingReservations = schedule.reservations
+				.filter((item) => {
+					const itemDate = new Date(item.date);
+					itemDate.setHours(0, 0, 0, 0);
+					if (itemDate.getTime() <= today.getTime()) return false;
+					return item.confirmation.canConfirm || item.confirmation.unconfirmData || item.actions.reservationId;
+				})
+				.slice(0, 6);
+			return new Set(upcomingReservations.map((item) => item.id));
+		}
+
+		return new Set(todayReservations.map((item) => item.id));
+	};
+
+	const displayedIds = getDisplayedReservationIds();
+
 	const groupedByDate = schedule?.reservations
 		? Object.values(
 				schedule.reservations
@@ -82,6 +116,8 @@ export function SchedulePage() {
 						return true;
 					})
 					.filter((item) => {
+						if (displayedIds.has(item.id)) return false;
+
 						const now = new Date();
 						const today = new Date();
 						today.setHours(0, 0, 0, 0);
@@ -339,6 +375,7 @@ export function SchedulePage() {
 					const now = new Date();
 					const today = new Date();
 					today.setHours(0, 0, 0, 0);
+
 					const todayReservations = schedule.reservations
 						.filter((item) => {
 							const itemDate = new Date(item.date);
@@ -351,39 +388,140 @@ export function SchedulePage() {
 							return departureTime > now;
 						})
 						.sort((a, b) => {
-							const destinationA = a.destination.name.toLowerCase();
-							const destinationB = b.destination.name.toLowerCase();
-							const isMaeRimA = destinationA.includes("แม่ริม");
-							const isMaeRimB = destinationB.includes("แม่ริม");
-
-							if (isMaeRimA && !isMaeRimB) return -1;
-							if (!isMaeRimA && isMaeRimB) return 1;
-
 							const timeA = a.departureTime?.replace(".", ":") || "";
 							const timeB = b.departureTime?.replace(".", ":") || "";
-							return timeB.localeCompare(timeA);
+							return timeA.localeCompare(timeB);
 						});
 
-					if (todayReservations.length === 0) return null;
+					let upcomingReservations: ScheduleReservation[] = [];
+					let sectionTitle = "รายการจองในวันนี้";
+
+					if (todayReservations.length === 0) {
+						upcomingReservations = schedule.reservations
+							.filter((item) => {
+								const itemDate = new Date(item.date);
+								itemDate.setHours(0, 0, 0, 0);
+
+								if (itemDate.getTime() <= today.getTime()) return false;
+
+								return item.confirmation.canConfirm || item.confirmation.unconfirmData || item.actions.reservationId;
+							})
+							.sort((a, b) => {
+								const dateA = new Date(a.date).getTime();
+								const dateB = new Date(b.date).getTime();
+								if (dateA !== dateB) return dateA - dateB;
+
+								const timeA = a.departureTime?.replace(".", ":") || "";
+								const timeB = b.departureTime?.replace(".", ":") || "";
+								return timeA.localeCompare(timeB);
+							})
+							.slice(0, 6);
+
+						sectionTitle = "รายการจองในเวลาที่ใกล้จะถึง";
+					}
+
+					const displayReservations = todayReservations.length > 0 ? todayReservations : upcomingReservations;
+
+					if (displayReservations.length === 0) {
+						return (
+							<div className="container mx-auto px-4 pb-8 sm:px-6">
+								<Card className="col-span-full border-0 bg-white/90 shadow-md backdrop-blur-md dark:bg-gray-900/90">
+									<CardContent className="py-16">
+										<div className="space-y-4 text-center">
+											<div className="flex justify-center">
+												<div className="rounded-full bg-gray-100 p-4 dark:bg-gray-800">
+													<Calendar className="h-12 w-12 text-gray-400 dark:text-gray-600" />
+												</div>
+											</div>
+											<div>
+												<p className="text-lg font-semibold text-gray-700 dark:text-gray-300">ไม่พบรายการจอง</p>
+												<p className="mt-2 text-sm text-gray-500 dark:text-gray-400">คุณยังไม่มีรายการจองรถบัส</p>
+											</div>
+											<Button
+												onClick={() => navigate(ROUTES.BOOKING)}
+												className="mt-4 gap-2 bg-linear-to-r from-blue-600 to-indigo-600 shadow-lg hover:from-blue-700 hover:to-indigo-700">
+												<Plus className="h-4 w-4" />
+												จองรถบัสเลย
+											</Button>
+										</div>
+									</CardContent>
+								</Card>
+							</div>
+						);
+					}
+
+					const groupedDisplayReservations = Object.values(
+						displayReservations.reduce(
+							(accumulator, item) => {
+								const dateObject = new Date(item.date);
+								const dateKey = dateObject.toISOString().split("T")[0];
+
+								if (!dateKey) return accumulator;
+
+								if (!accumulator[dateKey]) {
+									accumulator[dateKey] = {
+										date: dateKey,
+										dateISO: item.date,
+										displayDate: formatThaiDateShort(item.date),
+										items: [],
+									};
+								}
+
+								accumulator[dateKey].items.push(item);
+								return accumulator;
+							},
+							{} as Record<string, { date: string; dateISO: Date; displayDate: string; items: ScheduleReservation[] }>,
+						),
+					).sort((a, b) => new Date(a.dateISO).getTime() - new Date(b.dateISO).getTime());
 
 					return (
 						<div className="container mx-auto px-4 pb-8 sm:px-6">
-							<div className="mb-4">
-								<h2 className="text-lg font-semibold text-gray-900 dark:text-white">รายการจองในวันนี้</h2>
-								<p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{todayReservations.length} รายการ</p>
+							<div className="mb-6">
+								<h2 className="text-lg font-semibold text-gray-900 dark:text-white">{sectionTitle}</h2>
+								<p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+									{displayReservations.length} รายการ
+									{todayReservations.length === 0 && upcomingReservations.length > 0 && (
+										<span className="ml-2 text-blue-600 dark:text-blue-400">• สามารถยืนยันหรือยกเลิกได้</span>
+									)}
+								</p>
 							</div>
-							<div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-								{todayReservations.map((item) => (
-									<ReservationCard
-										key={item.id}
-										item={item}
-										actionLoading={actionLoading}
-										onConfirm={handleConfirm}
-										onCancel={handleCancel}
-										oneClickMode={oneClickMode}
-										showTimeLeft={true}
-										refreshTrigger={qrRefreshTrigger}
-									/>
+
+							<div className="space-y-6">
+								{groupedDisplayReservations.map((group) => (
+									<div key={group.date} className="space-y-4">
+										<div className="flex items-center gap-3">
+											<div className="flex items-center gap-2 rounded-lg bg-gray-200 px-4 py-2.5 shadow-md dark:bg-gray-700">
+												<Calendar className="h-4 w-4 text-gray-800 dark:text-gray-200" />
+												<span className="font-semibold text-gray-900 dark:text-white">{group.displayDate}</span>
+												{getRelativeDay(group.date) && (
+													<Badge
+														variant="outline"
+														className="ml-1 gap-1 border-gray-400 bg-white text-gray-800 dark:border-gray-500 dark:bg-gray-600 dark:text-gray-200">
+														{getRelativeDay(group.date)}
+													</Badge>
+												)}
+											</div>
+											<div className="h-px flex-1 bg-gray-200 dark:bg-gray-700"></div>
+											<Badge variant="secondary" className="text-xs font-medium dark:bg-gray-700 dark:text-gray-300">
+												{group.items.length} รอบ
+											</Badge>
+										</div>
+
+										<div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+											{group.items.map((item) => (
+												<ReservationCard
+													key={item.id}
+													item={item}
+													actionLoading={actionLoading}
+													onConfirm={handleConfirm}
+													onCancel={handleCancel}
+													oneClickMode={oneClickMode}
+													showTimeLeft={todayReservations.length > 0}
+													refreshTrigger={qrRefreshTrigger}
+												/>
+											))}
+										</div>
+									</div>
 								))}
 							</div>
 						</div>
@@ -553,29 +691,7 @@ export function SchedulePage() {
 								</div>
 							)}
 						</>
-					) : (
-						<Card className="col-span-full border-0 bg-white/90 shadow-md backdrop-blur-md dark:bg-gray-900/90">
-							<CardContent className="py-16">
-								<div className="space-y-4 text-center">
-									<div className="flex justify-center">
-										<div className="rounded-full bg-gray-100 p-4 dark:bg-gray-800">
-											<Calendar className="h-12 w-12 text-gray-400 dark:text-gray-600" />
-										</div>
-									</div>
-									<div>
-										<p className="text-lg font-semibold text-gray-700 dark:text-gray-300">ไม่พบรายการจอง</p>
-										<p className="mt-2 text-sm text-gray-500 dark:text-gray-400">คุณยังไม่มีรายการจองรถบัส</p>
-									</div>
-									<Button
-										onClick={() => navigate(ROUTES.BOOKING)}
-										className="mt-4 gap-2 bg-linear-to-r from-blue-600 to-indigo-600 shadow-lg hover:from-blue-700 hover:to-indigo-700">
-										<Plus className="h-4 w-4" />
-										จองรถบัสเลย
-									</Button>
-								</div>
-							</CardContent>
-						</Card>
-					)}
+					) : null}
 				</div>
 			</div>
 		</div>

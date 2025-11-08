@@ -129,7 +129,7 @@ export class SessionManager {
 
 	public getShowStatistics(): boolean {
 		const session = this.loadSession();
-		return session?.showStatistics ?? true;
+		return session?.showStatistics ?? false;
 	}
 
 	public setShowStatistics(enabled: boolean): void {

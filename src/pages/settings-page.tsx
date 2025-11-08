@@ -124,22 +124,22 @@ export function SettingsPage() {
 				</div>
 			</div>
 
-			<div className="container mx-auto max-w-4xl px-4 py-6 sm:px-6">
-				<div className="space-y-6">
+			<div className="container mx-auto max-w-5xl px-3 py-4 sm:px-4">
+				<div className="space-y-4 md:grid md:grid-cols-2 md:gap-4 md:space-y-0">
 					<Card className="border-0 bg-white/90 shadow-md backdrop-blur-md dark:bg-gray-900/90">
 						<CardHeader>
-							<div className="flex items-center gap-3">
-								<div className="rounded-full bg-blue-100 p-3 dark:bg-blue-900">
-									<User className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+							<div className="flex items-center gap-2">
+								<div className="rounded-full bg-blue-100 p-2 dark:bg-blue-900">
+									<User className="h-4 w-4 text-blue-600 dark:text-blue-400" />
 								</div>
 								<div>
-									<CardTitle className="text-lg">ข้อมูลผู้ใช้</CardTitle>
-									<CardDescription>ข้อมูลบัญชีของคุณ</CardDescription>
+									<CardTitle className="text-base">ข้อมูลผู้ใช้</CardTitle>
+									<CardDescription className="text-sm">ข้อมูลบัญชีของคุณ</CardDescription>
 								</div>
 							</div>
 						</CardHeader>
 						<Separator className="dark:bg-gray-800" />
-						<CardContent className="space-y-3">
+						<CardContent>
 							{username ? (
 								<div className="flex items-center justify-between">
 									<div>
@@ -156,13 +156,13 @@ export function SettingsPage() {
 					</Card>
 					<Card className="border-0 bg-white/90 shadow-md backdrop-blur-md dark:bg-gray-900/90">
 						<CardHeader>
-							<div className="flex items-center gap-3">
-								<div className="rounded-full bg-indigo-100 p-3 dark:bg-indigo-900">
-									<Check className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
+							<div className="flex items-center gap-2">
+								<div className="rounded-full bg-indigo-100 p-2 dark:bg-indigo-900">
+									<Check className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
 								</div>
 								<div>
-									<CardTitle className="text-lg">การจองอัตโนมัติ</CardTitle>
-									<CardDescription>ยืนยันหรือยกเลิกการจองแบบคลิกเดียว</CardDescription>
+									<CardTitle className="text-base">การจองอัตโนมัติ</CardTitle>
+									<CardDescription className="text-sm">ยืนยันหรือยกเลิกการจองแบบคลิกเดียว</CardDescription>
 								</div>
 							</div>
 						</CardHeader>
@@ -171,20 +171,20 @@ export function SettingsPage() {
 							<button
 								type="button"
 								onClick={toggleOneClick}
-								className="flex w-full items-center justify-between rounded-lg border-2 border-gray-200 bg-white p-4 transition-all hover:border-blue-300 hover:shadow-md dark:border-gray-700 dark:bg-gray-800 dark:hover:border-blue-600">
-								<div className="flex items-center gap-3">
-									<div className={`rounded-full p-2 ${oneClickEnabled ? "bg-indigo-100 dark:bg-indigo-900" : "bg-gray-100 dark:bg-gray-700"}`}>
-										<Check className={`h-5 w-5 ${oneClickEnabled ? "text-indigo-600 dark:text-indigo-400" : "text-gray-600 dark:text-gray-400"}`} />
+								className="flex w-full items-center justify-between rounded-lg border-2 border-gray-200 bg-white p-3 transition-all hover:border-blue-300 hover:shadow-md dark:border-gray-700 dark:bg-gray-800 dark:hover:border-blue-600">
+								<div className="flex items-center gap-2">
+									<div className={`rounded-full p-1.5 ${oneClickEnabled ? "bg-indigo-100 dark:bg-indigo-900" : "bg-gray-100 dark:bg-gray-700"}`}>
+										<Check className={`h-4 w-4 ${oneClickEnabled ? "text-indigo-600 dark:text-indigo-400" : "text-gray-600 dark:text-gray-400"}`} />
 									</div>
 									<div className="text-left">
 										<div className="flex items-center gap-2">
-											<p className="font-semibold text-gray-900 dark:text-white">โหมดคลิกเดียว</p>
-											<Badge variant="secondary" className="h-5 px-1.5 py-0 text-[10px] font-medium">
+											<p className="text-sm font-semibold text-gray-900 dark:text-white">โหมดคลิกเดียว</p>
+											<Badge variant="secondary" className="h-4 px-1 py-0 text-[9px] font-medium">
 												ใหม่
 											</Badge>
 										</div>
-										<p className="text-sm text-gray-600 dark:text-gray-400">
-											{oneClickEnabled ? "จองและยืนยันในคลิกเดียว / ยกเลิกทั้งหมดในคลิกเดียว" : "ต้องกดยืนยันหรือยกเลิก 2 รอบ (ปกติ)"}
+										<p className="text-xs text-gray-600 dark:text-gray-400">
+											{oneClickEnabled ? "จองและยืนยัน / ยกเลิก ในคลิกเดียว" : "ต้องกดยืนยันหรือยกเลิก 2 รอบ (ปกติ)"}
 										</p>
 									</div>
 								</div>
@@ -196,13 +196,13 @@ export function SettingsPage() {
 					</Card>
 					<Card className="border-0 bg-white/90 shadow-md backdrop-blur-md dark:bg-gray-900/90">
 						<CardHeader>
-							<div className="flex items-center gap-3">
-								<div className="rounded-full bg-green-100 p-3 dark:bg-green-900">
-									<TrendingUp className="h-6 w-6 text-green-600 dark:text-green-400" />
+							<div className="flex items-center gap-2">
+								<div className="rounded-full bg-green-100 p-2 dark:bg-green-900">
+									<TrendingUp className="h-4 w-4 text-green-600 dark:text-green-400" />
 								</div>
 								<div>
-									<CardTitle className="text-lg">การแสดง Statistics</CardTitle>
-									<CardDescription>เลือกแสดงหรือซ่อนส่วน Statistics ในหน้าต่างๆ</CardDescription>
+									<CardTitle className="text-base">การแสดง Statistics</CardTitle>
+									<CardDescription className="text-sm">เลือกแสดงหรือซ่อนส่วน Statistics ในหน้าต่างๆ</CardDescription>
 								</div>
 							</div>
 						</CardHeader>
@@ -211,16 +211,16 @@ export function SettingsPage() {
 							<button
 								type="button"
 								onClick={toggleShowStatistics}
-								className="flex w-full items-center justify-between rounded-lg border-2 border-gray-200 bg-white p-4 transition-all hover:border-blue-300 hover:shadow-md dark:border-gray-700 dark:bg-gray-800 dark:hover:border-blue-600">
-								<div className="flex items-center gap-3">
-									<div className={`rounded-full p-2 ${showStatistics ? "bg-green-100 dark:bg-green-900" : "bg-gray-100 dark:bg-gray-700"}`}>
-										<TrendingUp className={`h-5 w-5 ${showStatistics ? "text-green-600 dark:text-green-400" : "text-gray-600 dark:text-gray-400"}`} />
+								className="flex w-full items-center justify-between rounded-lg border-2 border-gray-200 bg-white p-3 transition-all hover:border-blue-300 hover:shadow-md dark:border-gray-700 dark:bg-gray-800 dark:hover:border-blue-600">
+								<div className="flex items-center gap-2">
+									<div className={`rounded-full p-1.5 ${showStatistics ? "bg-green-100 dark:bg-green-900" : "bg-gray-100 dark:bg-gray-700"}`}>
+										<TrendingUp className={`h-4 w-4 ${showStatistics ? "text-green-600 dark:text-green-400" : "text-gray-600 dark:text-gray-400"}`} />
 									</div>
 									<div className="text-left">
 										<div className="flex items-center gap-2">
-											<p className="font-semibold text-gray-900 dark:text-white">แสดง Statistics</p>
+											<p className="text-sm font-semibold text-gray-900 dark:text-white">แสดง Statistics</p>
 										</div>
-										<p className="text-sm text-gray-600 dark:text-gray-400">
+										<p className="text-xs text-gray-600 dark:text-gray-400">
 											{showStatistics ? "แสดงข้อมูลสถิติในหน้า Schedule และ Booking" : "ซ่อนข้อมูลสถิติในหน้าต่างๆ"}
 										</p>
 									</div>
@@ -233,35 +233,35 @@ export function SettingsPage() {
 					</Card>
 					<Card className="border-0 bg-white/90 shadow-md backdrop-blur-md dark:bg-gray-900/90">
 						<CardHeader>
-							<div className="flex items-center gap-3">
-								<div className="rounded-full bg-orange-100 p-3 dark:bg-orange-900">
-									<Clock className="h-6 w-6 text-orange-600 dark:text-orange-400" />
+							<div className="flex items-center gap-2">
+								<div className="rounded-full bg-orange-100 p-2 dark:bg-orange-900">
+									<Clock className="h-4 w-4 text-orange-600 dark:text-orange-400" />
 								</div>
 								<div>
-									<CardTitle className="text-lg">รูปแบบเวลา</CardTitle>
-									<CardDescription>เลือกวิธีแสดงเวลาที่คุณต้องการ</CardDescription>
+									<CardTitle className="text-base">รูปแบบเวลา</CardTitle>
+									<CardDescription className="text-sm">เลือกวิธีแสดงเวลาที่คุณต้องการ</CardDescription>
 								</div>
 							</div>
 						</CardHeader>
 						<Separator className="dark:bg-gray-800" />
-						<CardContent className="space-y-3">
+						<CardContent className="space-y-2">
 							<button
 								type="button"
 								onClick={() => handleTimeFormatChange("thai")}
-								className="group flex w-full items-center justify-between rounded-lg border-2 border-gray-200 bg-white p-4 transition-all hover:border-blue-300 hover:shadow-md dark:border-gray-700 dark:bg-gray-800 dark:hover:border-blue-600"
+								className="group flex w-full items-center justify-between rounded-lg border-2 border-gray-200 bg-white p-3 transition-all hover:border-blue-300 hover:shadow-md dark:border-gray-700 dark:bg-gray-800 dark:hover:border-blue-600"
 								style={timeFormat === "thai" ? { borderColor: "rgb(37 99 235)", backgroundColor: isDark ? "rgb(30 41 59)" : "rgb(239 246 255)" } : {}}>
-								<div className="flex items-center gap-3">
-									<div className="rounded-full bg-orange-100 p-2 dark:bg-orange-900">
-										<Clock className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+								<div className="flex items-center gap-2">
+									<div className="rounded-full bg-orange-100 p-1.5 dark:bg-orange-900">
+										<Clock className="h-4 w-4 text-orange-600 dark:text-orange-400" />
 									</div>
 									<div className="text-left">
 										<div className="flex items-center gap-2">
-											<p className="font-semibold text-gray-900 dark:text-white">แบบไทยแท้</p>
-											<Badge variant="secondary" className="h-5 px-1.5 py-0 text-[10px] font-medium">
+											<p className="text-sm font-semibold text-gray-900 dark:text-white">แบบไทยแท้</p>
+											<Badge variant="secondary" className="h-4 px-1 py-0 text-[9px] font-medium">
 												ทดลอง
 											</Badge>
 										</div>
-										<p className="text-sm text-gray-600 dark:text-gray-400">แสดงเวลาแบบ บ่ายโมง, บ่าย 2 โมงครึ่ง</p>
+										<p className="text-xs text-gray-600 dark:text-gray-400">แสดงเวลาแบบ บ่ายโมง, บ่าย 2 โมงครึ่ง</p>
 									</div>
 								</div>
 								{timeFormat === "thai" && (
@@ -274,15 +274,15 @@ export function SettingsPage() {
 							<button
 								type="button"
 								onClick={() => handleTimeFormatChange("24hour")}
-								className="group flex w-full items-center justify-between rounded-lg border-2 border-gray-200 bg-white p-4 transition-all hover:border-blue-300 hover:shadow-md dark:border-gray-700 dark:bg-gray-800 dark:hover:border-blue-600"
+								className="group flex w-full items-center justify-between rounded-lg border-2 border-gray-200 bg-white p-3 transition-all hover:border-blue-300 hover:shadow-md dark:border-gray-700 dark:bg-gray-800 dark:hover:border-blue-600"
 								style={timeFormat === "24hour" ? { borderColor: "rgb(37 99 235)", backgroundColor: isDark ? "rgb(30 41 59)" : "rgb(239 246 255)" } : {}}>
-								<div className="flex items-center gap-3">
-									<div className="rounded-full bg-blue-100 p-2 dark:bg-blue-900">
-										<Clock className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+								<div className="flex items-center gap-2">
+									<div className="rounded-full bg-blue-100 p-1.5 dark:bg-blue-900">
+										<Clock className="h-4 w-4 text-blue-600 dark:text-blue-400" />
 									</div>
 									<div className="text-left">
-										<p className="font-semibold text-gray-900 dark:text-white">24 ชั่วโมง</p>
-										<p className="text-sm text-gray-600 dark:text-gray-400">แสดงเวลาแบบ 13:00, 14:30</p>
+										<p className="text-sm font-semibold text-gray-900 dark:text-white">24 ชั่วโมง</p>
+										<p className="text-xs text-gray-600 dark:text-gray-400">แสดงเวลาแบบ 13:00, 14:30</p>
 									</div>
 								</div>
 								{timeFormat === "24hour" && (
@@ -293,32 +293,32 @@ export function SettingsPage() {
 							</button>
 						</CardContent>
 					</Card>
-					<Card className="border-0 bg-white/90 shadow-md backdrop-blur-md dark:bg-gray-900/90">
+					<Card className="border-0 bg-white/90 shadow-md backdrop-blur-md md:col-span-2 dark:bg-gray-900/90">
 						<CardHeader>
-							<div className="flex items-center gap-3">
-								<div className="rounded-full bg-purple-100 p-3 dark:bg-purple-900">
-									<Palette className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+							<div className="flex items-center gap-2">
+								<div className="rounded-full bg-purple-100 p-2 dark:bg-purple-900">
+									<Palette className="h-4 w-4 text-purple-600 dark:text-purple-400" />
 								</div>
 								<div>
-									<CardTitle className="text-lg">ธีม</CardTitle>
-									<CardDescription>เลือกธีมที่คุณชอบ</CardDescription>
+									<CardTitle className="text-base">ธีม</CardTitle>
+									<CardDescription className="text-sm">เลือกธีมที่คุณชอบ</CardDescription>
 								</div>
 							</div>
 						</CardHeader>
 						<Separator className="dark:bg-gray-800" />
-						<CardContent className="space-y-3">
+						<CardContent className="grid space-y-3 md:grid-cols-3 md:gap-4 md:space-y-0">
 							<button
 								type="button"
 								onClick={() => handleThemeChange("light")}
-								className="group flex w-full items-center justify-between rounded-lg border-2 border-gray-200 bg-white p-4 transition-all hover:border-blue-300 hover:shadow-md dark:border-gray-700 dark:bg-gray-800 dark:hover:border-blue-600"
+								className="group flex w-full items-center justify-between rounded-lg border-2 border-gray-200 bg-white p-3 transition-all hover:border-blue-300 hover:shadow-md dark:border-gray-700 dark:bg-gray-800 dark:hover:border-blue-600"
 								style={themeMode === "light" ? { borderColor: "rgb(37 99 235)", backgroundColor: "rgb(239 246 255)" } : {}}>
-								<div className="flex items-center gap-3">
-									<div className="rounded-full bg-yellow-100 p-2 dark:bg-yellow-900">
-										<Sun className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+								<div className="flex items-center gap-2">
+									<div className="rounded-full bg-yellow-100 p-1.5 dark:bg-yellow-900">
+										<Sun className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
 									</div>
 									<div className="text-left">
-										<p className="font-semibold text-gray-900 dark:text-white">โหมดสว่าง</p>
-										<p className="text-sm text-gray-600 dark:text-gray-400">ใช้ธีมสว่างตลอดเวลา</p>
+										<p className="text-sm font-semibold text-gray-900 dark:text-white">โหมดสว่าง</p>
+										<p className="text-xs text-gray-600 dark:text-gray-400">ใช้ธีมสว่างตลอดเวลา</p>
 									</div>
 								</div>
 								{themeMode === "light" && (
@@ -331,20 +331,20 @@ export function SettingsPage() {
 							<button
 								type="button"
 								onClick={() => handleThemeChange("dark")}
-								className="group flex w-full items-center justify-between rounded-lg border-2 border-gray-200 bg-white p-4 transition-all hover:border-blue-300 hover:shadow-md dark:border-gray-700 dark:bg-gray-800 dark:hover:border-blue-600"
+								className="group flex w-full items-center justify-between rounded-lg border-2 border-gray-200 bg-white p-3 transition-all hover:border-blue-300 hover:shadow-md dark:border-gray-700 dark:bg-gray-800 dark:hover:border-blue-600"
 								style={themeMode === "dark" ? { borderColor: "rgb(37 99 235)", backgroundColor: isDark ? "rgb(30 41 59)" : "rgb(239 246 255)" } : {}}>
-								<div className="flex items-center gap-3">
-									<div className="rounded-full bg-indigo-100 p-2 dark:bg-indigo-900">
-										<Moon className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+								<div className="flex items-center gap-2">
+									<div className="rounded-full bg-indigo-100 p-1.5 dark:bg-indigo-900">
+										<Moon className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
 									</div>
 									<div className="text-left">
 										<div className="flex items-center gap-2">
-											<p className="font-semibold text-gray-900 dark:text-white">โหมดมืด</p>
-											<Badge variant="secondary" className="h-5 px-1.5 py-0 text-[10px] font-medium">
+											<p className="text-sm font-semibold text-gray-900 dark:text-white">โหมดมืด</p>
+											<Badge variant="secondary" className="h-4 px-1 py-0 text-[9px] font-medium">
 												ทดลอง
 											</Badge>
 										</div>
-										<p className="text-sm text-gray-600 dark:text-gray-400">ใช้ธีมมืดตลอดเวลา</p>
+										<p className="text-xs text-gray-600 dark:text-gray-400">ใช้ธีมมืดตลอดเวลา</p>
 									</div>
 								</div>
 								{themeMode === "dark" && (
@@ -357,15 +357,15 @@ export function SettingsPage() {
 							<button
 								type="button"
 								onClick={() => handleThemeChange("system")}
-								className="group flex w-full items-center justify-between rounded-lg border-2 border-gray-200 bg-white p-4 transition-all hover:border-blue-300 hover:shadow-md dark:border-gray-700 dark:bg-gray-800 dark:hover:border-blue-600"
+								className="group flex w-full items-center justify-between rounded-lg border-2 border-gray-200 bg-white p-3 transition-all hover:border-blue-300 hover:shadow-md dark:border-gray-700 dark:bg-gray-800 dark:hover:border-blue-600"
 								style={themeMode === "system" ? { borderColor: "rgb(37 99 235)", backgroundColor: isDark ? "rgb(30 41 59)" : "rgb(239 246 255)" } : {}}>
-								<div className="flex items-center gap-3">
-									<div className="rounded-full bg-gray-100 p-2 dark:bg-gray-700">
-										<Globe className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+								<div className="flex items-center gap-2">
+									<div className="rounded-full bg-gray-100 p-1.5 dark:bg-gray-700">
+										<Globe className="h-4 w-4 text-gray-600 dark:text-gray-400" />
 									</div>
 									<div className="text-left">
-										<p className="font-semibold text-gray-900 dark:text-white">ตามระบบ</p>
-										<p className="text-sm text-gray-600 dark:text-gray-400">ปรับตามการตั้งค่าของอุปกรณ์</p>
+										<p className="text-sm font-semibold text-gray-900 dark:text-white">ตามระบบ</p>
+										<p className="text-xs text-gray-600 dark:text-gray-400">ปรับตามการตั้งค่าของอุปกรณ์</p>
 									</div>
 								</div>
 								{themeMode === "system" && (
@@ -379,13 +379,13 @@ export function SettingsPage() {
 
 					<Card className="border-0 bg-white/90 shadow-md backdrop-blur-md dark:bg-gray-900/90">
 						<CardHeader>
-							<div className="flex items-center gap-3">
-								<div className="rounded-full bg-green-100 p-3 dark:bg-green-900">
-									<Bell className="h-6 w-6 text-green-600 dark:text-green-400" />
+							<div className="flex items-center gap-2">
+								<div className="rounded-full bg-green-100 p-2 dark:bg-green-900">
+									<Bell className="h-4 w-4 text-green-600 dark:text-green-400" />
 								</div>
 								<div>
-									<CardTitle className="text-lg">การแจ้งเตือน</CardTitle>
-									<CardDescription>จัดการการแจ้งเตือนของคุณ</CardDescription>
+									<CardTitle className="text-base">การแจ้งเตือน</CardTitle>
+									<CardDescription className="text-sm">จัดการการแจ้งเตือนของคุณ</CardDescription>
 								</div>
 							</div>
 						</CardHeader>
@@ -394,19 +394,19 @@ export function SettingsPage() {
 							<button
 								type="button"
 								disabled
-								className="flex w-full cursor-not-allowed items-center justify-between rounded-lg border-2 border-gray-200 bg-gray-50 p-4 opacity-60 dark:border-gray-700 dark:bg-gray-800/50">
-								<div className="flex items-center gap-3">
-									<div className="rounded-full bg-gray-100 p-2 dark:bg-gray-700">
-										<BellOff className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+								className="flex w-full cursor-not-allowed items-center justify-between rounded-lg border-2 border-gray-200 bg-gray-50 p-3 opacity-60 dark:border-gray-700 dark:bg-gray-800/50">
+								<div className="flex items-center gap-2">
+									<div className="rounded-full bg-gray-100 p-1.5 dark:bg-gray-700">
+										<BellOff className="h-4 w-4 text-gray-600 dark:text-gray-400" />
 									</div>
 									<div className="text-left">
 										<div className="flex items-center gap-2">
-											<p className="font-semibold text-gray-900 dark:text-white">การแจ้งเตือนทั่วไป</p>
-											<Badge variant="secondary" className="h-5 px-1.5 py-0 text-[10px] font-medium">
+											<p className="text-sm font-semibold text-gray-900 dark:text-white">การแจ้งเตือนทั่วไป</p>
+											<Badge variant="secondary" className="h-4 px-1 py-0 text-[9px] font-medium">
 												ยังไม่พร้อม
 											</Badge>
 										</div>
-										<p className="text-sm text-gray-600 dark:text-gray-400">รับการแจ้งเตือนเกี่ยวกับการจองและรอบรถ</p>
+										<p className="text-xs text-gray-600 dark:text-gray-400">รับการแจ้งเตือนเกี่ยวกับการจองและรอบรถ</p>
 									</div>
 								</div>
 								<Badge variant="secondary">ปิด</Badge>
@@ -414,15 +414,15 @@ export function SettingsPage() {
 						</CardContent>
 					</Card>
 
-					<Card className="border-0 bg-white/90 shadow-md backdrop-blur-md dark:bg-gray-900/90">
+					<Card className="border-0 bg-white/90 shadow-md backdrop-blur-md md:col-span-2 dark:bg-gray-900/90">
 						<CardHeader>
-							<div className="flex items-center gap-3">
-								<div className="rounded-full bg-gray-100 p-3 dark:bg-gray-700">
-									<Settings className="h-6 w-6 text-gray-600 dark:text-gray-400" />
+							<div className="flex items-center gap-2">
+								<div className="rounded-full bg-gray-100 p-2 dark:bg-gray-700">
+									<Settings className="h-4 w-4 text-gray-600 dark:text-gray-400" />
 								</div>
 								<div>
-									<CardTitle className="text-lg">เกี่ยวกับ</CardTitle>
-									<CardDescription>ข้อมูลการพัฒนา</CardDescription>
+									<CardTitle className="text-base">เกี่ยวกับ</CardTitle>
+									<CardDescription className="text-sm">ข้อมูลการพัฒนา</CardDescription>
 								</div>
 							</div>
 						</CardHeader>
@@ -547,14 +547,14 @@ export function SettingsPage() {
 						</CardContent>
 					</Card>
 
-					<Card className="border-0 border-red-200 bg-white/90 shadow-md backdrop-blur-md dark:border-red-900 dark:bg-gray-900/90">
-						<CardContent className="p-6">
+					<Card className="border-0 border-red-200 bg-white/90 shadow-md backdrop-blur-md md:col-span-2 dark:border-red-900 dark:bg-gray-900/90">
+						<CardContent className="p-4">
 							<Button
 								onClick={logout}
 								variant="destructive"
-								size="lg"
-								className="h-12 w-full gap-2 text-base font-semibold shadow-lg transition-all hover:scale-[1.02] hover:shadow-xl active:scale-[0.98]">
-								<LogOut className="h-5 w-5" />
+								size="default"
+								className="h-10 w-full gap-2 text-sm font-semibold shadow-lg transition-all hover:scale-[1.02] hover:shadow-xl active:scale-[0.98]">
+								<LogOut className="h-4 w-4" />
 								ออกจากระบบ
 							</Button>
 						</CardContent>
