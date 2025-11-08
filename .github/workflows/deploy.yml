@@ -62,6 +62,7 @@ jobs:
               NODE_ENV: "production"
               APP_VERSION: ${{ steps.package-version.outputs.version }}
               GOOGLE_VERIFICATION_TOKEN: ${{ secrets.GOOGLE_VERIFICATION_TOKEN }}
+              ENCRYPTION_PIN: ${{ secrets.ENCRYPTION_PIN }}
 
          - name: Pull Vercel Environment Information
            run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}

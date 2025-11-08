@@ -7,6 +7,7 @@ import { ROUTE_METADATA } from "@/config/routes";
 import { Alert, AlertDescription, AlertTitle } from "../components/ui/alert";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
+// import { Checkbox } from "../components/ui/checkbox";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { useApi } from "../contexts/api-context";
@@ -19,6 +20,10 @@ export function LoginPage() {
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState<string | undefined>();
 	const [showPassword, setShowPassword] = useState(false);
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
+	const [rememberMe, setRememberMe] = useState(true);
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
+	const [autoLogin, setAutoLogin] = useState(true);
 	const [isDark, setIsDark] = useState(() => {
 		const theme = localStorage.getItem("theme");
 		return theme === "dark" || (!theme && window.matchMedia("(prefers-color-scheme: dark)").matches);
@@ -47,7 +52,8 @@ export function LoginPage() {
 		setIsLoading(true);
 
 		try {
-			const result = await login(username, password);
+			const result = await login(username, password, rememberMe, autoLogin);
+
 			if (!result) {
 				setError("เข้าสู่ระบบไม่สำเร็จ");
 			}
@@ -140,6 +146,30 @@ export function LoginPage() {
 								</button>
 							</div>
 						</div>
+
+						{/* <div className="space-y-3">
+							<div className="flex items-center space-x-2">
+								<Checkbox id="rememberMe" checked={rememberMe} onCheckedChange={(checked) => setRememberMe(checked === true)} disabled={isLoading} className="h-4 w-4" />
+								<Label htmlFor="rememberMe" className="cursor-pointer text-sm text-gray-700 select-none dark:text-gray-300">
+									จดจำการเข้าสู่ระบบ
+								</Label>
+							</div>
+
+							<div className="flex items-center space-x-2">
+								<Checkbox
+									id="autoLogin"
+									checked={autoLogin && rememberMe}
+									onCheckedChange={(checked) => setAutoLogin(checked === true)}
+									disabled={isLoading || !rememberMe}
+									className="h-4 w-4"
+								/>
+								<Label
+									htmlFor="autoLogin"
+									className={`cursor-pointer text-sm select-none ${rememberMe ? "text-gray-700 dark:text-gray-300" : "text-gray-400 dark:text-gray-500"}`}>
+									เข้าสู่ระบบอัตโนมัติเมื่อเปิดเว็บใหม่
+								</Label>
+							</div>
+						</div> */}
 
 						<Button
 							type="submit"

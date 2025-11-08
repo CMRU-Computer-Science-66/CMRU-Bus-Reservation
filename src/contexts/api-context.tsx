@@ -1,9 +1,14 @@
 import type { AvailableBusData, ParsedScheduleData } from "@cmru-comsci-66/cmru-api";
 import type { ReactNode } from "react";
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import toast from "react-hot-toast";
 
-import { API_CONFIG, getApiUrl } from "../config/api";
+import { getApiClient } from "../config/api";
+import { encryptCredentials } from "../lib/crypto-utils";
 import { getSessionManager } from "../lib/session-manager";
+import type { ApiError, GlobalThis } from "../types/global";
+
+(globalThis as GlobalThis).sessionManager = getSessionManager();
 
 interface ApiContextType {
 	bookBus: (scheduleId: number, scheduleDate: string, destinationType: 1 | 2) => Promise<{ message: string; success: boolean }>;
@@ -14,8 +19,9 @@ interface ApiContextType {
 	getAvailableBuses: (month?: string) => Promise<AvailableBusData | null>;
 	getSchedule: (page?: number, perPage?: number) => Promise<ParsedScheduleData | null>;
 	isAuthenticated: boolean;
+	isAutoLogging: boolean;
 	isLoading: boolean;
-	login: (username: string, password: string, rememberMe?: boolean) => Promise<boolean>;
+	login: (username: string, password: string, rememberMe?: boolean, enableAutoLogin?: boolean) => Promise<boolean>;
 	logout: () => void;
 	unconfirmReservation: (data: string) => Promise<boolean>;
 }
@@ -26,78 +32,139 @@ const sessionManager = getSessionManager();
 export function ApiProvider({ children }: { children: ReactNode }) {
 	const [isAuthenticated, setIsAuthenticated] = useState(() => {
 		const session = sessionManager.loadSession();
-		return session?.isAuthenticated && sessionManager.isSessionValid() ? true : false;
+
+		return !!(session?.isAuthenticated && session.token);
 	});
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const [isAutoLogging, setIsAutoLogging] = useState(false);
 
 	useEffect(() => {
-		const validateSession = async () => {
+		(globalThis as GlobalThis).setIsAutoLogging = setIsAutoLogging;
+		return () => {
+			delete (globalThis as GlobalThis).setIsAutoLogging;
+		};
+	}, []);
+
+	const autoRelogin = useCallback(async (username: string, password: string): Promise<string | null> => {
+		try {
+			const apiClient = getApiClient();
+
+			const encryptedCredentials = encryptCredentials(username, password);
+			const response = await apiClient.post<{ message?: string; success: boolean; token?: string }>("/bus/login", {
+				encryptedUsername: encryptedCredentials.encryptedUsername,
+				encryptedPassword: encryptedCredentials.encryptedPassword,
+				encrypted: true,
+			});
+
+			if (response.success && response.token) {
+				sessionManager.saveSession(username, response.token, password, true);
+				setIsAuthenticated(true);
+				setError(null);
+				return response.token;
+			}
+
+			return null;
+		} catch (error_) {
+			console.warn("Auto relogin failed:", error_);
+			return null;
+		}
+	}, []);
+
+	useEffect(() => {
+		const apiClient = getApiClient();
+		apiClient.setAutoReloginCallback(autoRelogin);
+	}, [autoRelogin]);
+
+	const autoLogin = useCallback(
+		async (username: string, password: string): Promise<boolean> => {
+			try {
+				const token = await autoRelogin(username, password);
+				return !!token;
+			} catch (error_) {
+				console.warn("Auto login failed:", error_);
+				return false;
+			}
+		},
+		[autoRelogin],
+	);
+
+	useEffect(() => {
+		const attemptAutoLogin = async () => {
 			const session = sessionManager.loadSession();
-			if (session && session.isAuthenticated) {
-				if (sessionManager.isSessionValid()) {
-					return;
-				}
+
+			if (session?.isAuthenticated && session.token) {
+				setIsAuthenticated(true);
+				return;
+			}
+
+			if (session?.autoLogin && session.username && session.password && !isAutoLogging) {
+				setIsAutoLogging(true);
+				toast.loading("กำลังเข้าสู่ระบบ...", {
+					id: "auto-login",
+				});
 
 				try {
-					const response = await fetch(getApiUrl(API_CONFIG.ENDPOINTS.BUS.LOGIN), {
-						method: "POST",
-						headers: {
-							"Content-Type": "application/json",
-						},
-						body: JSON.stringify({ username: session.username, password: session.password }),
-					});
-
-					const data = await response.json();
-
-					if (response.ok && (data.success || data.valid === true)) {
-						sessionManager.updateLastValidated();
-						setIsAuthenticated(true);
+					const success = await autoLogin(session.username, session.password);
+					if (success) {
+						setError(null);
+						toast.dismiss("auto-login");
+						toast.success("เข้าสู่ระบบสำเร็จ");
 					} else {
-						sessionManager.clearSession();
-						setIsAuthenticated(false);
+						toast.dismiss("auto-login");
+						toast.error("เข้าสู่ระบบไม่สำเร็จ กรุณาเข้าสู่ระบบใหม่");
+						setError("เข้าสู่ระบบไม่สำเร็จ กรุณาเข้าสู่ระบบใหม่");
 					}
 				} catch {
-					/* empty */
+					toast.dismiss("auto-login");
+					toast.error("การเชื่อมต่อล้มเหลว กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต");
+					setError("การเชื่อมต่อล้มเหลว กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต");
+				} finally {
+					setIsAutoLogging(false);
 				}
+			} else if (!session?.isAuthenticated) {
+				setIsAuthenticated(false);
+				sessionManager.clearSession();
 			}
 		};
 
-		validateSession();
-	}, []);
+		attemptAutoLogin();
+	}, [autoLogin, isAutoLogging]);
 
-	const login = useCallback(async (username: string, password: string, rememberMe: boolean = true): Promise<boolean> => {
+	const login = useCallback(async (username: string, password: string, rememberMe: boolean = true, enableAutoLogin: boolean = true): Promise<boolean> => {
 		setIsLoading(true);
 		setError(null);
 
 		try {
-			const response = await fetch(getApiUrl(API_CONFIG.ENDPOINTS.BUS.LOGIN), {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({ username, password }),
+			const apiClient = getApiClient();
+			const encryptedCredentials = encryptCredentials(username, password);
+			const response = await apiClient.post<{ message?: string; success: boolean; token?: string }>("/bus/login", {
+				encryptedUsername: encryptedCredentials.encryptedUsername,
+				encryptedPassword: encryptedCredentials.encryptedPassword,
+				encrypted: true,
 			});
 
-			const data = await response.json();
-
-			if (response.ok && data.success) {
+			if (response.success && response.token) {
 				setIsAuthenticated(true);
 
 				if (rememberMe) {
-					sessionManager.saveSession(username, password);
+					sessionManager.saveSession(username, response.token, enableAutoLogin ? password : undefined, enableAutoLogin);
 				} else {
 					sessionManager.clearSession();
 				}
 
+				toast.success("เข้าสู่ระบบสำเร็จ");
 				return true;
 			}
 
-			setError(data.message || "เข้าสู่ระบบไม่สำเร็จ");
+			const errorMessage = response.message || "เข้าสู่ระบบไม่สำเร็จ";
+			setError(errorMessage);
+			toast.error(errorMessage);
 			return false;
 		} catch (error_) {
 			const errorMessage = error_ instanceof Error ? error_.message : "เกิดข้อผิดพลาดในการเข้าสู่ระบบ";
 			setError(errorMessage);
+			toast.error(errorMessage);
 			return false;
 		} finally {
 			setIsLoading(false);
@@ -108,48 +175,45 @@ export function ApiProvider({ children }: { children: ReactNode }) {
 		setIsAuthenticated(false);
 		setError(null);
 		sessionManager.clearSession();
+		toast.success("ออกจากระบบสำเร็จ");
 	}, []);
 
 	const getSchedule = useCallback(
 		async (page?: number, perPage: number = 10): Promise<ParsedScheduleData | null> => {
-			if (!isAuthenticated) {
+			if (!isAuthenticated && !sessionManager.hasSession()) {
 				setError("กรุณาเข้าสู่ระบบก่อน");
 				return null;
 			}
+
 			setIsLoading(true);
 			setError(null);
 
 			try {
+				const apiClient = getApiClient();
 				const parameters = new URLSearchParams();
 				if (page) parameters.append("page", page.toString());
 				parameters.append("perPage", perPage.toString());
 
-				const url = `${API_CONFIG.ENDPOINTS.BUS.SCHEDULE}?${parameters.toString()}`;
-				const response = await fetch(getApiUrl(url), {
-					method: "GET",
-					headers: {
-						"Content-Type": "application/json",
-					},
-				});
+				const endpoint = `/bus/schedule?${parameters.toString()}`;
+				const result = await apiClient.getWithAuthAndRetry<ParsedScheduleData>(endpoint, () => sessionManager.getToken());
 
-				const result = await response.json();
-
-				if (response.ok) {
-					sessionManager.updateLastValidated();
-					return result as ParsedScheduleData;
-				}
-
-				setError(result.message || "ไม่สามารถดึงข้อมูลตารางเวลาได้");
-
-				if (result.message?.includes("login") || result.message?.includes("Session")) {
-					sessionManager.markSessionInvalid();
-					setIsAuthenticated(false);
-				}
-
-				return null;
-			} catch (error_) {
+				sessionManager.updateLastValidated();
+				return result;
+			} catch (error_: unknown) {
 				const errorMessage = error_ instanceof Error ? error_.message : "ไม่สามารถดึงข้อมูลตารางเวลาได้";
 				setError(errorMessage);
+
+				if (error_ instanceof Error && "status" in error_ && (error_ as ApiError).status === 401) {
+					const session = sessionManager.loadSession();
+
+					if (session?.autoLogin === false || !session?.autoLogin) {
+						sessionManager.clearSession();
+						setIsAuthenticated(false);
+					} else {
+						setError(null);
+					}
+				}
+
 				return null;
 			} finally {
 				setIsLoading(false);
@@ -160,41 +224,43 @@ export function ApiProvider({ children }: { children: ReactNode }) {
 
 	const confirmReservation = useCallback(
 		async (data: string): Promise<boolean> => {
-			if (!isAuthenticated) {
+			if (!isAuthenticated && !sessionManager.hasSession()) {
 				setError("กรุณาเข้าสู่ระบบก่อน");
 				return false;
 			}
+
 			setIsLoading(true);
 			setError(null);
 
 			try {
+				const apiClient = getApiClient();
 				const oneClickEnabled = sessionManager.getOneClickEnabled();
-				const response = await fetch(getApiUrl(API_CONFIG.ENDPOINTS.BUS.CONFIRM), {
-					method: "POST",
-					headers: {
-						"Content-Type": "application/json",
-					},
-					body: JSON.stringify({ data, oneClick: oneClickEnabled }),
-				});
+				const response = await apiClient.postWithAuthAndRetry<{ data?: unknown; message?: string; success: boolean }>("/bus/confirm", { data, oneClick: oneClickEnabled }, () =>
+					sessionManager.getToken(),
+				);
 
-				const result = await response.json();
-
-				if (response.ok && (result.success === true || result.data)) {
+				if (response.success || response.data) {
 					sessionManager.updateLastValidated();
 					return true;
 				}
 
-				setError(result.message || "ไม่สามารถยืนยันการจองได้");
-
-				if (result.message?.includes("login") || result.message?.includes("Session")) {
-					sessionManager.markSessionInvalid();
-					setIsAuthenticated(false);
-				}
-
+				setError(response.message || "ไม่สามารถยืนยันการจองได้");
 				return false;
-			} catch (error_) {
+			} catch (error_: unknown) {
 				const errorMessage = error_ instanceof Error ? error_.message : "ไม่สามารถยืนยันการจองได้";
 				setError(errorMessage);
+
+				if (error_ instanceof Error && "status" in error_ && (error_ as ApiError).status === 401) {
+					const session = sessionManager.loadSession();
+
+					if (session?.autoLogin === false) {
+						sessionManager.clearSession();
+						setIsAuthenticated(false);
+					} else {
+						setError(null);
+					}
+				}
+
 				return false;
 			} finally {
 				setIsLoading(false);
@@ -205,41 +271,45 @@ export function ApiProvider({ children }: { children: ReactNode }) {
 
 	const unconfirmReservation = useCallback(
 		async (data: string): Promise<boolean> => {
-			if (!isAuthenticated) {
+			if (!isAuthenticated && !sessionManager.hasSession()) {
 				setError("กรุณาเข้าสู่ระบบก่อน");
 				return false;
 			}
+
 			setIsLoading(true);
 			setError(null);
 
 			try {
+				const apiClient = getApiClient();
 				const oneClickEnabled = sessionManager.getOneClickEnabled();
-				const response = await fetch(getApiUrl(API_CONFIG.ENDPOINTS.BUS.UNCONFIRM), {
-					method: "POST",
-					headers: {
-						"Content-Type": "application/json",
-					},
-					body: JSON.stringify({ data, oneClick: oneClickEnabled }),
-				});
+				const response = await apiClient.postWithAuthAndRetry<{ data?: unknown; message?: string; success: boolean }>(
+					"/bus/unconfirm",
+					{ data, oneClick: oneClickEnabled },
+					() => sessionManager.getToken(),
+				);
 
-				const result = await response.json();
-
-				if (response.ok && (result.success === true || result.data)) {
+				if (response.success || response.data) {
 					sessionManager.updateLastValidated();
 					return true;
 				}
 
-				setError(result.message || "ไม่สามารถยกเลิกการยืนยันได้");
-
-				if (result.message?.includes("login") || result.message?.includes("Session")) {
-					sessionManager.markSessionInvalid();
-					setIsAuthenticated(false);
-				}
-
+				setError(response.message || "ไม่สามารถยกเลิกการยืนยันได้");
 				return false;
-			} catch (error_) {
+			} catch (error_: unknown) {
 				const errorMessage = error_ instanceof Error ? error_.message : "ไม่สามารถยกเลิกการยืนยันได้";
 				setError(errorMessage);
+
+				if (error_ instanceof Error && "status" in error_ && (error_ as ApiError).status === 401) {
+					const session = sessionManager.loadSession();
+
+					if (session?.autoLogin === false) {
+						sessionManager.clearSession();
+						setIsAuthenticated(false);
+					} else {
+						setError(null);
+					}
+				}
+
 				return false;
 			} finally {
 				setIsLoading(false);
@@ -257,40 +327,42 @@ export function ApiProvider({ children }: { children: ReactNode }) {
 
 	const deleteReservation = useCallback(
 		async (data: string | number): Promise<boolean> => {
-			if (!isAuthenticated) {
+			if (!isAuthenticated && !sessionManager.hasSession()) {
 				setError("กรุณาเข้าสู่ระบบก่อน");
 				return false;
 			}
+
 			setIsLoading(true);
 			setError(null);
 
 			try {
-				const response = await fetch(getApiUrl(API_CONFIG.ENDPOINTS.BUS.DELETE), {
-					method: "POST",
-					headers: {
-						"Content-Type": "application/json",
-					},
-					body: JSON.stringify({ reservationId: data }),
-				});
+				const apiClient = getApiClient();
+				const response = await apiClient.postWithAuthAndRetry<{ data?: unknown; message?: string; success: boolean }>("/bus/delete", { reservationId: data }, () =>
+					sessionManager.getToken(),
+				);
 
-				const result = await response.json();
-
-				if (response.ok && (result.success === true || result.data)) {
+				if (response.success || response.data) {
 					sessionManager.updateLastValidated();
 					return true;
 				}
 
-				setError(result.message || "ไม่สามารถลบการจองได้");
-
-				if (result.message?.includes("login") || result.message?.includes("Session")) {
-					sessionManager.markSessionInvalid();
-					setIsAuthenticated(false);
-				}
-
+				setError(response.message || "ไม่สามารถลบการจองได้");
 				return false;
-			} catch (error_) {
+			} catch (error_: unknown) {
 				const errorMessage = error_ instanceof Error ? error_.message : "ไม่สามารถลบการจองได้";
 				setError(errorMessage);
+
+				if (error_ instanceof Error && "status" in error_ && (error_ as ApiError).status === 401) {
+					const session = sessionManager.loadSession();
+
+					if (session?.autoLogin === false) {
+						sessionManager.clearSession();
+						setIsAuthenticated(false);
+					} else {
+						setError(null);
+					}
+				}
+
 				return false;
 			} finally {
 				setIsLoading(false);
@@ -301,40 +373,36 @@ export function ApiProvider({ children }: { children: ReactNode }) {
 
 	const getAvailableBuses = useCallback(
 		async (month?: string): Promise<AvailableBusData | null> => {
-			if (!isAuthenticated) {
+			if (!isAuthenticated && !sessionManager.hasSession()) {
 				setError("กรุณาเข้าสู่ระบบก่อน");
 				return null;
 			}
+
 			setIsLoading(true);
 			setError(null);
 
 			try {
-				const url = API_CONFIG.ENDPOINTS.BUS.AVAILABLE + (month ? `?month=${encodeURIComponent(month)}` : "");
-				const response = await fetch(getApiUrl(url), {
-					method: "GET",
-					headers: {
-						"Content-Type": "application/json",
-					},
-				});
+				const apiClient = getApiClient();
+				const endpoint = "/bus/available" + (month ? `?month=${encodeURIComponent(month)}` : "");
+				const result = await apiClient.getWithAuthAndRetry<AvailableBusData>(endpoint, () => sessionManager.getToken());
 
-				const result = await response.json();
-
-				if (response.ok) {
-					sessionManager.updateLastValidated();
-					return result as AvailableBusData;
-				}
-
-				setError(result.message || "ไม่สามารถดึงข้อมูลตารางรถที่สามารถจองได้");
-
-				if (result.message?.includes("login") || result.message?.includes("Session")) {
-					sessionManager.markSessionInvalid();
-					setIsAuthenticated(false);
-				}
-
-				return null;
-			} catch (error_) {
+				sessionManager.updateLastValidated();
+				return result;
+			} catch (error_: unknown) {
 				const errorMessage = error_ instanceof Error ? error_.message : "ไม่สามารถดึงข้อมูลตารางรถที่สามารถจองได้";
 				setError(errorMessage);
+
+				if (error_ instanceof Error && "status" in error_ && (error_ as ApiError).status === 401) {
+					const session = sessionManager.loadSession();
+
+					if (session?.autoLogin === false) {
+						sessionManager.clearSession();
+						setIsAuthenticated(false);
+					} else {
+						setError(null);
+					}
+				}
+
 				return null;
 			} finally {
 				setIsLoading(false);
@@ -345,42 +413,46 @@ export function ApiProvider({ children }: { children: ReactNode }) {
 
 	const bookBus = useCallback(
 		async (scheduleId: number, scheduleDate: string, destinationType: 1 | 2): Promise<{ message: string; success: boolean }> => {
-			if (!isAuthenticated) {
+			if (!isAuthenticated && !sessionManager.hasSession()) {
 				setError("กรุณาเข้าสู่ระบบก่อน");
 				return { success: false, message: "กรุณาเข้าสู่ระบบก่อน" };
 			}
+
 			setIsLoading(true);
 			setError(null);
 
 			try {
+				const apiClient = getApiClient();
 				const oneClickEnabled = sessionManager.getOneClickEnabled();
-				const response = await fetch(getApiUrl(API_CONFIG.ENDPOINTS.BUS.BOOK), {
-					method: "POST",
-					headers: {
-						"Content-Type": "application/json",
-					},
-					body: JSON.stringify({ scheduleId, scheduleDate, destinationType, oneClick: oneClickEnabled }),
-				});
+				const response = await apiClient.postWithAuthAndRetry<{ message?: string; success: boolean }>(
+					"/bus/book",
+					{ scheduleId, scheduleDate, destinationType, oneClick: oneClickEnabled },
+					() => sessionManager.getToken(),
+				);
 
-				const result = await response.json();
-
-				if (response.ok && result.success) {
+				if (response.success) {
 					sessionManager.updateLastValidated();
-					return { success: true, message: result.message || "จองสำเร็จ" };
+					return { success: true, message: response.message || "จองสำเร็จ" };
 				}
 
-				const errorMessage = result.message || "ไม่สามารถจองรถได้";
+				const errorMessage = response.message || "ไม่สามารถจองรถได้";
 				setError(errorMessage);
-
-				if (result.message?.includes("login") || result.message?.includes("Session")) {
-					sessionManager.markSessionInvalid();
-					setIsAuthenticated(false);
-				}
-
 				return { success: false, message: errorMessage };
-			} catch (error_) {
+			} catch (error_: unknown) {
 				const errorMessage = error_ instanceof Error ? error_.message : "ไม่สามารถจองรถได้";
 				setError(errorMessage);
+
+				if (error_ instanceof Error && "status" in error_ && (error_ as ApiError).status === 401) {
+					const session = sessionManager.loadSession();
+
+					if (session?.autoLogin === false) {
+						sessionManager.clearSession();
+						setIsAuthenticated(false);
+					} else {
+						setError(null);
+					}
+				}
+
 				return { success: false, message: errorMessage };
 			} finally {
 				setIsLoading(false);
@@ -393,6 +465,7 @@ export function ApiProvider({ children }: { children: ReactNode }) {
 		<ApiContext.Provider
 			value={{
 				isAuthenticated,
+				isAutoLogging,
 				isLoading,
 				error,
 				login,

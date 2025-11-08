@@ -1,9 +1,15 @@
+import { decryptString, encryptString } from "./crypto-utils";
+
 export interface SessionData {
+	autoLogin?: boolean;
+	encryptedPassword?: string;
+	encryptedUsername?: string;
 	isAuthenticated: boolean;
 	lastValidated: number;
 	oneClickEnabled?: boolean;
-	password: string;
+	password?: string;
 	showStatistics?: boolean;
+	token?: string;
 	username: string;
 }
 
@@ -22,16 +28,36 @@ export class SessionManager {
 		return SessionManager.instance;
 	}
 
-	public saveSession(username: string, password: string): void {
+	public saveSession(username: string, token?: string, password?: string, autoLogin: boolean = true): void {
 		if (typeof window === "undefined" || !window.localStorage) {
 			return;
 		}
 
+		const existingSession = this.loadSession();
+
+		let encryptedUsername: string | undefined;
+		let encryptedPassword: string | undefined;
+
+		if (autoLogin && password) {
+			try {
+				encryptedUsername = encryptString(username);
+				encryptedPassword = encryptString(password);
+			} catch {
+				autoLogin = false;
+			}
+		}
+
 		const sessionData: SessionData = {
-			username,
-			password,
+			autoLogin,
+			encryptedPassword: encryptedPassword || existingSession?.encryptedPassword,
+			encryptedUsername: encryptedUsername || existingSession?.encryptedUsername,
 			isAuthenticated: true,
 			lastValidated: Date.now(),
+			oneClickEnabled: existingSession?.oneClickEnabled ?? true,
+			password: password || existingSession?.password,
+			showStatistics: existingSession?.showStatistics ?? false,
+			token,
+			username,
 		};
 
 		try {
@@ -86,15 +112,72 @@ export class SessionManager {
 		}
 	}
 
-	public getCredentials(): { password: string; username: string } | null {
+	public getToken(): string | null {
 		const session = this.loadSession();
 		if (!session || !session.isAuthenticated) {
 			return null;
 		}
+		return session.token || null;
+	}
+
+	public getUsername(): string | null {
+		const session = this.loadSession();
+		if (!session || !session.isAuthenticated) {
+			return null;
+		}
+		return session.username;
+	}
+
+	public getPassword(): string | null {
+		const session = this.loadSession();
+		if (!session || !session.autoLogin) {
+			return null;
+		}
+
+		if (session.encryptedPassword) {
+			try {
+				return decryptString(session.encryptedPassword);
+			} catch {
+				/* empty */
+			}
+		}
+
+		return session.password || null;
+	}
+
+	public getEncryptedCredentials(): { encryptedPassword: string; encryptedUsername: string } | null {
+		const session = this.loadSession();
+		if (!session || !session.autoLogin || !session.encryptedUsername || !session.encryptedPassword) {
+			return null;
+		}
+
 		return {
-			username: session.username,
-			password: session.password,
+			encryptedUsername: session.encryptedUsername,
+			encryptedPassword: session.encryptedPassword,
 		};
+	}
+
+	public isAutoLoginEnabled(): boolean {
+		const session = this.loadSession();
+		return session?.autoLogin ?? false;
+	}
+
+	public setAutoLogin(enabled: boolean): void {
+		const session = this.loadSession();
+		if (session) {
+			session.autoLogin = enabled;
+			if (!enabled) {
+				session.password = undefined;
+				session.encryptedPassword = undefined;
+				session.encryptedUsername = undefined;
+			}
+			try {
+				const encrypted = btoa(JSON.stringify(session));
+				localStorage.setItem(STORAGE_KEY, encrypted);
+			} catch {
+				/* empty */
+			}
+		}
 	}
 
 	public clearSession(): void {

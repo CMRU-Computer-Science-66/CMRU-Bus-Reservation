@@ -7,6 +7,7 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { ErrorBoundary } from "./components/error-boundary";
 import { ROUTES } from "./config/routes";
 import { ApiProvider, useApi } from "./contexts/api-context";
+// import { ResponsiveToaster } from "./hooks/use-responsive-toaster";
 import { BookingPage } from "./pages/booking-page";
 import { LoginPage } from "./pages/login-page";
 import { SchedulePage } from "./pages/schedule-page";
@@ -93,6 +94,7 @@ export function App() {
 					<QueryProvider>
 						<ApiProvider>
 							<AppRoutes />
+							{/* <ResponsiveToaster /> */}
 						</ApiProvider>
 					</QueryProvider>
 				</BrowserRouter>

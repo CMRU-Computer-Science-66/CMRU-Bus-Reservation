@@ -464,6 +464,7 @@ const result = await Bun.build({
 	define: {
 		"process.env.NODE_ENV": JSON.stringify(isProduction ? "production" : "development"),
 		"process.env.APP_VERSION": version,
+		"process.env.ENCRYPTION_PIN": Bun.env.ENCRYPTION_PIN || "default",
 	},
 	naming: {
 		entry: "[dir]/[name].[ext]",
