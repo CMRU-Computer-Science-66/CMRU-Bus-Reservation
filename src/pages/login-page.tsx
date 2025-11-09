@@ -11,10 +11,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../co
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { useApi } from "../contexts/api-context";
+import { useTheme } from "../hooks/use-theme";
 import { ThemeToggle } from "./components/theme-toggle";
 
 export function LoginPage() {
 	const { login } = useApi();
+	const { handleThemeChange, isDark } = useTheme();
 	const [username, setUsername] = useState("");
 	const [password, setPassword] = useState("");
 	const [isLoading, setIsLoading] = useState(false);
@@ -24,22 +26,10 @@ export function LoginPage() {
 	const [rememberMe, setRememberMe] = useState(true);
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	const [autoLogin, setAutoLogin] = useState(true);
-	const [isDark, setIsDark] = useState(() => {
-		const theme = localStorage.getItem("theme");
-		// return theme === "dark" || (!theme && window.matchMedia("(prefers-color-scheme: dark)").matches);
-		const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-		return theme === "dark" || (theme === "system" && prefersDark);
-	});
-
-	useState(() => {
-		document.documentElement.classList.toggle("dark", isDark);
-	});
 
 	const toggleTheme = () => {
-		const userTheme = !isDark;
-		setIsDark(userTheme);
-		localStorage.setItem("theme", userTheme ? "dark" : "light");
-		document.documentElement.classList.toggle("dark", userTheme);
+		const targetTheme = isDark ? "light" : "dark";
+		handleThemeChange(targetTheme);
 	};
 
 	const handleSubmit = async (event: React.FormEvent) => {

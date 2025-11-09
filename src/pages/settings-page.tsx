@@ -31,40 +31,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../co
 import { Separator } from "../components/ui/separator";
 import { BASE_URL, EXTERNAL_URLS, ROUTE_METADATA, ROUTES } from "../config/routes";
 import { useApi } from "../contexts/api-context";
-import { getSessionManager } from "../lib/session-manager";
-
-type ThemeMode = "light" | "dark" | "system";
-type TimeFormat = "24hour" | "thai";
-const sessionManager = getSessionManager();
+import { useMobileMenu } from "../hooks/use-mobile-menu";
+import { useSession } from "../hooks/use-session";
+import { useTheme } from "../hooks/use-theme";
 
 export function SettingsPage() {
 	const navigate = useNavigate();
 	const { logout } = useApi();
-	const [username] = useState<string>(() => sessionManager.getUsername() || "");
-	const [apiVersion, setApiVersion] = useState<string>("loading...");
+	const { handleThemeChange, isDark, themeMode } = useTheme();
+	const { handleTimeFormatChange, oneClickEnabled, showStatistics, timeFormat, toggleOneClick, toggleShowStatistics, username } = useSession();
+	const { closeMobileMenu, getMobileMenuClasses, mobileMenuOpen, toggleMobileMenu } = useMobileMenu();
+	const [apiVersion, setApiVersion] = useState<string>("...");
 	const [contributors, setContributors] = useState<Array<{ avatar_url: string; html_url: string; login: string }>>([]);
 	const [showAllContributors, setShowAllContributors] = useState(false);
-	const [themeMode, setThemeMode] = useState<ThemeMode>(() => {
-		const theme = localStorage.getItem("theme") as ThemeMode | null;
-		return theme || "light";
-	});
-	const [isDark, setIsDark] = useState(() => {
-		const theme = localStorage.getItem("theme") as ThemeMode | null;
-		const prefersDark = globalThis.matchMedia("(prefers-color-scheme: dark)").matches;
-		return theme === "dark" || (theme === "system" && prefersDark);
-	});
-	const [timeFormat, setTimeFormat] = useState<TimeFormat>(() => {
-		const format = localStorage.getItem("timeFormat") as TimeFormat | null;
-		return format || "thai";
-	});
-	const [oneClickEnabled, setOneClickEnabled] = useState(() => {
-		return sessionManager.getOneClickEnabled();
-	});
-	const [showStatistics, setShowStatistics] = useState(() => {
-		return sessionManager.getShowStatistics();
-	});
-	const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-	const [mobileMenuClosing, setMobileMenuClosing] = useState(false);
 
 	useEffect(() => {
 		fetch(`${BASE_URL}/api`)
@@ -87,43 +66,6 @@ export function SettingsPage() {
 			})
 			.catch(() => {});
 	}, []);
-
-	useEffect(() => {
-		document.documentElement.classList.toggle("dark", isDark);
-	}, [isDark]);
-
-	const handleThemeChange = (mode: ThemeMode) => {
-		setThemeMode(mode);
-		localStorage.setItem("theme", mode);
-		const prefersDark = globalThis.matchMedia("(prefers-color-scheme: dark)").matches;
-		const shouldBeDark = mode === "dark" || (mode === "system" && prefersDark);
-		setIsDark(shouldBeDark);
-	};
-
-	const handleTimeFormatChange = (format: TimeFormat) => {
-		setTimeFormat(format);
-		localStorage.setItem("timeFormat", format);
-	};
-
-	const toggleOneClick = () => {
-		const isOneClickEnabled = !oneClickEnabled;
-		setOneClickEnabled(isOneClickEnabled);
-		sessionManager.setOneClickEnabled(isOneClickEnabled);
-	};
-
-	const toggleShowStatistics = () => {
-		const isShowStatistics = !showStatistics;
-		setShowStatistics(isShowStatistics);
-		sessionManager.setShowStatistics(isShowStatistics);
-	};
-
-	const closeMobileMenu = () => {
-		setMobileMenuClosing(true);
-		setTimeout(() => {
-			setMobileMenuOpen(false);
-			setMobileMenuClosing(false);
-		}, 200);
-	};
 
 	return (
 		<div className="min-h-screen bg-linear-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-slate-950 dark:via-blue-950 dark:to-indigo-950">
@@ -167,11 +109,7 @@ export function SettingsPage() {
 								<LogOut className="h-4 w-4" />
 								ออกจากระบบ
 							</Button>
-							<Button
-								variant="outline"
-								size="icon"
-								onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-								className="h-10 w-10 transition-all hover:scale-110 active:scale-95 md:hidden">
+							<Button variant="outline" size="icon" onClick={toggleMobileMenu} className="h-10 w-10 transition-all hover:scale-110 active:scale-95 md:hidden">
 								{mobileMenuOpen ? <X className="h-4 w-4 sm:h-5 sm:w-5" /> : <Menu className="h-4 w-4 sm:h-5 sm:w-5" />}
 							</Button>
 						</div>
@@ -181,9 +119,7 @@ export function SettingsPage() {
 
 			{mobileMenuOpen && (
 				<div
-					className={`sticky top-[73px] z-30 border-b border-gray-200 bg-white/80 backdrop-blur-md transition-all duration-200 md:hidden dark:border-gray-800 dark:bg-gray-900/80 ${
-						mobileMenuClosing ? "animate-out slide-out-to-top-4 fade-out-0" : "animate-in slide-in-from-top-4 fade-in-0"
-					}`}>
+					className={`sticky top-[73px] z-30 border-b border-gray-200 bg-white/80 backdrop-blur-md transition-all duration-200 md:hidden dark:border-gray-800 dark:bg-gray-900/80 ${getMobileMenuClasses()}`}>
 					<div className="container mx-auto px-4 py-4">
 						<div className="space-y-2">
 							<Button

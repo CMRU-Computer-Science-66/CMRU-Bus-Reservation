@@ -1,9 +1,11 @@
 import type { ParsedScheduleData } from "@cmru-comsci-66/cmru-api";
-import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Calendar, Car, ChevronDown, ChevronUp, LogOut, MapPin, Menu, Plus, RefreshCw, Settings, TrendingUp, Users, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Helmet } from "react-helmet-async";
 import { useNavigate } from "react-router-dom";
+
+import { useMobileMenu } from "@/hooks/use-mobile-menu";
+import { useRefresh } from "@/hooks/use-refresh";
 
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
@@ -12,7 +14,7 @@ import { ROUTE_METADATA, ROUTES } from "../config/routes";
 import { useApi } from "../contexts/api-context";
 import { useCrossPageScroll } from "../hooks/use-auto-scroll";
 import { useFilterState } from "../hooks/use-filter-state";
-import { queryKeys, useAllSchedulesQuery } from "../hooks/use-queries";
+import { useAllSchedulesQuery } from "../hooks/use-queries";
 import { getFilteredReservations, useReservationStatistics } from "../hooks/use-reservation-statistics";
 import { ErrorScreen } from "./components/error-screen";
 import { PageHeader } from "./components/page-header";
@@ -188,27 +190,17 @@ function processScheduleData(scheduleData: ParsedScheduleData): StatisticsData {
 export function StatisticsPage() {
 	const navigate = useNavigate();
 	const { error, isAuthenticated, logout } = useApi();
-	const queryClient = useQueryClient();
+	const { closeMobileMenu, mobileMenuClosing, mobileMenuOpen, toggleMobileMenu } = useMobileMenu();
+	const { handleRefresh, isRefreshing } = useRefresh();
 	const { data: allSchedulesData, isLoading: isLoadingSchedules } = useAllSchedulesQuery(isAuthenticated);
 	const combinedLoading = isLoadingSchedules;
 	const allReservations = allSchedulesData?.reservations || [];
-	const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-	const [mobileMenuClosing, setMobileMenuClosing] = useState(false);
 	const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set());
 	const { currentFilter, getCurrentFilterLabel, handleFilterChange } = useFilterState("all");
 	const reservationStats = useReservationStatistics(allSchedulesData);
 	const filteredReservations = getFilteredReservations(allSchedulesData, currentFilter);
 	const filteredScheduleData = allSchedulesData ? { ...allSchedulesData, reservations: filteredReservations } : null;
 	const statisticsData = filteredScheduleData ? processScheduleData(filteredScheduleData) : null;
-
-	const closeMobileMenu = () => {
-		setMobileMenuClosing(true);
-		setTimeout(() => {
-			setMobileMenuOpen(false);
-			setMobileMenuClosing(false);
-		}, 200);
-	};
-	const [isRefreshing, setIsRefreshing] = useState(false);
 	const { navigateWithPageAndScroll } = useCrossPageScroll();
 	const navigateToReservation = (reservationId: number) => {
 		const sortedReservations = [...allReservations].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -248,15 +240,6 @@ export function StatisticsPage() {
 				return date.getMonth() === monthIndex;
 			})
 			.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-	};
-
-	const handleRefresh = async () => {
-		setIsRefreshing(true);
-		try {
-			await Promise.all([queryClient.refetchQueries({ queryKey: queryKeys.allSchedules() }), new Promise((resolve) => setTimeout(resolve, 500))]);
-		} finally {
-			setIsRefreshing(false);
-		}
 	};
 
 	if (error) {
@@ -317,7 +300,7 @@ export function StatisticsPage() {
 				className="h-10 w-10 rounded-full transition-all hover:scale-110 active:scale-95 md:hidden">
 				<RefreshCw className={`h-4 w-4 transition-transform sm:h-5 sm:w-5 ${isRefreshing || isLoadingSchedules ? "animate-spin" : ""}`} />
 			</Button>
-			<Button variant="outline" size="icon" onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="h-10 w-10 transition-all hover:scale-110 active:scale-95 md:hidden">
+			<Button variant="outline" size="icon" onClick={toggleMobileMenu} className="h-10 w-10 transition-all hover:scale-110 active:scale-95 md:hidden">
 				{mobileMenuOpen ? <X className="h-4 w-4 sm:h-5 sm:w-5" /> : <Menu className="h-4 w-4 sm:h-5 sm:w-5" />}
 			</Button>
 		</>

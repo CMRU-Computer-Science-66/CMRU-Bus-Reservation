@@ -1,5 +1,4 @@
 import type { ScheduleReservation } from "@cmru-comsci-66/cmru-api";
-import { useQueryClient } from "@tanstack/react-query";
 import { Calendar, CheckCircle2, LogOut, Menu, Plus, QrCode, RefreshCw, Settings, TrendingUp, User, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Helmet } from "react-helmet-async";
@@ -12,9 +11,12 @@ import { ROUTE_METADATA, ROUTES } from "../config/routes";
 import { useApi } from "../contexts/api-context";
 import { useAutoScroll, useCrossPageScroll } from "../hooks/use-auto-scroll";
 import { useFilterState } from "../hooks/use-filter-state";
+import { useMobileMenu } from "../hooks/use-mobile-menu";
 import { queryKeys, useCancelReservationMutation, useConfirmReservationMutation, useDeleteReservationMutation, useScheduleQuery } from "../hooks/use-queries";
+import { useRefresh } from "../hooks/use-refresh";
 import { useReservationStatistics } from "../hooks/use-reservation-statistics";
-import { getSessionManager } from "../lib/session-manager";
+import { useSession } from "../hooks/use-session";
+import { useTheme } from "../hooks/use-theme";
 import { DateSection } from "./components/date-section";
 import { formatThaiDateShort, getRelativeDay } from "./components/date-utils";
 import { ErrorScreen } from "./components/error-screen";
@@ -25,24 +27,22 @@ import { StatCard } from "./components/stat-card";
 export function SchedulePage() {
 	const navigate = useNavigate();
 	const { logout } = useApi();
-	const queryClient = useQueryClient();
+	const { applyTheme } = useTheme();
+	const { oneClickEnabled: oneClickMode, showStatistics } = useSession();
+	const { closeMobileMenu, mobileMenuOpen, toggleMobileMenu } = useMobileMenu();
+	const { handleRefresh, isRefreshing } = useRefresh(() => queryKeys.schedule());
+
 	const [currentPage, setCurrentPage] = useState(1);
 	const { data: schedule, error, isLoading, refetch } = useScheduleQuery(currentPage, true);
 	const confirmMutation = useConfirmReservationMutation();
 	const cancelMutation = useCancelReservationMutation();
 	const deleteMutation = useDeleteReservationMutation();
-
-	const sessionManager = getSessionManager();
-	const [oneClickMode, setOneClickMode] = useState(sessionManager.getOneClickEnabled());
-	const [showStatistics, setShowStatistics] = useState(sessionManager.getShowStatistics());
 	const [actionLoading, setActionLoading] = useState<number | null>(null);
-	const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 	const { currentFilter: filterStatus, handleFilterChange } = useFilterState("all");
 	const reservationStats = useReservationStatistics(schedule);
 	const [qrRefreshTrigger, setQrRefreshTrigger] = useState(0);
-	const [isRefreshing, setIsRefreshing] = useState(false);
 	const isAutoPaginationActive = useRef(false);
 	const processedScrollTarget = useRef<string | null>(null);
 
@@ -65,36 +65,9 @@ export function SchedulePage() {
 		[scrollToReservation],
 	);
 
-	const handleRefresh = async () => {
-		setIsRefreshing(true);
-		try {
-			await Promise.all([queryClient.refetchQueries({ queryKey: queryKeys.schedule() }), new Promise((resolve) => setTimeout(resolve, 500))]);
-		} finally {
-			setIsRefreshing(false);
-		}
-	};
-
 	useEffect(() => {
-		setOneClickMode(sessionManager.getOneClickEnabled());
-		setShowStatistics(sessionManager.getShowStatistics());
-	}, [sessionManager]);
-
-	useEffect(() => {
-		const handleFocus = () => {
-			setOneClickMode(sessionManager.getOneClickEnabled());
-			setShowStatistics(sessionManager.getShowStatistics());
-		};
-
-		window.addEventListener("focus", handleFocus);
-		return () => window.removeEventListener("focus", handleFocus);
-	}, [sessionManager]);
-
-	useEffect(() => {
-		const theme = localStorage.getItem("theme");
-		const prefersDark = globalThis.matchMedia("(prefers-color-scheme: dark)").matches;
-		const shouldBeDark = theme === "dark" || (theme === "system" && prefersDark);
-		document.documentElement.classList.toggle("dark", shouldBeDark);
-	}, []);
+		applyTheme();
+	}, [applyTheme]);
 
 	useEffect(() => {
 		const scrollToReservationId = sessionStorage.getItem("scrollToReservation");
@@ -347,7 +320,7 @@ export function SchedulePage() {
 				className="h-10 w-10 rounded-full transition-all hover:scale-110 active:scale-95 md:hidden">
 				<RefreshCw className={`h-4 w-4 transition-transform sm:h-5 sm:w-5 ${isRefreshing || isLoading ? "animate-spin" : ""}`} />
 			</Button>
-			<Button variant="outline" size="icon" onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="h-10 w-10 transition-all hover:scale-110 active:scale-95 md:hidden">
+			<Button variant="outline" size="icon" onClick={toggleMobileMenu} className="h-10 w-10 transition-all hover:scale-110 active:scale-95 md:hidden">
 				{mobileMenuOpen ? <X className="h-4 w-4 sm:h-5 sm:w-5" /> : <Menu className="h-4 w-4 sm:h-5 sm:w-5" />}
 			</Button>
 		</>
@@ -379,7 +352,7 @@ export function SchedulePage() {
 								size="sm"
 								onClick={() => {
 									navigate(ROUTES.STATISTICS);
-									setMobileMenuOpen(false);
+									closeMobileMenu();
 								}}
 								className="w-full justify-start gap-2">
 								<TrendingUp className="h-4 w-4" />
@@ -389,8 +362,8 @@ export function SchedulePage() {
 								variant="outline"
 								size="sm"
 								onClick={() => {
-									navigate(ROUTES.SETTINGS);
-									setMobileMenuOpen(false);
+									navigate(ROUTES.BOOKING);
+									closeMobileMenu();
 								}}
 								className="w-full justify-start gap-2">
 								<Settings className="h-4 w-4" />

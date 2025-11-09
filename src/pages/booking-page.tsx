@@ -17,8 +17,11 @@ import { ROUTE_METADATA, ROUTES } from "../config/routes";
 import { useApi } from "../contexts/api-context";
 import { useAutoScroll, useCrossPageScroll } from "../hooks/use-auto-scroll";
 import { useBookingFilterState } from "../hooks/use-booking-filter-state";
-import { queryKeys, useAvailableBusesQuery, useBookBusMutation, useScheduleQuery } from "../hooks/use-queries";
-import { getSessionManager } from "../lib/session-manager";
+import { useMobileMenu } from "../hooks/use-mobile-menu";
+import { useAvailableBusesQuery, useBookBusMutation, useScheduleQuery } from "../hooks/use-queries";
+import { useRefresh } from "../hooks/use-refresh";
+import { useSession } from "../hooks/use-session";
+import { useTheme } from "../hooks/use-theme";
 import { formatTime } from "../lib/time-formatter";
 import { PageHeader } from "./components/page-header";
 import { StatCard } from "./components/stat-card";
@@ -63,11 +66,13 @@ const getRelativeDay = (date: Date) => {
 export function BookingPage() {
 	const navigate = useNavigate();
 	const { cancelReservation, deleteReservation, isAuthenticated, logout } = useApi();
-	const queryClient = useQueryClient();
+	const { applyTheme } = useTheme();
+	const { showStatistics } = useSession();
+	const { closeMobileMenu, mobileMenuClosing, mobileMenuOpen, toggleMobileMenu } = useMobileMenu();
+	const { handleRefresh, isRefreshing } = useRefresh();
 	const { data: availableBuses, isLoading: isLoadingAvailableBuses, refetch: refetchAvailableBuses } = useAvailableBusesQuery(isAuthenticated);
 	const { data: scheduleData, isLoading: isLoadingSchedule, refetch: refetchSchedule } = useScheduleQuery(1, isAuthenticated);
 	const bookMutation = useBookBusMutation();
-
 	const [bookedScheduleIds, setBookedScheduleIds] = useState<Set<string>>(new Set());
 	const [bookedReservations, setBookedReservations] = useState<Map<string, ScheduleReservation>>(new Map());
 	const [isLoading, setIsLoading] = useState(false);
@@ -75,23 +80,8 @@ export function BookingPage() {
 	const [bookingLoading, setBookingLoading] = useState<number | undefined>();
 	const [bookingStatus, setBookingStatus] = useState<string>("");
 	const [selectedSchedules, setSelectedSchedules] = useState<Record<string, { toMaeRim: number | string | undefined; toWiangBua: number | string | undefined }>>({});
-	const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-	const [mobileMenuClosing, setMobileMenuClosing] = useState(false);
 	const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 	const { currentFilter: filterMode, handleFilterChange } = useBookingFilterState("all");
-	const [showStatistics, setShowStatistics] = useState(() => {
-		return getSessionManager().getShowStatistics();
-	});
-	const [isRefreshing, setIsRefreshing] = useState(false);
-
-	const closeMobileMenu = () => {
-		setMobileMenuClosing(true);
-		setTimeout(() => {
-			setMobileMenuOpen(false);
-			setMobileMenuClosing(false);
-		}, 200);
-	};
-
 	const { isHighlighted: isCardHighlighted, scrollToElement: scrollToCard } = useAutoScroll<string>({
 		checkViewport: true,
 		highlightDuration: 2000,
@@ -113,39 +103,6 @@ export function BookingPage() {
 		},
 		[navigate, navigateWithScroll],
 	);
-
-	useEffect(() => {
-		const theme = localStorage.getItem("theme");
-		const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-		const shouldBeDark = theme === "dark" || (theme === "system" && prefersDark);
-		document.documentElement.classList.toggle("dark", shouldBeDark);
-	}, []);
-
-	useEffect(() => {
-		setShowStatistics(getSessionManager().getShowStatistics());
-	}, []);
-
-	useEffect(() => {
-		const handleFocus = () => {
-			setShowStatistics(getSessionManager().getShowStatistics());
-		};
-
-		window.addEventListener("focus", handleFocus);
-		return () => window.removeEventListener("focus", handleFocus);
-	}, []);
-
-	const handleForceRefresh = useCallback(async () => {
-		setIsRefreshing(true);
-		try {
-			await Promise.all([
-				queryClient.refetchQueries({ queryKey: queryKeys.availableBuses() }),
-				queryClient.refetchQueries({ queryKey: queryKeys.schedule() }),
-				new Promise((resolve) => setTimeout(resolve, 500)),
-			]);
-		} finally {
-			setIsRefreshing(false);
-		}
-	}, [queryClient]);
 
 	const fetchBookedSchedules = useCallback(async () => {
 		if (scheduleData?.reservations) {
@@ -420,11 +377,7 @@ export function BookingPage() {
 							<Button variant="outline" size="icon" disabled className="h-10 w-10 rounded-full transition-all active:scale-95 md:hidden">
 								<RefreshCw className="h-4 w-4 animate-spin sm:h-5 sm:w-5" />
 							</Button>
-							<Button
-								variant="outline"
-								size="icon"
-								onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-								className="h-10 w-10 transition-all hover:scale-110 active:scale-95 md:hidden">
+							<Button variant="outline" size="icon" onClick={toggleMobileMenu} className="h-10 w-10 transition-all hover:scale-110 active:scale-95 md:hidden">
 								{mobileMenuOpen ? <X className="h-4 w-4 sm:h-5 sm:w-5" /> : <Menu className="h-4 w-4 sm:h-5 sm:w-5" />}
 							</Button>
 						</>
@@ -588,7 +541,7 @@ export function BookingPage() {
 						<Button
 							variant="outline"
 							size="sm"
-							onClick={handleForceRefresh}
+							onClick={handleRefresh}
 							disabled={isRefreshing || isLoading || isLoadingAvailableBuses || isLoadingSchedule}
 							className="hidden gap-2 shadow-sm hover:shadow-lg md:flex">
 							<RefreshCw className={`h-4 w-4 transition-transform ${isRefreshing || isLoadingAvailableBuses || isLoadingSchedule ? "animate-spin" : "hover:rotate-180"}`} />
@@ -617,16 +570,12 @@ export function BookingPage() {
 						<Button
 							variant="outline"
 							size="icon"
-							onClick={handleForceRefresh}
+							onClick={handleRefresh}
 							disabled={isRefreshing || isLoading || isLoadingAvailableBuses || isLoadingSchedule}
 							className="h-10 w-10 rounded-full transition-all hover:scale-110 active:scale-95 md:hidden">
 							<RefreshCw className={`h-4 w-4 transition-transform sm:h-5 sm:w-5 ${isRefreshing || isLoadingAvailableBuses || isLoadingSchedule ? "animate-spin" : ""}`} />
 						</Button>
-						<Button
-							variant="outline"
-							size="icon"
-							onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-							className="h-10 w-10 transition-all hover:scale-110 active:scale-95 md:hidden">
+						<Button variant="outline" size="icon" onClick={toggleMobileMenu} className="h-10 w-10 transition-all hover:scale-110 active:scale-95 md:hidden">
 							{mobileMenuOpen ? <X className="h-4 w-4 sm:h-5 sm:w-5" /> : <Menu className="h-4 w-4 sm:h-5 sm:w-5" />}
 						</Button>
 					</>
@@ -794,7 +743,98 @@ export function BookingPage() {
 							</Badge>
 						)}
 					</div>
-					<div className="text-xs text-gray-500 md:hidden dark:text-gray-400">💡 แตะที่บัตรเพื่อ auto scroll</div>
+					<div className="text-xs text-gray-500 md:hidden dark:text-gray-400">
+						{(() => {
+							const hasSelections = Object.keys(selectedSchedules).some((dateString) => {
+								const sel = selectedSchedules[dateString];
+								return sel && (sel.toMaeRim || sel.toWiangBua);
+							});
+
+							const multipleSelections =
+								Object.keys(selectedSchedules).filter((dateString) => {
+									const sel = selectedSchedules[dateString];
+									return sel && (sel.toMaeRim || sel.toWiangBua);
+								}).length > 1;
+
+							const hasBookedSchedules = groupedSchedules.some((group) =>
+								group.schedules.some((schedule) => {
+									const date = new Date(schedule.date).toISOString().split("T")[0];
+									const time = schedule.departureTime;
+									const destinationType = schedule.destinationType.toString();
+									const bookingKey = `${date}_${time}_${destinationType}`;
+									return bookedScheduleIds.has(bookingKey);
+								}),
+							);
+
+							const totalAvailableSlots = groupedSchedules.reduce((total, group) => total + group.canReserveCount, 0);
+							const filteredCount = groupedSchedules.length;
+
+							if (isLoading || isLoadingAvailableBuses || isLoadingSchedule) {
+								return "⏳ กำลังโหลดรอบรถ รอซักครู่นะ...";
+							}
+							if (bookingLoading !== undefined) {
+								return "⏳ กำลังจองให้อยู่ รอหน่อยนะ...";
+							}
+
+							if (multipleSelections) {
+								const selectedCount = Object.keys(selectedSchedules).filter((dateString) => {
+									const sel = selectedSchedules[dateString];
+									return sel && (sel.toMaeRim || sel.toWiangBua);
+								}).length;
+								return `🎯 เลือกไว้ ${selectedCount} วันแล้ว กดปุ่มด้านล่างเพื่อจองเลย!`;
+							}
+
+							if (hasSelections) {
+								const selectedDate = Object.keys(selectedSchedules).find((dateString) => {
+									const sel = selectedSchedules[dateString];
+									return sel && (sel.toMaeRim || sel.toWiangBua);
+								});
+								const currentSelection = selectedDate ? selectedSchedules[selectedDate] : null;
+								const hasCancellation = currentSelection?.toMaeRim === "__CANCEL__" || currentSelection?.toWiangBua === "__CANCEL__";
+								const hasNewBooking =
+									(currentSelection?.toMaeRim && currentSelection.toMaeRim !== "__CANCEL__") ||
+									(currentSelection?.toWiangBua && currentSelection.toWiangBua !== "__CANCEL__");
+
+								if (hasCancellation && hasNewBooking) {
+									return "🔄 จะยกเลิกและจองใหม่ กดยืนยันได้เลย";
+								} else if (hasCancellation) {
+									return "❌ เลือกยกเลิกแล้ว กดยืนยันเพื่อยกเลิกจริง ๆ";
+								} else {
+									return "✅ เลือกรอบแล้ว กดยืนยันเพื่อจอง";
+								}
+							}
+
+							if (filterMode === "available" && filteredCount > 0) {
+								return `🟢 มี ${filteredCount} วันที่เปิดให้จอง เลือกวันที่ต้องการได้เลย`;
+							}
+
+							if (filterMode === "canReserve" && filteredCount > 0) {
+								return `📅 ทั้งหมด ${filteredCount} วัน มี ${totalAvailableSlots} รอบให้เลือก`;
+							}
+
+							if (groupedSchedules.length === 0) {
+								return "❌ ยังไม่มีรอบเปิดจอง ลองรีเฟรชดูหรือกลับมาใหม่ภายหลัง";
+							}
+
+							if (hasBookedSchedules) {
+								const actualBookedCount = groupedSchedules.reduce(
+									(total, group) =>
+										total +
+										group.schedules.filter((schedule) => {
+											const date = new Date(schedule.date).toISOString().split("T")[0];
+											const time = schedule.departureTime;
+											const destinationType = schedule.destinationType.toString();
+											const bookingKey = `${date}_${time}_${destinationType}`;
+											return bookedScheduleIds.has(bookingKey);
+										}).length,
+									0,
+								);
+								return `💚 คุณจองไว้แล้ว ${actualBookedCount} รอบ สามารถเลือกเพิ่มหรือยกเลิกได้`;
+							}
+
+							return "👆 เลือกวันและรอบรถที่ต้องการเดินทาง";
+						})()}
+					</div>
 					{/* <div className="flex gap-2">
 						<Button variant={viewMode === "grid" ? "default" : "outline"} size="sm" onClick={() => setViewMode("grid")} className="gap-2">
 							<Grid3x3 className="h-4 w-4" />
@@ -1269,7 +1309,7 @@ export function BookingPage() {
 													<>
 														{hasBookedSchedules && (
 															<div className="space-y-2 rounded-lg border border-green-200 bg-green-50 p-3 dark:border-green-900 dark:bg-green-950">
-																<p className="text-xs font-medium text-green-600 dark:text-green-400">รอบที่คุณจอง:</p>
+																<p className="text-xs font-medium text-green-600 dark:text-green-400">รอบที่คุณจอง</p>
 
 																{group.schedules
 																	.filter((schedule) => {
@@ -1337,15 +1377,92 @@ export function BookingPage() {
 																		const hasCancellation = current?.toMaeRim === "__CANCEL__" || current?.toWiangBua === "__CANCEL__";
 																		const hasNewBooking =
 																			(current?.toMaeRim && current.toMaeRim !== "__CANCEL__") || (current?.toWiangBua && current.toWiangBua !== "__CANCEL__");
+																		const hasOnlyMaeRim =
+																			current?.toMaeRim && current.toMaeRim !== "__CANCEL__" && (!current?.toWiangBua || current.toWiangBua === "__CANCEL__");
+																		const hasOnlyWiangBua =
+																			current?.toWiangBua && current.toWiangBua !== "__CANCEL__" && (!current?.toMaeRim || current.toMaeRim === "__CANCEL__");
+																		const hasBothDirections =
+																			current?.toMaeRim && current.toMaeRim !== "__CANCEL__" && current?.toWiangBua && current.toWiangBua !== "__CANCEL__";
+																		const isPartialCancellation = hasCancellation && hasNewBooking;
+																		const isFullCancellation = hasCancellation && !hasNewBooking;
 
-																		if (hasCancellation && hasNewBooking) {
-																			return "เปลี่ยนแปลงการจอง:";
-																		} else if (hasCancellation) {
-																			return "การยกเลิก:";
+																		if (isPartialCancellation) {
+																			return "เปลี่ยนแปลงการจองรอบเดินทาง";
+																		} else if (isFullCancellation) {
+																			return "ยกเลิกการจองรอบเดินทาง";
 																		} else if (hasBookedSchedules) {
-																			return "เปลี่ยนรอบเป็น:";
+																			const hasBookedMaeRim = group.schedules
+																				.filter((s) => s.destinationType === 1)
+																				.some((schedule) => {
+																					const date = new Date(schedule.date).toISOString().split("T")[0];
+																					const time = schedule.departureTime;
+																					const bookingKey = `${date}_${time}_1`;
+																					return bookedScheduleIds.has(bookingKey);
+																				});
+																			const hasBookedWiangBua = group.schedules
+																				.filter((s) => s.destinationType === 2)
+																				.some((schedule) => {
+																					const date = new Date(schedule.date).toISOString().split("T")[0];
+																					const time = schedule.departureTime;
+																					const bookingKey = `${date}_${time}_2`;
+																					return bookedScheduleIds.has(bookingKey);
+																				});
+
+																			const isSelectingSameBookedMaeRim =
+																				current?.toMaeRim &&
+																				group.schedules
+																					.filter((s) => s.destinationType === 1 && s.id === current.toMaeRim)
+																					.some((schedule) => {
+																						const date = new Date(schedule.date).toISOString().split("T")[0];
+																						const time = schedule.departureTime;
+																						const bookingKey = `${date}_${time}_1`;
+																						return bookedScheduleIds.has(bookingKey);
+																					});
+																			const isSelectingSameBookedWiangBua =
+																				current?.toWiangBua &&
+																				group.schedules
+																					.filter((s) => s.destinationType === 2 && s.id === current.toWiangBua)
+																					.some((schedule) => {
+																						const date = new Date(schedule.date).toISOString().split("T")[0];
+																						const time = schedule.departureTime;
+																						const bookingKey = `${date}_${time}_2`;
+																						return bookedScheduleIds.has(bookingKey);
+																					});
+
+																			const isChangingExistingMaeRim = hasBookedMaeRim && current?.toMaeRim && !isSelectingSameBookedMaeRim;
+																			const isChangingExistingWiangBua = hasBookedWiangBua && current?.toWiangBua && !isSelectingSameBookedWiangBua;
+																			const isAddingNewMaeRim = !hasBookedMaeRim && current?.toMaeRim && current.toMaeRim !== "__CANCEL__";
+																			const isAddingNewWiangBua = !hasBookedWiangBua && current?.toWiangBua && current.toWiangBua !== "__CANCEL__";
+
+																			if (isChangingExistingMaeRim && isAddingNewWiangBua) {
+																				return "เปลี่ยนรอบไปและเพิ่มรอบกลับ";
+																			} else if (isAddingNewMaeRim && isChangingExistingWiangBua) {
+																				return "เพิ่มรอบไปและเปลี่ยนรอบกลับ";
+																			} else if (isChangingExistingMaeRim && isChangingExistingWiangBua) {
+																				return "เปลี่ยนรอบเดินทางทั้งไป-กลับ";
+																			} else if (isAddingNewMaeRim && isAddingNewWiangBua) {
+																				return "เพิ่มรอบไป-กลับ";
+																			} else if (isChangingExistingMaeRim) {
+																				return "เปลี่ยนรอบไปแม่ริม";
+																			} else if (isChangingExistingWiangBua) {
+																				return "เปลี่ยนรอบกลับเวียงบัว";
+																			} else if (isAddingNewMaeRim) {
+																				return "เพิ่มรอบไปแม่ริม";
+																			} else if (isAddingNewWiangBua) {
+																				return "เพิ่มรอบกลับเวียงบัว";
+																			} else {
+																				return "เพิ่มรอบเดินทาง";
+																			}
 																		} else {
-																			return "รอบที่เลือก:";
+																			if (hasBothDirections) {
+																				return "เพิ่มรอบไป-กลับ";
+																			} else if (hasOnlyMaeRim) {
+																				return "เพิ่มรอบไปแม่ริม";
+																			} else if (hasOnlyWiangBua) {
+																				return "เพิ่มรอบกลับเวียงบัว";
+																			} else {
+																				return "รอบเดินทางที่เลือก";
+																			}
 																		}
 																	})()}
 																</p>

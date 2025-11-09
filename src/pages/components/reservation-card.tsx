@@ -132,6 +132,7 @@ export function ReservationCard({
 			}
 			setQrCountdown(0);
 		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [qrDialogOpen, item?.ticket.hasQRCode, loadQRCode]);
 
 	useEffect(() => {
