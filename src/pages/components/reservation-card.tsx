@@ -7,7 +7,8 @@ import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { Dialog, DialogContent } from "../../components/ui/dialog";
 import { Separator } from "../../components/ui/separator";
-import { API_CONFIG, getApiUrl } from "../../config/api";
+import { API_CONFIG, getApiClient, getApiUrl } from "../../config/api";
+import { getSessionManager } from "../../lib/session-manager";
 import { formatTime } from "../../lib/time-formatter";
 
 interface ReservationCardProperties {
@@ -51,21 +52,15 @@ export function ReservationCard({
 		setQrLoading(true);
 		setQrImageError(false);
 		try {
-			const response = await fetch(getApiUrl(`${API_CONFIG.ENDPOINTS.BUS.TICKET_INFO}?ticketId=${item.ticket.id}`), {
-				method: "GET",
-				headers: {
-					"Content-Type": "application/json",
-				},
-			});
+			const apiClient = getApiClient();
+			const sessionManager = getSessionManager();
+			const ticketInfo = await apiClient.getWithAuthAndRetry<{
+				qrCode?: { imageUrl?: string };
+			}>(`${API_CONFIG.ENDPOINTS.BUS.TICKET_INFO}?ticketId=${item.ticket.id}`, () => sessionManager.getToken());
 
-			if (response.ok) {
-				const ticketInfo = await response.json();
-				if (ticketInfo?.qrCode?.imageUrl) {
-					const qrUrl = ticketInfo.qrCode.imageUrl.startsWith("http") ? ticketInfo.qrCode.imageUrl : `https://cmrubus.cmru.ac.th${ticketInfo.qrCode.imageUrl}`;
-					setQrCodeUrl(qrUrl);
-				} else {
-					setQrImageError(true);
-				}
+			if (ticketInfo?.qrCode?.imageUrl) {
+				const qrUrl = ticketInfo.qrCode.imageUrl.startsWith("http") ? ticketInfo.qrCode.imageUrl : `https://cmrubus.cmru.ac.th${ticketInfo.qrCode.imageUrl}`;
+				setQrCodeUrl(qrUrl);
 			} else {
 				setQrImageError(true);
 			}

@@ -55,7 +55,8 @@ export function useValidateSession() {
 	return useQuery({
 		queryKey: ["validate", getCurrentUser()],
 		queryFn: async () => {
-			return apiClient.get<{ valid: boolean }>("/bus/validate");
+			const sessionManager = getSessionManager();
+			return apiClient.getWithAuthAndRetry<{ valid: boolean }>("/bus/validate", () => sessionManager.getToken());
 		},
 		staleTime: 2 * 60 * 1000,
 		gcTime: 5 * 60 * 1000,
@@ -77,7 +78,8 @@ export function useAvailableBuses() {
 	return useQuery({
 		queryKey: ["bus", "available", getCurrentUser()],
 		queryFn: async () => {
-			return apiClient.get("/bus/available");
+			const sessionManager = getSessionManager();
+			return apiClient.getWithAuthAndRetry("/bus/available", () => sessionManager.getToken());
 		},
 		staleTime: 30 * 1000,
 		refetchInterval: 60 * 1000,
@@ -91,7 +93,8 @@ export function useBusSchedule(page = 1, perPage = 10) {
 	return useQuery({
 		queryKey: ["bus", "schedule", getCurrentUser(), page, perPage],
 		queryFn: async () => {
-			return apiClient.get(`/bus/schedule?page=${page}&perPage=${perPage}`);
+			const sessionManager = getSessionManager();
+			return apiClient.getWithAuthAndRetry(`/bus/schedule?page=${page}&perPage=${perPage}`, () => sessionManager.getToken());
 		},
 		staleTime: 30 * 1000,
 		retry: 2,
@@ -104,7 +107,8 @@ export function useBusBooking() {
 
 	return useMutation({
 		mutationFn: async (bookingData: BusBookingData) => {
-			return apiClient.post("/bus/book", bookingData);
+			const sessionManager = getSessionManager();
+			return apiClient.postWithAuthAndRetry("/bus/book", bookingData, () => sessionManager.getToken());
 		},
 		onSuccess: () => {
 			const currentUser = getCurrentUser();
@@ -121,7 +125,8 @@ export function useConfirmReservation() {
 
 	return useMutation({
 		mutationFn: async (confirmationData: ConfirmationData) => {
-			return apiClient.post("/bus/confirm", confirmationData);
+			const sessionManager = getSessionManager();
+			return apiClient.postWithAuthAndRetry("/bus/confirm", confirmationData, () => sessionManager.getToken());
 		},
 		onSuccess: () => {
 			const currentUser = getCurrentUser();
@@ -137,7 +142,8 @@ export function useUnconfirmReservation() {
 
 	return useMutation({
 		mutationFn: async ({ data, oneClick }: { data: string; oneClick?: boolean }) => {
-			return apiClient.post("/bus/unconfirm", { data, oneClick });
+			const sessionManager = getSessionManager();
+			return apiClient.postWithAuthAndRetry("/bus/unconfirm", { data, oneClick }, () => sessionManager.getToken());
 		},
 		onSuccess: () => {
 			const currentUser = getCurrentUser();
@@ -153,7 +159,8 @@ export function useDeleteReservation() {
 
 	return useMutation({
 		mutationFn: async (reservationId: string | number) => {
-			return apiClient.post("/bus/delete", { reservationId });
+			const sessionManager = getSessionManager();
+			return apiClient.postWithAuthAndRetry("/bus/delete", { reservationId }, () => sessionManager.getToken());
 		},
 		onSuccess: () => {
 			const currentUser = getCurrentUser();
@@ -169,7 +176,8 @@ export function useCancelReservation() {
 
 	return useMutation({
 		mutationFn: async (reservationId: string | number) => {
-			return apiClient.post("/bus/cancel", { reservationId });
+			const sessionManager = getSessionManager();
+			return apiClient.postWithAuthAndRetry("/bus/cancel", { reservationId }, () => sessionManager.getToken());
 		},
 		onSuccess: () => {
 			const currentUser = getCurrentUser();
@@ -185,7 +193,8 @@ export function useTicketInfo(ticketId: string) {
 	return useQuery({
 		queryKey: ["bus", "ticket", "info", getCurrentUser(), ticketId],
 		queryFn: async () => {
-			return apiClient.get(`/bus/ticket/info?ticketId=${ticketId}`);
+			const sessionManager = getSessionManager();
+			return apiClient.getWithAuthAndRetry(`/bus/ticket/info?ticketId=${ticketId}`, () => sessionManager.getToken());
 		},
 		enabled: !!ticketId,
 		staleTime: 5 * 60 * 1000,
