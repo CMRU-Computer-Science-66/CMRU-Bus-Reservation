@@ -40,7 +40,7 @@ const sessionManager = getSessionManager();
 export function SettingsPage() {
 	const navigate = useNavigate();
 	const { logout } = useApi();
-	const [username, setUsername] = useState<string>("");
+	const [username] = useState<string>(() => sessionManager.getUsername() || "");
 	const [apiVersion, setApiVersion] = useState<string>("loading...");
 	const [contributors, setContributors] = useState<Array<{ avatar_url: string; html_url: string; login: string }>>([]);
 	const [showAllContributors, setShowAllContributors] = useState(false);
@@ -67,12 +67,6 @@ export function SettingsPage() {
 	const [mobileMenuClosing, setMobileMenuClosing] = useState(false);
 
 	useEffect(() => {
-		const session = sessionManager.loadSession();
-		if (session?.username) {
-			// eslint-disable-next-line react-hooks/set-state-in-effect
-			setUsername(session.username);
-		}
-
 		fetch(`${BASE_URL}/api`)
 			.then((response) => response.json())
 			.then((data) => {
