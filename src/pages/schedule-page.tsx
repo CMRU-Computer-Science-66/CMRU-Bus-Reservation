@@ -11,7 +11,9 @@ import { Card, CardContent } from "../components/ui/card";
 import { ROUTE_METADATA, ROUTES } from "../config/routes";
 import { useApi } from "../contexts/api-context";
 import { useAutoScroll, useCrossPageScroll } from "../hooks/use-auto-scroll";
+import { useFilterState } from "../hooks/use-filter-state";
 import { queryKeys, useCancelReservationMutation, useConfirmReservationMutation, useDeleteReservationMutation, useScheduleQuery } from "../hooks/use-queries";
+import { useReservationStatistics } from "../hooks/use-reservation-statistics";
 import { getSessionManager } from "../lib/session-manager";
 import { DateSection } from "./components/date-section";
 import { formatThaiDateShort, getRelativeDay } from "./components/date-utils";
@@ -37,7 +39,8 @@ export function SchedulePage() {
 	const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-	const [filterStatus, setFilterStatus] = useState<"all" | "confirmed" | "completed" | "hasQR">("all");
+	const { currentFilter: filterStatus, handleFilterChange } = useFilterState("all");
+	const reservationStats = useReservationStatistics(schedule);
 	const [qrRefreshTrigger, setQrRefreshTrigger] = useState(0);
 	const [isRefreshing, setIsRefreshing] = useState(false);
 	const isAutoPaginationActive = useRef(false);
@@ -407,41 +410,41 @@ export function SchedulePage() {
 					<div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
 						<StatCard
 							label="ยืนยันแล้ว"
-							value={schedule?.reservations ? schedule.reservations.filter((r) => r.confirmation.isConfirmed).length : 0}
+							value={reservationStats.confirmed}
 							icon={CheckCircle2}
 							gradient="from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400"
 							iconBg="bg-blue-100 dark:bg-blue-900"
-							onClick={() => setFilterStatus(filterStatus === "confirmed" ? "all" : "confirmed")}
+							onClick={() => handleFilterChange("confirmed")}
 							isActive={filterStatus === "confirmed"}
 							isLoading={isLoading}
 						/>
 						<StatCard
 							label="เดินทางแล้ว"
-							value={schedule?.reservations ? schedule.reservations.filter((r) => r.travelStatus.hasCompleted === true).length : 0}
+							value={reservationStats.completed}
 							icon={TrendingUp}
 							gradient="from-green-600 to-emerald-600 dark:from-green-400 dark:to-emerald-400"
 							iconBg="bg-green-100 dark:bg-green-900"
-							onClick={() => setFilterStatus(filterStatus === "completed" ? "all" : "completed")}
+							onClick={() => handleFilterChange("completed")}
 							isActive={filterStatus === "completed"}
 							isLoading={isLoading}
 						/>
 						<StatCard
 							label="มี QR Code"
-							value={schedule?.reservations ? schedule.reservations.filter((r) => r.ticket.hasQRCode).length : 0}
+							value={reservationStats.hasQR}
 							icon={QrCode}
 							gradient="from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400"
 							iconBg="bg-purple-100 dark:bg-purple-900"
-							onClick={() => setFilterStatus(filterStatus === "hasQR" ? "all" : "hasQR")}
+							onClick={() => handleFilterChange("hasQR")}
 							isActive={filterStatus === "hasQR"}
 							isLoading={isLoading}
 						/>
 						<StatCard
 							label="ทั้งหมด"
-							value={schedule?.totalReservations || 0}
+							value={reservationStats.all}
 							icon={User}
 							gradient="from-orange-600 to-red-600 dark:from-orange-400 dark:to-red-400"
 							iconBg="bg-orange-100 dark:bg-orange-900"
-							onClick={() => setFilterStatus("all")}
+							onClick={() => handleFilterChange("all")}
 							isActive={filterStatus === "all"}
 							isLoading={isLoading}
 						/>

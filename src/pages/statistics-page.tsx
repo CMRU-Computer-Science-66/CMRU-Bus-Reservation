@@ -11,7 +11,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
 import { ROUTE_METADATA, ROUTES } from "../config/routes";
 import { useApi } from "../contexts/api-context";
 import { useCrossPageScroll } from "../hooks/use-auto-scroll";
+import { useFilterState } from "../hooks/use-filter-state";
 import { queryKeys, useAllSchedulesQuery } from "../hooks/use-queries";
+import { getFilteredReservations, useReservationStatistics } from "../hooks/use-reservation-statistics";
 import { ErrorScreen } from "./components/error-screen";
 import { PageHeader } from "./components/page-header";
 import { StatCard } from "./components/stat-card";
@@ -190,30 +192,12 @@ export function StatisticsPage() {
 	const { data: allSchedulesData, isLoading: isLoadingSchedules } = useAllSchedulesQuery(isAuthenticated);
 	const combinedLoading = isLoadingSchedules;
 	const allReservations = allSchedulesData?.reservations || [];
-	const getFilteredReservations = (filter: "all" | "confirmed" | "completed" | "cancelled") => {
-		if (!allSchedulesData?.reservations) return [];
-
-		switch (filter) {
-			case "confirmed": {
-				return allSchedulesData.reservations.filter((item) => item.confirmation?.isConfirmed && !item.travelStatus?.hasCompleted);
-			}
-			case "completed": {
-				return allSchedulesData.reservations.filter((item) => item.travelStatus?.hasCompleted === true);
-			}
-			case "cancelled": {
-				return allSchedulesData.reservations.filter((item) => !item.confirmation?.isConfirmed && !item.travelStatus?.hasCompleted);
-			}
-			default: {
-				return allSchedulesData.reservations;
-			}
-		}
-	};
-
 	const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 	const [mobileMenuClosing, setMobileMenuClosing] = useState(false);
 	const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set());
-	const [currentFilter, setCurrentFilter] = useState<"all" | "confirmed" | "completed" | "cancelled">("all");
-	const filteredReservations = getFilteredReservations(currentFilter);
+	const { currentFilter, getCurrentFilterLabel, handleFilterChange } = useFilterState("all");
+	const reservationStats = useReservationStatistics(allSchedulesData);
+	const filteredReservations = getFilteredReservations(allSchedulesData, currentFilter);
 	const filteredScheduleData = allSchedulesData ? { ...allSchedulesData, reservations: filteredReservations } : null;
 	const statisticsData = filteredScheduleData ? processScheduleData(filteredScheduleData) : null;
 
@@ -280,30 +264,9 @@ export function StatisticsPage() {
 	}
 
 	const metadata = ROUTE_METADATA[ROUTES.STATISTICS];
-
-	const getFilterLabel = () => {
-		switch (currentFilter) {
-			case "all": {
-				return "ทั้งหมด";
-			}
-			case "confirmed": {
-				return "ยืนยันแล้ว";
-			}
-			case "completed": {
-				return "เดินทางแล้ว";
-			}
-			case "cancelled": {
-				return "ยกเลิกแล้ว";
-			}
-			default: {
-				return "ทั้งหมด";
-			}
-		}
-	};
-
 	const subtitle = (
 		<>
-			<span className="font-medium text-blue-600 dark:text-blue-400">{combinedLoading ? "กำลังโหลด..." : `ข้อมูลสถิติ - ${getFilterLabel()}`}</span>
+			<span className="font-medium text-blue-600 dark:text-blue-400">{combinedLoading ? "กำลังโหลด..." : `ข้อมูลสถิติ - ${getCurrentFilterLabel()}`}</span>
 			{" • "}
 			<span>{statisticsData?.totalBookings || 0} รายการ</span>
 		</>
@@ -419,39 +382,39 @@ export function StatisticsPage() {
 				<div className="mb-8 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
 					<StatCard
 						label="จองทั้งหมด"
-						value={allSchedulesData?.reservations?.length?.toString() || "0"}
+						value={reservationStats.all.toString()}
 						icon={Calendar}
 						gradient={currentFilter === "all" ? "from-blue-700 to-indigo-700" : "from-blue-600 to-indigo-600"}
 						isLoading={combinedLoading}
-						isActive={false}
-						onClick={() => setCurrentFilter("all")}
+						isActive={currentFilter === "all"}
+						onClick={() => handleFilterChange("all")}
 					/>
 					<StatCard
 						label="ยืนยันแล้ว"
-						value={allSchedulesData?.reservations?.filter((item) => item.confirmation?.isConfirmed && !item.travelStatus?.hasCompleted)?.length?.toString() || "0"}
+						value={reservationStats.confirmed.toString()}
 						icon={Users}
 						gradient={currentFilter === "confirmed" ? "from-green-700 to-emerald-700" : "from-green-600 to-emerald-600"}
 						isLoading={combinedLoading}
 						isActive={currentFilter === "confirmed"}
-						onClick={() => setCurrentFilter("confirmed")}
+						onClick={() => handleFilterChange("confirmed")}
 					/>
 					<StatCard
 						label="เดินทางแล้ว"
-						value={allSchedulesData?.reservations?.filter((item) => item.travelStatus?.hasCompleted === true)?.length?.toString() || "0"}
+						value={reservationStats.completed.toString()}
 						icon={MapPin}
 						gradient={currentFilter === "completed" ? "from-purple-700 to-pink-700" : "from-purple-600 to-pink-600"}
 						isLoading={combinedLoading}
 						isActive={currentFilter === "completed"}
-						onClick={() => setCurrentFilter("completed")}
+						onClick={() => handleFilterChange("completed")}
 					/>
 					<StatCard
 						label="ยกเลิกแล้ว"
-						value={allSchedulesData?.reservations?.filter((item) => !item.confirmation?.isConfirmed && !item.travelStatus?.hasCompleted)?.length?.toString() || "0"}
+						value={reservationStats.cancelled.toString()}
 						icon={TrendingUp}
 						gradient={currentFilter === "cancelled" ? "from-red-700 to-orange-700" : "from-red-600 to-orange-600"}
 						isLoading={combinedLoading}
 						isActive={currentFilter === "cancelled"}
-						onClick={() => setCurrentFilter("cancelled")}
+						onClick={() => handleFilterChange("cancelled")}
 					/>
 				</div>
 

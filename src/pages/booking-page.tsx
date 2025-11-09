@@ -16,6 +16,7 @@ import { Skeleton } from "../components/ui/skeleton";
 import { ROUTE_METADATA, ROUTES } from "../config/routes";
 import { useApi } from "../contexts/api-context";
 import { useAutoScroll, useCrossPageScroll } from "../hooks/use-auto-scroll";
+import { useBookingFilterState } from "../hooks/use-booking-filter-state";
 import { queryKeys, useAvailableBusesQuery, useBookBusMutation, useScheduleQuery } from "../hooks/use-queries";
 import { getSessionManager } from "../lib/session-manager";
 import { formatTime } from "../lib/time-formatter";
@@ -77,7 +78,7 @@ export function BookingPage() {
 	const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 	const [mobileMenuClosing, setMobileMenuClosing] = useState(false);
 	const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-	const [filterMode, setFilterMode] = useState<"all" | "available" | "canReserve">("all");
+	const { currentFilter: filterMode, handleFilterChange } = useBookingFilterState("all");
 	const [showStatistics, setShowStatistics] = useState(() => {
 		return getSessionManager().getShowStatistics();
 	});
@@ -454,6 +455,14 @@ export function BookingPage() {
 					<div className="container mx-auto px-4 py-6 sm:px-6">
 						<div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
 							<StatCard
+								label="จำนวนรอบจองได้"
+								value={0}
+								icon={User}
+								gradient="from-orange-600 to-red-600 dark:from-orange-400 dark:to-red-400"
+								iconBg="bg-orange-100 dark:bg-orange-900"
+								isLoading={true}
+							/>
+							<StatCard
 								label="วันที่มีรถ"
 								value={0}
 								icon={CheckCircle2}
@@ -475,14 +484,6 @@ export function BookingPage() {
 								icon={Bus}
 								gradient="from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400"
 								iconBg="bg-purple-100 dark:bg-purple-900"
-								isLoading={true}
-							/>
-							<StatCard
-								label="จองได้"
-								value={0}
-								icon={User}
-								gradient="from-orange-600 to-red-600 dark:from-orange-400 dark:to-red-400"
-								iconBg="bg-orange-100 dark:bg-orange-900"
 								isLoading={true}
 							/>
 						</div>
@@ -709,7 +710,7 @@ export function BookingPage() {
 							icon={CheckCircle2}
 							gradient="from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400"
 							iconBg="bg-blue-100 dark:bg-blue-900"
-							onClick={() => setFilterMode(filterMode === "all" ? "all" : "all")}
+							onClick={() => handleFilterChange("all")}
 							isActive={filterMode === "all"}
 							isLoading={isLoading}
 						/>
@@ -743,8 +744,18 @@ export function BookingPage() {
 							icon={TrendingUp}
 							gradient="from-green-600 to-emerald-600 dark:from-green-400 dark:to-emerald-400"
 							iconBg="bg-green-100 dark:bg-green-900"
-							onClick={() => setFilterMode(filterMode === "available" ? "all" : "available")}
+							onClick={() => handleFilterChange("available")}
 							isActive={filterMode === "available"}
+							isLoading={isLoading}
+						/>
+						<StatCard
+							label="จำนวนรอบจองได้"
+							value={availableBuses?.availableSchedules?.filter((s) => s.canReserve).length || 0}
+							icon={User}
+							gradient="from-orange-600 to-red-600 dark:from-orange-400 dark:to-red-400"
+							iconBg="bg-orange-100 dark:bg-orange-900"
+							onClick={() => handleFilterChange("canReserve")}
+							isActive={filterMode === "canReserve"}
 							isLoading={isLoading}
 						/>
 						<StatCard
@@ -753,18 +764,8 @@ export function BookingPage() {
 							icon={Bus}
 							gradient="from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400"
 							iconBg="bg-purple-100 dark:bg-purple-900"
-							onClick={() => setFilterMode("all")}
+							onClick={() => handleFilterChange("all")}
 							isActive={filterMode === "all"}
-							isLoading={isLoading}
-						/>
-						<StatCard
-							label="จองได้"
-							value={availableBuses?.availableSchedules?.filter((s) => s.canReserve).length || 0}
-							icon={User}
-							gradient="from-orange-600 to-red-600 dark:from-orange-400 dark:to-red-400"
-							iconBg="bg-orange-100 dark:bg-orange-900"
-							onClick={() => setFilterMode(filterMode === "canReserve" ? "all" : "canReserve")}
-							isActive={filterMode === "canReserve"}
 							isLoading={isLoading}
 						/>
 					</div>
@@ -788,8 +789,8 @@ export function BookingPage() {
 						{filterMode !== "all" && (
 							<Badge variant="secondary" className="gap-1">
 								{filterMode === "available" && "มีรอบว่าง"}
-								{filterMode === "canReserve" && "จองได้"}
-								<X className="h-3 w-3 cursor-pointer hover:text-red-600" onClick={() => setFilterMode("all")} />
+								{filterMode === "canReserve" && "จำนวนรอบจองได้"}
+								<X className="h-3 w-3 cursor-pointer hover:text-red-600" onClick={() => handleFilterChange("all")} />
 							</Badge>
 						)}
 					</div>

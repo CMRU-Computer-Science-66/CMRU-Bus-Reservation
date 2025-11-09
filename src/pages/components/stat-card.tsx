@@ -29,12 +29,14 @@ function getRingColor(gradient: string): string {
 }
 
 export function StatCard({ gradient, icon: Icon, iconBg, isActive, isLoading = false, label, onClick, value }: StatCardProperties) {
+	const shouldShowRing = isActive && !["ทั้งหมด", "จองทั้งหมด", "รอบทั้งหมด", "วันที่มีรถ"].includes(label);
+
 	return (
 		<Card
 			onClick={onClick}
 			className={`group border-0 bg-white/90 shadow-md backdrop-blur-md transition-all hover:scale-105 hover:shadow-xl dark:bg-gray-900/90 ${
 				onClick ? "cursor-pointer" : ""
-			} ${isActive ? `ring-2 ring-offset-2 ${getRingColor(gradient)}` : ""}`}>
+			} ${shouldShowRing ? `ring-2 ring-offset-2 ${getRingColor(gradient)}` : ""}`}>
 			<CardContent className="p-4">
 				<div className="flex items-center justify-between gap-3">
 					<div className="flex-1">
