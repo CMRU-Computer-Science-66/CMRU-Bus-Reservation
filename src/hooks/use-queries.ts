@@ -2,11 +2,16 @@ import type { ParsedScheduleData } from "@cmru-comsci-66/cmru-api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useApi } from "../contexts/api-context";
+import { getSessionManager } from "../lib/session-manager";
+
+function getCurrentUser(): string | null {
+	return getSessionManager().getUsername();
+}
 
 export const queryKeys = {
-	schedule: (page?: number) => ["schedule", page] as const,
-	availableBuses: () => ["availableBuses"] as const,
-	allSchedules: () => ["allSchedules"] as const,
+	schedule: (page?: number) => ["schedule", getCurrentUser(), page] as const,
+	availableBuses: () => ["availableBuses", getCurrentUser()] as const,
+	allSchedules: () => ["allSchedules", getCurrentUser()] as const,
 } as const;
 
 export function useScheduleQuery(page: number = 1, enabled: boolean = true) {

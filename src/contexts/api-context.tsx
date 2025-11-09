@@ -6,6 +6,7 @@ import toast from "react-hot-toast";
 import { getApiClient } from "../config/api";
 import { encryptCredentials } from "../lib/crypto-utils";
 import { getSessionManager } from "../lib/session-manager";
+import { getQueryClient } from "../providers/query-provider";
 import type { ApiError, GlobalThis } from "../types/global";
 
 (globalThis as GlobalThis).sessionManager = getSessionManager();
@@ -172,7 +173,12 @@ export function ApiProvider({ children }: { children: ReactNode }) {
 	const logout = useCallback(() => {
 		setIsAuthenticated(false);
 		setError(null);
+
 		sessionManager.clearSession();
+
+		const queryClient = getQueryClient();
+		queryClient.clear();
+
 		toast.success("ออกจากระบบสำเร็จ");
 	}, []);
 

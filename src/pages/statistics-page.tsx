@@ -190,10 +190,32 @@ export function StatisticsPage() {
 	const { data: allSchedulesData, isLoading: isLoadingSchedules } = useAllSchedulesQuery(isAuthenticated);
 	const combinedLoading = isLoadingSchedules;
 	const allReservations = allSchedulesData?.reservations || [];
-	const statisticsData = allSchedulesData ? processScheduleData(allSchedulesData) : null;
+	const getFilteredReservations = (filter: "all" | "confirmed" | "completed" | "cancelled") => {
+		if (!allSchedulesData?.reservations) return [];
+
+		switch (filter) {
+			case "confirmed": {
+				return allSchedulesData.reservations.filter((item) => item.confirmation?.isConfirmed && !item.travelStatus?.hasCompleted);
+			}
+			case "completed": {
+				return allSchedulesData.reservations.filter((item) => item.travelStatus?.hasCompleted === true);
+			}
+			case "cancelled": {
+				return allSchedulesData.reservations.filter((item) => !item.confirmation?.isConfirmed && !item.travelStatus?.hasCompleted);
+			}
+			default: {
+				return allSchedulesData.reservations;
+			}
+		}
+	};
+
 	const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 	const [mobileMenuClosing, setMobileMenuClosing] = useState(false);
 	const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set());
+	const [currentFilter, setCurrentFilter] = useState<"all" | "confirmed" | "completed" | "cancelled">("all");
+	const filteredReservations = getFilteredReservations(currentFilter);
+	const filteredScheduleData = allSchedulesData ? { ...allSchedulesData, reservations: filteredReservations } : null;
+	const statisticsData = filteredScheduleData ? processScheduleData(filteredScheduleData) : null;
 
 	const closeMobileMenu = () => {
 		setMobileMenuClosing(true);
@@ -236,7 +258,7 @@ export function StatisticsPage() {
 		const monthIndex = thaiMonthNames.indexOf(monthName);
 		if (monthIndex === -1) return [];
 
-		return allReservations
+		return filteredReservations
 			.filter((reservation) => {
 				const date = new Date(reservation.date);
 				return date.getMonth() === monthIndex;
@@ -259,9 +281,29 @@ export function StatisticsPage() {
 
 	const metadata = ROUTE_METADATA[ROUTES.STATISTICS];
 
+	const getFilterLabel = () => {
+		switch (currentFilter) {
+			case "all": {
+				return "ทั้งหมด";
+			}
+			case "confirmed": {
+				return "ยืนยันแล้ว";
+			}
+			case "completed": {
+				return "เดินทางแล้ว";
+			}
+			case "cancelled": {
+				return "ยกเลิกแล้ว";
+			}
+			default: {
+				return "ทั้งหมด";
+			}
+		}
+	};
+
 	const subtitle = (
 		<>
-			<span className="font-medium text-blue-600 dark:text-blue-400">{combinedLoading ? "กำลังโหลด..." : "ข้อมูลสถิติ"}</span>
+			<span className="font-medium text-blue-600 dark:text-blue-400">{combinedLoading ? "กำลังโหลด..." : `ข้อมูลสถิติ - ${getFilterLabel()}`}</span>
 			{" • "}
 			<span>{statisticsData?.totalBookings || 0} รายการ</span>
 		</>
@@ -377,39 +419,39 @@ export function StatisticsPage() {
 				<div className="mb-8 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
 					<StatCard
 						label="จองทั้งหมด"
-						value={statisticsData?.totalBookings?.toString() || "0"}
+						value={allSchedulesData?.reservations?.length?.toString() || "0"}
 						icon={Calendar}
-						gradient="from-blue-600 to-indigo-600"
+						gradient={currentFilter === "all" ? "from-blue-700 to-indigo-700" : "from-blue-600 to-indigo-600"}
 						isLoading={combinedLoading}
-						onClick={() => navigate(ROUTES.SCHEDULE)}
+						isActive={false}
+						onClick={() => setCurrentFilter("all")}
 					/>
 					<StatCard
-						label="ยกเลิกแล้ว"
-						value={statisticsData?.cancelledBookings?.toString() || "0"}
+						label="ยืนยันแล้ว"
+						value={allSchedulesData?.reservations?.filter((item) => item.confirmation?.isConfirmed && !item.travelStatus?.hasCompleted)?.length?.toString() || "0"}
 						icon={Users}
-						gradient="from-green-600 to-emerald-600"
+						gradient={currentFilter === "confirmed" ? "from-green-700 to-emerald-700" : "from-green-600 to-emerald-600"}
 						isLoading={combinedLoading}
-						onClick={() => {
-							navigate(`${ROUTES.SCHEDULE}?filter=cancelled`);
-						}}
+						isActive={currentFilter === "confirmed"}
+						onClick={() => setCurrentFilter("confirmed")}
 					/>
 					<StatCard
 						label="เดินทางแล้ว"
-						value={statisticsData?.completedTrips?.toString() || "0"}
+						value={allSchedulesData?.reservations?.filter((item) => item.travelStatus?.hasCompleted === true)?.length?.toString() || "0"}
 						icon={MapPin}
-						gradient="from-purple-600 to-pink-600"
+						gradient={currentFilter === "completed" ? "from-purple-700 to-pink-700" : "from-purple-600 to-pink-600"}
 						isLoading={combinedLoading}
-						onClick={() => {
-							navigate(`${ROUTES.SCHEDULE}?filter=completed`);
-						}}
+						isActive={currentFilter === "completed"}
+						onClick={() => setCurrentFilter("completed")}
 					/>
 					<StatCard
-						label="เฉลีย/เดือน"
-						value={statisticsData?.averageBookingsPerMonth?.toString() || "0"}
+						label="ยกเลิกแล้ว"
+						value={allSchedulesData?.reservations?.filter((item) => !item.confirmation?.isConfirmed && !item.travelStatus?.hasCompleted)?.length?.toString() || "0"}
 						icon={TrendingUp}
-						gradient="from-orange-600 to-red-600"
+						gradient={currentFilter === "cancelled" ? "from-red-700 to-orange-700" : "from-red-600 to-orange-600"}
 						isLoading={combinedLoading}
-						onClick={() => navigate(ROUTES.SCHEDULE)}
+						isActive={currentFilter === "cancelled"}
+						onClick={() => setCurrentFilter("cancelled")}
 					/>
 				</div>
 
@@ -476,38 +518,40 @@ export function StatisticsPage() {
 							</CardContent>
 						</Card>
 
-						<Card className="border-0 bg-white/90 shadow-md backdrop-blur-md dark:bg-gray-900/90">
-							<CardHeader>
-								<CardTitle className="flex items-center gap-2">
-									<TrendingUp className="h-5 w-5" />
-									การกระจายตามสถานะ
-								</CardTitle>
-							</CardHeader>
-							<CardContent>
-								<div className="space-y-4">
-									{statisticsData?.statusDistribution?.map((status) => (
-										<div key={status.status} className="flex items-center justify-between">
-											<div className="flex items-center gap-3">
-												<div className="h-4 w-4 rounded-full" style={{ backgroundColor: status.color }} />
-												<div className="font-medium">{status.status}</div>
-												<Badge variant="secondary">{status.percentage}%</Badge>
-											</div>
-											<div className="text-sm text-gray-600 dark:text-gray-400">{status.count} ครั้ง</div>
-										</div>
-									)) ||
-										[1, 2, 3].map((index) => (
-											<div key={index} className="flex items-center justify-between">
+						{(statisticsData?.statusDistribution?.length || 0) > 1 && (
+							<Card className="border-0 bg-white/90 shadow-md backdrop-blur-md dark:bg-gray-900/90">
+								<CardHeader>
+									<CardTitle className="flex items-center gap-2">
+										<TrendingUp className="h-5 w-5" />
+										สถิติตามสถานะ
+									</CardTitle>
+								</CardHeader>
+								<CardContent>
+									<div className="space-y-4">
+										{statisticsData?.statusDistribution?.map((status) => (
+											<div key={status.status} className="flex items-center justify-between">
 												<div className="flex items-center gap-3">
-													<div className="h-4 w-4 animate-pulse rounded-full bg-gray-300 dark:bg-gray-600" />
-													<div className="h-4 w-24 animate-pulse rounded bg-gray-300 dark:bg-gray-600" />
-													<div className="h-5 w-12 animate-pulse rounded-full bg-gray-200 dark:bg-gray-700" />
+													<div className="h-4 w-4 rounded-full" style={{ backgroundColor: status.color }} />
+													<div className="font-medium">{status.status}</div>
+													<Badge variant="secondary">{status.percentage}%</Badge>
 												</div>
-												<div className="h-4 w-16 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+												<div className="text-sm text-gray-600 dark:text-gray-400">{status.count} ครั้ง</div>
 											</div>
-										))}
-								</div>
-							</CardContent>
-						</Card>
+										)) ||
+											[1, 2, 3].map((index) => (
+												<div key={index} className="flex items-center justify-between">
+													<div className="flex items-center gap-3">
+														<div className="h-4 w-4 animate-pulse rounded-full bg-gray-300 dark:bg-gray-600" />
+														<div className="h-4 w-24 animate-pulse rounded bg-gray-300 dark:bg-gray-600" />
+														<div className="h-5 w-12 animate-pulse rounded-full bg-gray-200 dark:bg-gray-700" />
+													</div>
+													<div className="h-4 w-16 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+												</div>
+											))}
+									</div>
+								</CardContent>
+							</Card>
+						)}
 
 						<Card className="border-0 bg-white/90 shadow-md backdrop-blur-md dark:bg-gray-900/90">
 							<CardHeader>

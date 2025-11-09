@@ -1,6 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { getApiClient } from "../config/api";
+import { getSessionManager } from "../lib/session-manager";
+
+function getCurrentUser(): string | null {
+	return getSessionManager().getUsername();
+}
 
 interface LoginCredentials {
 	password: string;
@@ -27,8 +32,9 @@ export function useLogin() {
 			return apiClient.post("/bus/login", credentials);
 		},
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["bus"] });
-			queryClient.invalidateQueries({ queryKey: ["validate"] });
+			const currentUser = getCurrentUser();
+			queryClient.invalidateQueries({ queryKey: ["bus", currentUser] });
+			queryClient.invalidateQueries({ queryKey: ["validate", currentUser] });
 		},
 		retry: (failureCount, error) => {
 			if (error instanceof Error) {
@@ -47,7 +53,7 @@ export function useValidateSession() {
 	const apiClient = getApiClient();
 
 	return useQuery({
-		queryKey: ["validate"],
+		queryKey: ["validate", getCurrentUser()],
 		queryFn: async () => {
 			return apiClient.get<{ valid: boolean }>("/bus/validate");
 		},
@@ -69,7 +75,7 @@ export function useAvailableBuses() {
 	const apiClient = getApiClient();
 
 	return useQuery({
-		queryKey: ["bus", "available"],
+		queryKey: ["bus", "available", getCurrentUser()],
 		queryFn: async () => {
 			return apiClient.get("/bus/available");
 		},
@@ -83,7 +89,7 @@ export function useBusSchedule(page = 1, perPage = 10) {
 	const apiClient = getApiClient();
 
 	return useQuery({
-		queryKey: ["bus", "schedule", page, perPage],
+		queryKey: ["bus", "schedule", getCurrentUser(), page, perPage],
 		queryFn: async () => {
 			return apiClient.get(`/bus/schedule?page=${page}&perPage=${perPage}`);
 		},
@@ -101,8 +107,9 @@ export function useBusBooking() {
 			return apiClient.post("/bus/book", bookingData);
 		},
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["bus", "schedule"] });
-			queryClient.invalidateQueries({ queryKey: ["bus", "available"] });
+			const currentUser = getCurrentUser();
+			queryClient.invalidateQueries({ queryKey: ["bus", "schedule", currentUser] });
+			queryClient.invalidateQueries({ queryKey: ["bus", "available", currentUser] });
 		},
 		retry: 1,
 	});
@@ -117,7 +124,8 @@ export function useConfirmReservation() {
 			return apiClient.post("/bus/confirm", confirmationData);
 		},
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["bus", "schedule"] });
+			const currentUser = getCurrentUser();
+			queryClient.invalidateQueries({ queryKey: ["bus", "schedule", currentUser] });
 		},
 		retry: 1,
 	});
@@ -132,7 +140,8 @@ export function useUnconfirmReservation() {
 			return apiClient.post("/bus/unconfirm", { data, oneClick });
 		},
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["bus", "schedule"] });
+			const currentUser = getCurrentUser();
+			queryClient.invalidateQueries({ queryKey: ["bus", "schedule", currentUser] });
 		},
 		retry: 1,
 	});
@@ -147,7 +156,8 @@ export function useDeleteReservation() {
 			return apiClient.post("/bus/delete", { reservationId });
 		},
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["bus", "schedule"] });
+			const currentUser = getCurrentUser();
+			queryClient.invalidateQueries({ queryKey: ["bus", "schedule", currentUser] });
 		},
 		retry: 1,
 	});
@@ -162,7 +172,8 @@ export function useCancelReservation() {
 			return apiClient.post("/bus/cancel", { reservationId });
 		},
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["bus", "schedule"] });
+			const currentUser = getCurrentUser();
+			queryClient.invalidateQueries({ queryKey: ["bus", "schedule", currentUser] });
 		},
 		retry: 1,
 	});
@@ -172,7 +183,7 @@ export function useTicketInfo(ticketId: string) {
 	const apiClient = getApiClient();
 
 	return useQuery({
-		queryKey: ["bus", "ticket", "info", ticketId],
+		queryKey: ["bus", "ticket", "info", getCurrentUser(), ticketId],
 		queryFn: async () => {
 			return apiClient.get(`/bus/ticket/info?ticketId=${ticketId}`);
 		},
