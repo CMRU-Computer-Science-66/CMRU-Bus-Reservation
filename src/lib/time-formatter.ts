@@ -24,9 +24,9 @@ export function formatTime(time: string, format?: TimeFormat): string {
 }
 
 function convertToThaiTime(time: string): string {
-	const parts = time.split(":");
-	const hours = Number.parseInt(parts[0] || "0", 10);
-	const minutes = Number.parseInt(parts[1] || "0", 10);
+	const [hh, mm] = time.split(":");
+	const hours = Number(hh ?? "0");
+	const minutes = Number(mm ?? "0");
 
 	if (hours === 12 && minutes === 0) {
 		return "เที่ยง";
@@ -36,10 +36,7 @@ function convertToThaiTime(time: string): string {
 
 	if (hours >= 6 && hours < 12) {
 		result = `${hours} โมง`;
-
-		if (minutes === 0) {
-			result += "เช้า";
-		}
+		if (minutes === 0) result += "เช้า";
 	} else if (hours === 12) {
 		result = "เที่ยง";
 	} else if (hours >= 13 && hours < 16) {
@@ -48,15 +45,12 @@ function convertToThaiTime(time: string): string {
 	} else if (hours >= 16 && hours < 18) {
 		const thaiHour = hours - 12;
 		result = `${thaiHour} โมง`;
-		if (minutes === 0) {
-			result += "เย็น";
-		}
+		if (minutes === 0) result += "เย็น";
 	} else if (hours >= 18 && hours < 24) {
 		const thaiHour = hours - 12;
 		result = `${thaiHour} โมง`;
 	} else if (hours >= 0 && hours < 6) {
-		const thaiHour = hours === 0 ? 12 : hours;
-		result = `ตี ${thaiHour}`;
+		result = hours === 0 ? "เที่ยงคืน" : `ตี ${hours}`;
 	}
 
 	if (minutes > 0) {
