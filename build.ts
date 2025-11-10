@@ -170,7 +170,7 @@ const generatePageHTML = (
 ): string => {
 	const title = metadata?.title || `${pageName.charAt(0).toUpperCase() + pageName.slice(1)} - CMRU Bus`;
 	const description = metadata?.description || `${pageName} page for CMRU Bus Reservation System`;
-	const baseUrl = isDev ? "http://localhost:3000" : "https://cmru-bus.vercel.app";
+	const baseUrl = isDev ? `http://localhost:${Bun.env.PORT || "6614"}` : "https://cmru-bus.vercel.app";
 	const fullUrl = `${baseUrl}${route}`;
 	const relativePath = "./";
 	const isIndexPage = pageName === "index" || route === "/";
@@ -445,8 +445,7 @@ if (jsEntrypoints.length > 0) {
 }
 console.log(`📦  Total entry points: ${allEntrypoints.length}\n`);
 
-const isProduction = process.env.NODE_ENV === "production" || !isDev;
-
+const isProduction = Bun.env.NODE_ENV === "production" || !isDev;
 const result = await Bun.build({
 	entrypoints: allEntrypoints,
 	outdir,
@@ -464,8 +463,9 @@ const result = await Bun.build({
 	env: "inline",
 	define: {
 		"process.env.NODE_ENV": JSON.stringify(isProduction ? "production" : "development"),
-		"process.env.APP_VERSION": version,
+		"process.env.APP_VERSION": Bun.env.APP_VERSION || version,
 		"process.env.ENCRYPTION_PIN": Bun.env.ENCRYPTION_PIN || "default",
+		// ...(process.env.API_URL ? { "process.env.API_URL": Bun.env.API_URL } : {})
 	},
 	naming: {
 		entry: "[dir]/[name].[ext]",

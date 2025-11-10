@@ -7,7 +7,7 @@ import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { Dialog, DialogContent } from "../../components/ui/dialog";
 import { Separator } from "../../components/ui/separator";
-import { API_CONFIG, getApiClient, getApiUrl } from "../../config/api";
+import { API_CONFIG, getApiClient } from "../../config/api";
 import { getSessionManager } from "../../lib/session-manager";
 import { formatTime } from "../../lib/time-formatter";
 

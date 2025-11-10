@@ -57,7 +57,7 @@
 สร้างไฟล์ `.env`:
 
 ```env
-API_URL=http://localhost:4399/
+API_URL=http://localhost:6614/
 APP_VERSION=Development
 ```
 
@@ -69,7 +69,7 @@ bunx @cmru-comsci-66/cmru-api serve  # Terminal 1
 bun run dev                          # Terminal 2
 ```
 
-เปิดเบราว์เซอร์ที่ `http://localhost:4399`
+เปิดเบราว์เซอร์ที่ `http://localhost:6614`
 
 ## Disclaimer ⚠️
 
