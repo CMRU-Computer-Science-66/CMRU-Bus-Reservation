@@ -25,7 +25,7 @@ export const ROUTE_METADATA = {
 	},
 	[ROUTES.LOGIN]: {
 		title: "เข้าสู่ระบบ - ระบบจองรถบัส CMRU",
-		description: "เข้าสู่ระบบจองรถบัส มหาวิทยาลัยราชภัฏเชียงใหม่ ด้วย CMU Account",
+		description: "เข้าสู่ระบบจองรถบัส มหาวิทยาลัยราชภัฏเชียงใหม่ ด้วย CMRU Account",
 		priority: 0.8,
 		frequency: "weekly" as const,
 	},
