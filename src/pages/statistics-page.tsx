@@ -367,7 +367,7 @@ export function StatisticsPage() {
 						label="จองทั้งหมด"
 						value={reservationStats.all.toString()}
 						icon={Calendar}
-						gradient={currentFilter === "all" ? "from-blue-700 to-indigo-700" : "from-blue-600 to-indigo-600"}
+						colorTheme="blue"
 						isLoading={combinedLoading}
 						isActive={currentFilter === "all"}
 						onClick={() => handleFilterChange("all")}
@@ -376,7 +376,7 @@ export function StatisticsPage() {
 						label="ยืนยันแล้ว"
 						value={reservationStats.confirmed.toString()}
 						icon={Users}
-						gradient={currentFilter === "confirmed" ? "from-green-700 to-emerald-700" : "from-green-600 to-emerald-600"}
+						colorTheme="green"
 						isLoading={combinedLoading}
 						isActive={currentFilter === "confirmed"}
 						onClick={() => handleFilterChange("confirmed")}
@@ -385,7 +385,7 @@ export function StatisticsPage() {
 						label="เดินทางแล้ว"
 						value={reservationStats.completed.toString()}
 						icon={MapPin}
-						gradient={currentFilter === "completed" ? "from-purple-700 to-pink-700" : "from-purple-600 to-pink-600"}
+						colorTheme="purple"
 						isLoading={combinedLoading}
 						isActive={currentFilter === "completed"}
 						onClick={() => handleFilterChange("completed")}
@@ -394,7 +394,7 @@ export function StatisticsPage() {
 						label="ยกเลิกแล้ว"
 						value={reservationStats.cancelled.toString()}
 						icon={TrendingUp}
-						gradient={currentFilter === "cancelled" ? "from-red-700 to-orange-700" : "from-red-600 to-orange-600"}
+						colorTheme="red"
 						isLoading={combinedLoading}
 						isActive={currentFilter === "cancelled"}
 						onClick={() => handleFilterChange("cancelled")}

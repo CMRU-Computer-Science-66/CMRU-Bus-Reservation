@@ -68,7 +68,7 @@ export function SettingsPage() {
 	}, []);
 
 	return (
-		<div className="min-h-screen bg-linear-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-slate-950 dark:via-blue-950 dark:to-indigo-950">
+		<div className="bg-app-gradient min-h-screen">
 			<Helmet>
 				<title>{ROUTE_METADATA["/settings"].title}</title>
 				<meta name="description" content={ROUTE_METADATA["/schedule"].description} />
@@ -77,12 +77,12 @@ export function SettingsPage() {
 				<div className="container mx-auto px-4 py-4 sm:px-6">
 					<div className="flex items-center justify-between gap-4">
 						<div className="flex min-w-0 flex-1 items-center gap-3">
-							<div className="rounded-xl bg-linear-to-br from-blue-600 to-indigo-600 p-2 shadow-lg transition-all duration-300 hover:scale-110 hover:shadow-xl">
+							<div className="bg-header-gradient rounded-xl p-2 shadow-lg transition-all duration-300 hover:scale-110 hover:shadow-xl">
 								<Settings className="h-5 w-5 text-white sm:h-6 sm:w-6" />
 							</div>
 							<div className="min-w-0 flex-1">
-								<h1 className="truncate text-lg font-bold text-gray-900 sm:text-xl dark:text-white">ตั้งค่า</h1>
-								<p className="truncate text-xs text-gray-600 sm:text-sm dark:text-gray-400">จัดการการตั้งค่าและข้อมูลส่วนตัว</p>
+								<h1 className="text-primary-bold truncate text-lg font-bold sm:text-xl">ตั้งค่า</h1>
+								<p className="text-secondary truncate text-xs sm:text-sm">จัดการการตั้งค่าและข้อมูลส่วนตัว</p>
 							</div>
 						</div>
 						<div className="flex shrink-0 items-center gap-2">
@@ -101,11 +101,7 @@ export function SettingsPage() {
 								<TrendingUp className="h-4 w-4" />
 								สถิติ
 							</Button>
-							<Button
-								variant="outline"
-								size="sm"
-								onClick={logout}
-								className="hidden gap-2 shadow-sm hover:border-red-300 hover:bg-red-50 hover:text-red-600 hover:shadow-lg md:flex dark:hover:bg-red-950">
+							<Button variant="outline" size="sm" onClick={logout} className="hover-red-soft hidden gap-2 shadow-sm hover:shadow-lg md:flex">
 								<LogOut className="h-4 w-4" />
 								ออกจากระบบ
 							</Button>
@@ -162,7 +158,7 @@ export function SettingsPage() {
 									logout();
 									closeMobileMenu();
 								}}
-								className="w-full justify-start gap-2 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950">
+								className="hover-red-soft w-full justify-start gap-2">
 								<LogOut className="h-4 w-4" />
 								ออกจากระบบ
 							</Button>
@@ -176,8 +172,8 @@ export function SettingsPage() {
 					<Card className="border-0 bg-white/90 shadow-md backdrop-blur-md dark:bg-gray-900/90">
 						<CardHeader>
 							<div className="flex items-center gap-2">
-								<div className="rounded-full bg-blue-100 p-2 dark:bg-blue-900">
-									<User className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+								<div className="bg-icon-blue rounded-full p-2">
+									<User className="text-icon-blue h-4 w-4" />
 								</div>
 								<div>
 									<CardTitle className="text-base">ข้อมูลผู้ใช้</CardTitle>
@@ -185,18 +181,18 @@ export function SettingsPage() {
 								</div>
 							</div>
 						</CardHeader>
-						<Separator className="dark:bg-gray-800" />
+						<Separator className="separator-dark" />
 						<CardContent>
 							{username ? (
 								<div className="flex items-center justify-between">
 									<div>
-										<p className="text-sm font-medium text-gray-600 dark:text-gray-400">รหัสนักศึกษา</p>
-										<p className="mt-1 text-base font-semibold text-gray-900 dark:text-white">{username}</p>
+										<p className="text-secondary text-sm font-medium">รหัสนักศึกษา</p>
+										<p className="text-primary-bold mt-1 text-base font-semibold">{username}</p>
 									</div>
 								</div>
 							) : (
 								<div className="py-4 text-center">
-									<p className="text-gray-500 dark:text-gray-400">ไม่พบข้อมูลผู้ใช้</p>
+									<p className="text-secondary-muted">ไม่พบข้อมูลผู้ใช้</p>
 								</div>
 							)}
 						</CardContent>
@@ -213,26 +209,24 @@ export function SettingsPage() {
 								</div>
 							</div>
 						</CardHeader>
-						<Separator className="dark:bg-gray-800" />
+						<Separator className="separator-dark" />
 						<CardContent>
 							<button
 								type="button"
 								onClick={toggleOneClick}
-								className="flex w-full items-center justify-between rounded-lg border-2 border-gray-200 bg-white p-3 transition-all hover:border-blue-300 hover:shadow-md dark:border-gray-700 dark:bg-gray-800 dark:hover:border-blue-600">
+								className="separator-dark flex w-full items-center justify-between rounded-lg border-2 border-gray-200 bg-white p-3 transition-all hover:border-blue-300 hover:shadow-md dark:border-gray-700 dark:hover:border-blue-600">
 								<div className="flex items-center gap-2">
 									<div className={`rounded-full p-1.5 ${oneClickEnabled ? "bg-indigo-100 dark:bg-indigo-900" : "bg-gray-100 dark:bg-gray-700"}`}>
-										<Check className={`h-4 w-4 ${oneClickEnabled ? "text-indigo-600 dark:text-indigo-400" : "text-gray-600 dark:text-gray-400"}`} />
+										<Check className={`h-4 w-4 ${oneClickEnabled ? "text-indigo-600 dark:text-indigo-400" : "text-secondary"}`} />
 									</div>
 									<div className="text-left">
 										<div className="flex items-center gap-2">
-											<p className="text-sm font-semibold text-gray-900 dark:text-white">โหมดคลิกเดียว</p>
+											<p className="text-primary-bold text-sm font-semibold">โหมดคลิกเดียว</p>
 											<Badge variant="secondary" className="h-4 px-1 py-0 text-[9px] font-medium">
 												ใหม่
 											</Badge>
 										</div>
-										<p className="text-xs text-gray-600 dark:text-gray-400">
-											{oneClickEnabled ? "จองและยืนยัน / ยกเลิก ในคลิกเดียว" : "ต้องกดยืนยันหรือยกเลิก 2 รอบ (ปกติ)"}
-										</p>
+										<p className="text-secondary text-xs">{oneClickEnabled ? "จองและยืนยัน / ยกเลิก ในคลิกเดียว" : "ต้องกดยืนยันหรือยกเลิก 2 รอบ (ปกติ)"}</p>
 									</div>
 								</div>
 								<Badge variant={oneClickEnabled ? "default" : "secondary"} className={oneClickEnabled ? "bg-indigo-600 dark:bg-indigo-500" : ""}>
@@ -253,23 +247,21 @@ export function SettingsPage() {
 								</div>
 							</div>
 						</CardHeader>
-						<Separator className="dark:bg-gray-800" />
+						<Separator className="separator-dark" />
 						<CardContent>
 							<button
 								type="button"
 								onClick={toggleShowStatistics}
-								className="flex w-full items-center justify-between rounded-lg border-2 border-gray-200 bg-white p-3 transition-all hover:border-blue-300 hover:shadow-md dark:border-gray-700 dark:bg-gray-800 dark:hover:border-blue-600">
+								className="separator-dark flex w-full items-center justify-between rounded-lg border-2 border-gray-200 bg-white p-3 transition-all hover:border-blue-300 hover:shadow-md dark:border-gray-700 dark:hover:border-blue-600">
 								<div className="flex items-center gap-2">
 									<div className={`rounded-full p-1.5 ${showStatistics ? "bg-green-100 dark:bg-green-900" : "bg-gray-100 dark:bg-gray-700"}`}>
-										<TrendingUp className={`h-4 w-4 ${showStatistics ? "text-green-600 dark:text-green-400" : "text-gray-600 dark:text-gray-400"}`} />
+										<TrendingUp className={`h-4 w-4 ${showStatistics ? "text-green-600 dark:text-green-400" : "text-secondary"}`} />
 									</div>
 									<div className="text-left">
 										<div className="flex items-center gap-2">
-											<p className="text-sm font-semibold text-gray-900 dark:text-white">แสดง Statistics</p>
+											<p className="text-primary-bold text-sm font-semibold">แสดง Statistics</p>
 										</div>
-										<p className="text-xs text-gray-600 dark:text-gray-400">
-											{showStatistics ? "แสดงข้อมูลสถิติในหน้า Schedule และ Booking" : "ซ่อนข้อมูลสถิติในหน้าต่างๆ"}
-										</p>
+										<p className="text-secondary text-xs">{showStatistics ? "แสดงข้อมูลสถิติในหน้า Schedule และ Booking" : "ซ่อนข้อมูลสถิติในหน้าต่างๆ"}</p>
 									</div>
 								</div>
 								<Badge variant={showStatistics ? "default" : "secondary"} className={showStatistics ? "bg-green-600 dark:bg-green-500" : ""}>
@@ -290,12 +282,12 @@ export function SettingsPage() {
 								</div>
 							</div>
 						</CardHeader>
-						<Separator className="dark:bg-gray-800" />
+						<Separator className="separator-dark" />
 						<CardContent className="space-y-2">
 							<button
 								type="button"
 								onClick={() => handleTimeFormatChange("thai")}
-								className="group flex w-full items-center justify-between rounded-lg border-2 border-gray-200 bg-white p-3 transition-all hover:border-blue-300 hover:shadow-md dark:border-gray-700 dark:bg-gray-800 dark:hover:border-blue-600"
+								className="group separator-dark flex w-full items-center justify-between rounded-lg border-2 border-gray-200 bg-white p-3 transition-all hover:border-blue-300 hover:shadow-md dark:border-gray-700 dark:hover:border-blue-600"
 								style={timeFormat === "thai" ? { borderColor: "rgb(37 99 235)", backgroundColor: isDark ? "rgb(30 41 59)" : "rgb(239 246 255)" } : {}}>
 								<div className="flex items-center gap-2">
 									<div className="rounded-full bg-orange-100 p-1.5 dark:bg-orange-900">
@@ -303,12 +295,12 @@ export function SettingsPage() {
 									</div>
 									<div className="text-left">
 										<div className="flex items-center gap-2">
-											<p className="text-sm font-semibold text-gray-900 dark:text-white">แบบไทยแท้</p>
+											<p className="text-primary-bold text-sm font-semibold">แบบไทยแท้</p>
 											<Badge variant="secondary" className="h-4 px-1 py-0 text-[9px] font-medium">
 												ทดลอง
 											</Badge>
 										</div>
-										<p className="text-xs text-gray-600 dark:text-gray-400">แสดงเวลาแบบ บ่ายโมง, บ่าย 2 โมงครึ่ง</p>
+										<p className="text-secondary text-xs">แสดงเวลาแบบ บ่ายโมง, บ่าย 2 โมงครึ่ง</p>
 									</div>
 								</div>
 								{timeFormat === "thai" && (
@@ -321,15 +313,15 @@ export function SettingsPage() {
 							<button
 								type="button"
 								onClick={() => handleTimeFormatChange("24hour")}
-								className="group flex w-full items-center justify-between rounded-lg border-2 border-gray-200 bg-white p-3 transition-all hover:border-blue-300 hover:shadow-md dark:border-gray-700 dark:bg-gray-800 dark:hover:border-blue-600"
+								className="group separator-dark flex w-full items-center justify-between rounded-lg border-2 border-gray-200 bg-white p-3 transition-all hover:border-blue-300 hover:shadow-md dark:border-gray-700 dark:hover:border-blue-600"
 								style={timeFormat === "24hour" ? { borderColor: "rgb(37 99 235)", backgroundColor: isDark ? "rgb(30 41 59)" : "rgb(239 246 255)" } : {}}>
 								<div className="flex items-center gap-2">
 									<div className="rounded-full bg-blue-100 p-1.5 dark:bg-blue-900">
 										<Clock className="h-4 w-4 text-blue-600 dark:text-blue-400" />
 									</div>
 									<div className="text-left">
-										<p className="text-sm font-semibold text-gray-900 dark:text-white">24 ชั่วโมง</p>
-										<p className="text-xs text-gray-600 dark:text-gray-400">แสดงเวลาแบบ 13:00, 14:30</p>
+										<p className="text-primary-bold text-sm font-semibold">24 ชั่วโมง</p>
+										<p className="text-secondary text-xs">แสดงเวลาแบบ 13:00, 14:30</p>
 									</div>
 								</div>
 								{timeFormat === "24hour" && (
@@ -352,20 +344,20 @@ export function SettingsPage() {
 								</div>
 							</div>
 						</CardHeader>
-						<Separator className="dark:bg-gray-800" />
+						<Separator className="separator-dark" />
 						<CardContent className="grid space-y-3 md:grid-cols-3 md:gap-4 md:space-y-0">
 							<button
 								type="button"
 								onClick={() => handleThemeChange("light")}
-								className="group flex w-full items-center justify-between rounded-lg border-2 border-gray-200 bg-white p-3 transition-all hover:border-blue-300 hover:shadow-md dark:border-gray-700 dark:bg-gray-800 dark:hover:border-blue-600"
+								className="group separator-dark flex w-full items-center justify-between rounded-lg border-2 border-gray-200 bg-white p-3 transition-all hover:border-blue-300 hover:shadow-md dark:border-gray-700 dark:hover:border-blue-600"
 								style={themeMode === "light" ? { borderColor: "rgb(37 99 235)", backgroundColor: "rgb(239 246 255)" } : {}}>
 								<div className="flex items-center gap-2">
 									<div className="rounded-full bg-yellow-100 p-1.5 dark:bg-yellow-900">
 										<Sun className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
 									</div>
 									<div className="text-left">
-										<p className="text-sm font-semibold text-gray-900 dark:text-white">โหมดสว่าง</p>
-										<p className="text-xs text-gray-600 dark:text-gray-400">ใช้ธีมสว่างตลอดเวลา</p>
+										<p className="text-primary-bold text-sm font-semibold">โหมดสว่าง</p>
+										<p className="text-secondary text-xs">ใช้ธีมสว่างตลอดเวลา</p>
 									</div>
 								</div>
 								{themeMode === "light" && (
@@ -378,7 +370,7 @@ export function SettingsPage() {
 							<button
 								type="button"
 								onClick={() => handleThemeChange("dark")}
-								className="group flex w-full items-center justify-between rounded-lg border-2 border-gray-200 bg-white p-3 transition-all hover:border-blue-300 hover:shadow-md dark:border-gray-700 dark:bg-gray-800 dark:hover:border-blue-600"
+								className="group separator-dark flex w-full items-center justify-between rounded-lg border-2 border-gray-200 bg-white p-3 transition-all hover:border-blue-300 hover:shadow-md dark:border-gray-700 dark:hover:border-blue-600"
 								style={themeMode === "dark" ? { borderColor: "rgb(37 99 235)", backgroundColor: isDark ? "rgb(30 41 59)" : "rgb(239 246 255)" } : {}}>
 								<div className="flex items-center gap-2">
 									<div className="rounded-full bg-indigo-100 p-1.5 dark:bg-indigo-900">
@@ -386,12 +378,12 @@ export function SettingsPage() {
 									</div>
 									<div className="text-left">
 										<div className="flex items-center gap-2">
-											<p className="text-sm font-semibold text-gray-900 dark:text-white">โหมดมืด</p>
+											<p className="text-primary-bold text-sm font-semibold">โหมดมืด</p>
 											<Badge variant="secondary" className="h-4 px-1 py-0 text-[9px] font-medium">
 												ทดลอง
 											</Badge>
 										</div>
-										<p className="text-xs text-gray-600 dark:text-gray-400">ใช้ธีมมืดตลอดเวลา</p>
+										<p className="text-secondary text-xs">ใช้ธีมมืดตลอดเวลา</p>
 									</div>
 								</div>
 								{themeMode === "dark" && (
@@ -404,15 +396,15 @@ export function SettingsPage() {
 							<button
 								type="button"
 								onClick={() => handleThemeChange("system")}
-								className="group flex w-full items-center justify-between rounded-lg border-2 border-gray-200 bg-white p-3 transition-all hover:border-blue-300 hover:shadow-md dark:border-gray-700 dark:bg-gray-800 dark:hover:border-blue-600"
+								className="group separator-dark flex w-full items-center justify-between rounded-lg border-2 border-gray-200 bg-white p-3 transition-all hover:border-blue-300 hover:shadow-md dark:border-gray-700 dark:hover:border-blue-600"
 								style={themeMode === "system" ? { borderColor: "rgb(37 99 235)", backgroundColor: isDark ? "rgb(30 41 59)" : "rgb(239 246 255)" } : {}}>
 								<div className="flex items-center gap-2">
 									<div className="rounded-full bg-gray-100 p-1.5 dark:bg-gray-700">
-										<Globe className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+										<Globe className="text-secondary h-4 w-4" />
 									</div>
 									<div className="text-left">
-										<p className="text-sm font-semibold text-gray-900 dark:text-white">ตามระบบ</p>
-										<p className="text-xs text-gray-600 dark:text-gray-400">ปรับตามการตั้งค่าของอุปกรณ์</p>
+										<p className="text-primary-bold text-sm font-semibold">ตามระบบ</p>
+										<p className="text-secondary text-xs">ปรับตามการตั้งค่าของอุปกรณ์</p>
 									</div>
 								</div>
 								{themeMode === "system" && (
@@ -436,24 +428,24 @@ export function SettingsPage() {
 								</div>
 							</div>
 						</CardHeader>
-						<Separator className="dark:bg-gray-800" />
+						<Separator className="separator-dark" />
 						<CardContent>
 							<button
 								type="button"
 								disabled
-								className="flex w-full cursor-not-allowed items-center justify-between rounded-lg border-2 border-gray-200 bg-gray-50 p-3 opacity-60 dark:border-gray-700 dark:bg-gray-800/50">
+								className="separator-dark flex w-full cursor-not-allowed items-center justify-between rounded-lg border-2 border-gray-200 bg-gray-50 p-3 opacity-60 dark:border-gray-700/50">
 								<div className="flex items-center gap-2">
 									<div className="rounded-full bg-gray-100 p-1.5 dark:bg-gray-700">
-										<BellOff className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+										<BellOff className="text-secondary h-4 w-4" />
 									</div>
 									<div className="text-left">
 										<div className="flex items-center gap-2">
-											<p className="text-sm font-semibold text-gray-900 dark:text-white">การแจ้งเตือนทั่วไป</p>
+											<p className="text-primary-bold text-sm font-semibold">การแจ้งเตือนทั่วไป</p>
 											<Badge variant="secondary" className="h-4 px-1 py-0 text-[9px] font-medium">
 												ยังไม่พร้อม
 											</Badge>
 										</div>
-										<p className="text-xs text-gray-600 dark:text-gray-400">รับการแจ้งเตือนเกี่ยวกับการจองและรอบรถ</p>
+										<p className="text-secondary text-xs">รับการแจ้งเตือนเกี่ยวกับการจองและรอบรถ</p>
 									</div>
 								</div>
 								<Badge variant="secondary">ปิด</Badge>
@@ -465,7 +457,7 @@ export function SettingsPage() {
 						<CardHeader>
 							<div className="flex items-center gap-2">
 								<div className="rounded-full bg-gray-100 p-2 dark:bg-gray-700">
-									<Settings className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+									<Settings className="text-secondary h-4 w-4" />
 								</div>
 								<div>
 									<CardTitle className="text-base">เกี่ยวกับ</CardTitle>
@@ -473,21 +465,21 @@ export function SettingsPage() {
 								</div>
 							</div>
 						</CardHeader>
-						<Separator className="dark:bg-gray-800" />
+						<Separator className="separator-dark" />
 						<CardContent className="space-y-4">
 							{/* <div className="flex items-center justify-between">
 								<div className="flex items-center gap-2">
-									<Briefcase className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-									<p className="text-sm font-medium text-gray-600 dark:text-gray-400">ชื่อ Project</p>
+									<Briefcase className="text-secondary h-4 w-4" />
+									<p className="text-secondary text-sm font-medium">ชื่อ Project</p>
 								</div>
-								<p className="text-base font-semibold text-gray-900 dark:text-white">CMRU Bus Reservation</p>
+								<p className="text-primary-bold text-base font-semibold">CMRU Bus Reservation</p>
 							</div>
-							<Separator className="dark:bg-gray-800" /> */}
+							<Separator className="separator-dark" /> */}
 
 							<div className="flex items-center justify-between">
 								<div className="flex items-center gap-2">
-									<Github className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-									<p className="text-sm font-medium text-gray-600 dark:text-gray-400">GitHub</p>
+									<Github className="text-secondary h-4 w-4" />
+									<p className="text-secondary text-sm font-medium">GitHub</p>
 								</div>
 								<a
 									href={EXTERNAL_URLS.GITHUB_REPO}
@@ -497,12 +489,12 @@ export function SettingsPage() {
 									CMRU-Bus-Reservation
 								</a>
 							</div>
-							<Separator className="dark:bg-gray-800" />
+							<Separator className="separator-dark" />
 							<div>
 								<button onClick={() => setShowAllContributors(!showAllContributors)} className="flex w-full items-center justify-between">
 									<div className="flex items-center gap-2">
-										<UserCheck className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-										<p className="text-sm font-medium text-gray-600 dark:text-gray-400">พัฒนาโดย</p>
+										<UserCheck className="text-secondary h-4 w-4" />
+										<p className="text-secondary text-sm font-medium">พัฒนาโดย</p>
 									</div>
 									<div className="flex items-center gap-2">
 										<div className="flex -space-x-2">
@@ -525,7 +517,7 @@ export function SettingsPage() {
 												/>
 											)}
 										</div>
-										{contributors.length > 3 && <span className="text-xs font-medium text-gray-600 dark:text-gray-400">+{contributors.length - 3}</span>}
+										{contributors.length > 3 && <span className="text-secondary text-xs font-medium">+{contributors.length - 3}</span>}
 										<ChevronDown className={`h-4 w-4 text-gray-600 transition-transform dark:text-gray-400 ${showAllContributors ? "rotate-180" : ""}`} />
 									</div>
 								</button>
@@ -545,7 +537,7 @@ export function SettingsPage() {
 															alt={contributor.login}
 															className="h-8 w-8 rounded-full border-2 border-gray-200 dark:border-gray-700"
 														/>
-														<span className="text-sm font-medium text-gray-900 dark:text-white">{contributor.login}</span>
+														<span className="text-primary-bold text-sm font-medium">{contributor.login}</span>
 													</a>
 												))
 											) : (
@@ -559,7 +551,7 @@ export function SettingsPage() {
 														alt="CMRU Computer Science 66"
 														className="h-8 w-8 rounded-full border-2 border-gray-200 dark:border-gray-700"
 													/>
-													<span className="text-sm font-medium text-gray-900 dark:text-white">CMRU Computer Science 66</span>
+													<span className="text-primary-bold text-sm font-medium">CMRU Computer Science 66</span>
 												</a>
 											)}
 										</div>
@@ -567,11 +559,11 @@ export function SettingsPage() {
 								)}
 							</div>
 
-							<Separator className="dark:bg-gray-800" />
+							<Separator className="separator-dark" />
 							<div className="flex items-center justify-between">
 								<div className="flex items-center gap-2">
-									<Tag className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-									<p className="text-sm font-medium text-gray-600 dark:text-gray-400">เวอร์ชัน API</p>
+									<Tag className="text-secondary h-4 w-4" />
+									<p className="text-secondary text-sm font-medium">เวอร์ชัน API</p>
 								</div>
 								<a href={EXTERNAL_URLS.API_REPO} target="_blank" rel="noopener noreferrer">
 									<Badge variant="outline" className="cursor-pointer font-mono transition-colors hover:bg-gray-100 dark:hover:bg-gray-800">
@@ -579,11 +571,11 @@ export function SettingsPage() {
 									</Badge>
 								</a>
 							</div>
-							<Separator className="dark:bg-gray-800" />
+							<Separator className="separator-dark" />
 							<div className="flex items-center justify-between">
 								<div className="flex items-center gap-2">
-									<Tag className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-									<p className="text-sm font-medium text-gray-600 dark:text-gray-400">เวอร์ชัน Web</p>
+									<Tag className="text-secondary h-4 w-4" />
+									<p className="text-secondary text-sm font-medium">เวอร์ชัน Web</p>
 								</div>
 								<a href={EXTERNAL_URLS.GITHUB_REPO} target="_blank" rel="noopener noreferrer">
 									<Badge variant="outline" className="cursor-pointer font-mono transition-colors hover:bg-gray-100 dark:hover:bg-gray-800">
@@ -607,7 +599,7 @@ export function SettingsPage() {
 								</Button>
 							</div>
 							<div className="block md:hidden">
-								<p className="text-center text-sm text-gray-600 dark:text-gray-400">
+								<p className="text-secondary text-center text-sm">
 									ใช้เมนู <Menu className="inline h-4 w-4" /> ด้านบนเพื่อออกจากระบบ
 								</p>
 							</div>

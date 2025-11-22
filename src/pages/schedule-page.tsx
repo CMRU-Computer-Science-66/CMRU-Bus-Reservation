@@ -265,7 +265,7 @@ export function SchedulePage() {
 
 	const subtitle = (
 		<>
-			{schedule?.userInfo.name && <span className="font-medium text-blue-600 dark:text-blue-400">{schedule.userInfo.name}</span>}
+			{schedule?.userInfo.name && <span className="font-medium text-icon-blue">{schedule.userInfo.name}</span>}
 			{schedule?.userInfo.name && " • "}
 			<span>{schedule?.totalReservations || 0} รายการ</span>
 		</>
@@ -280,7 +280,7 @@ export function SchedulePage() {
 			<Button
 				size="sm"
 				onClick={() => navigate(ROUTES.BOOKING)}
-				className="hidden gap-2 bg-linear-to-r from-green-600 to-emerald-600 shadow-lg transition-all hover:scale-105 hover:from-green-700 hover:to-emerald-700 hover:shadow-xl md:flex dark:from-green-500 dark:to-emerald-500">
+				className="hidden gap-2 bg-button-success shadow-lg transition-all hover:scale-105 hover:shadow-xl md:flex">
 				<Plus className="h-4 w-4" />
 				จองรถ
 			</Button>
@@ -297,7 +297,7 @@ export function SchedulePage() {
 				variant="outline"
 				size="sm"
 				onClick={logout}
-				className="hidden gap-2 shadow-sm hover:border-red-300 hover:bg-red-50 hover:text-red-600 hover:shadow-lg md:flex dark:hover:bg-red-950">
+				className="hidden gap-2 shadow-sm hover-red-soft">
 				<LogOut className="h-4 w-4" />
 				ออกจากระบบ
 			</Button>
@@ -327,7 +327,7 @@ export function SchedulePage() {
 	);
 
 	return (
-		<div className="relative min-h-screen bg-linear-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-slate-950 dark:via-blue-950 dark:to-indigo-950">
+		<div className="relative min-h-screen bg-app-gradient">
 			<Helmet>
 				<title>{ROUTE_METADATA["/schedule"].title}</title>
 				<meta name="description" content={ROUTE_METADATA["/schedule"].description} />
@@ -385,8 +385,8 @@ export function SchedulePage() {
 							label="ยืนยันแล้ว"
 							value={reservationStats.confirmed}
 							icon={CheckCircle2}
-							gradient="from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400"
-							iconBg="bg-blue-100 dark:bg-blue-900"
+							colorTheme="blue"
+							iconBg="bg-icon-blue"
 							onClick={() => handleFilterChange("confirmed")}
 							isActive={filterStatus === "confirmed"}
 							isLoading={isLoading}
@@ -395,8 +395,8 @@ export function SchedulePage() {
 							label="เดินทางแล้ว"
 							value={reservationStats.completed}
 							icon={TrendingUp}
-							gradient="from-green-600 to-emerald-600 dark:from-green-400 dark:to-emerald-400"
-							iconBg="bg-green-100 dark:bg-green-900"
+							colorTheme="green"
+							iconBg="bg-icon-green"
 							onClick={() => handleFilterChange("completed")}
 							isActive={filterStatus === "completed"}
 							isLoading={isLoading}
@@ -405,8 +405,8 @@ export function SchedulePage() {
 							label="มี QR Code"
 							value={reservationStats.hasQR}
 							icon={QrCode}
-							gradient="from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400"
-							iconBg="bg-purple-100 dark:bg-purple-900"
+							colorTheme="purple"
+							iconBg="bg-icon-purple"
 							onClick={() => handleFilterChange("hasQR")}
 							isActive={filterStatus === "hasQR"}
 							isLoading={isLoading}
@@ -415,8 +415,8 @@ export function SchedulePage() {
 							label="ทั้งหมด"
 							value={reservationStats.all}
 							icon={User}
-							gradient="from-orange-600 to-red-600 dark:from-orange-400 dark:to-red-400"
-							iconBg="bg-orange-100 dark:bg-orange-900"
+							colorTheme="orange"
+							iconBg="bg-icon-orange"
 							onClick={() => handleFilterChange("all")}
 							isActive={filterStatus === "all"}
 							isLoading={isLoading}
@@ -430,10 +430,10 @@ export function SchedulePage() {
 			{isLoading ? (
 				<div className="container mx-auto px-4 pb-8 sm:px-6">
 					<div className="mb-6">
-						<div className="h-7 w-60 rounded bg-gray-200 dark:bg-gray-700" />
+						<div className="h-7 w-60 rounded loading-bg-medium" />
 						<div className="mt-2 flex items-center gap-2">
-							<div className="h-5 w-20 rounded bg-gray-200 dark:bg-gray-700" />
-							<div className="h-5 w-40 rounded bg-gray-200 dark:bg-gray-700" />
+							<div className="h-5 w-20 rounded loading-bg-medium" />
+							<div className="h-5 w-40 rounded loading-bg-medium" />
 						</div>
 					</div>
 					<div className="space-y-6">
@@ -558,7 +558,7 @@ export function SchedulePage() {
 								<p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
 									{displayReservations.length} รายการ
 									{todayReservations.length === 0 && upcomingReservations.length > 0 && (
-										<span className="ml-2 text-blue-600 dark:text-blue-400">• สามารถยืนยันหรือยกเลิกได้</span>
+										<span className="ml-2 text-icon-blue">• สามารถยืนยันหรือยกเลิกได้</span>
 									)}
 								</p>
 							</div>
@@ -578,7 +578,7 @@ export function SchedulePage() {
 													</Badge>
 												)}
 											</div>
-											<div className="h-px flex-1 bg-gray-200 dark:bg-gray-700"></div>
+											<div className="h-px flex-1 loading-bg-medium"></div>
 											<Badge variant="secondary" className="text-xs font-medium dark:bg-gray-700 dark:text-gray-300">
 												{group.items.length} รอบ
 											</Badge>
@@ -663,7 +663,7 @@ export function SchedulePage() {
 												</Badge>
 											)}
 										</div>
-										<div className="h-px flex-1 bg-gray-200 dark:bg-gray-700"></div>
+										<div className="h-px flex-1 loading-bg-medium"></div>
 										<Badge variant="secondary" className="text-xs font-medium dark:bg-gray-700 dark:text-gray-300">
 											{group.items.length} รอบ
 										</Badge>

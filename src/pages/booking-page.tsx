@@ -350,7 +350,7 @@ export function BookingPage() {
 
 	if (isLoading && !availableBuses) {
 		return (
-			<div className="relative min-h-screen bg-linear-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-slate-950 dark:via-blue-950 dark:to-indigo-950">
+			<div className="relative min-h-screen bg-app-gradient">
 				<Helmet>
 					<title>{ROUTE_METADATA["/booking"].title}</title>
 					<meta name="description" content={ROUTE_METADATA["/booking"].description} />
@@ -370,7 +370,7 @@ export function BookingPage() {
 								variant="outline"
 								size="sm"
 								onClick={logout}
-								className="hidden gap-2 shadow-sm hover:border-red-300 hover:bg-red-50 hover:text-red-600 hover:shadow-lg md:flex dark:hover:bg-red-950">
+								className="hidden gap-2 shadow-sm hover-red-soft">
 								<LogOut className="h-4 w-4" />
 								ออกจากระบบ
 							</Button>
@@ -411,32 +411,32 @@ export function BookingPage() {
 								label="จำนวนรอบจองได้"
 								value={0}
 								icon={User}
-								gradient="from-orange-600 to-red-600 dark:from-orange-400 dark:to-red-400"
-								iconBg="bg-orange-100 dark:bg-orange-900"
+								colorTheme="orange"
+								iconBg="bg-icon-orange"
 								isLoading={true}
 							/>
 							<StatCard
 								label="วันที่มีรถ"
 								value={0}
 								icon={CheckCircle2}
-								gradient="from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400"
-								iconBg="bg-blue-100 dark:bg-blue-900"
+								colorTheme="blue"
+								iconBg="bg-icon-blue"
 								isLoading={true}
 							/>
 							<StatCard
 								label="มีรอบว่าง"
 								value={0}
 								icon={TrendingUp}
-								gradient="from-green-600 to-emerald-600 dark:from-green-400 dark:to-emerald-400"
-								iconBg="bg-green-100 dark:bg-green-900"
+								colorTheme="green"
+								iconBg="bg-icon-green"
 								isLoading={true}
 							/>
 							<StatCard
 								label="รอบทั้งหมด"
 								value={0}
 								icon={Bus}
-								gradient="from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400"
-								iconBg="bg-purple-100 dark:bg-purple-900"
+								colorTheme="purple"
+								iconBg="bg-icon-purple"
 								isLoading={true}
 							/>
 						</div>
@@ -448,7 +448,7 @@ export function BookingPage() {
 				<div className="container mx-auto px-4 pb-8 sm:px-6">
 					<div className="mb-4 flex items-center justify-between">
 						<div className="flex items-center gap-2">
-							<h2 className="text-lg font-semibold text-gray-900 dark:text-white">รอบรถที่เปิดจอง</h2>
+							<h2 className="text-lg font-semibold text-primary-bold">รอบรถที่เปิดจอง</h2>
 							<div className="inline-flex h-6 min-w-0"></div>
 						</div>
 					</div>
@@ -517,7 +517,7 @@ export function BookingPage() {
 	}
 
 	return (
-		<div className="relative min-h-screen bg-linear-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-slate-950 dark:via-blue-950 dark:to-indigo-950">
+		<div className="relative min-h-screen bg-app-gradient">
 			<Helmet>
 				<title>{ROUTE_METADATA["/booking"].title}</title>
 				<meta name="description" content={ROUTE_METADATA["/booking"].description} />
@@ -563,7 +563,7 @@ export function BookingPage() {
 							variant="outline"
 							size="sm"
 							onClick={logout}
-							className="hidden gap-2 shadow-sm hover:border-red-300 hover:bg-red-50 hover:text-red-600 hover:shadow-lg md:flex dark:hover:bg-red-950">
+							className="hidden gap-2 shadow-sm hover-red-soft">
 							<LogOut className="h-4 w-4" />
 							ออกจากระบบ
 						</Button>
@@ -657,8 +657,8 @@ export function BookingPage() {
 									: 0
 							}
 							icon={CheckCircle2}
-							gradient="from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400"
-							iconBg="bg-blue-100 dark:bg-blue-900"
+							colorTheme="blue"
+							iconBg="bg-icon-blue"
 							onClick={() => handleFilterChange("all")}
 							isActive={filterMode === "all"}
 							isLoading={isLoading}
@@ -691,8 +691,8 @@ export function BookingPage() {
 									: 0
 							}
 							icon={TrendingUp}
-							gradient="from-green-600 to-emerald-600 dark:from-green-400 dark:to-emerald-400"
-							iconBg="bg-green-100 dark:bg-green-900"
+							colorTheme="green"
+							iconBg="bg-icon-green"
 							onClick={() => handleFilterChange("available")}
 							isActive={filterMode === "available"}
 							isLoading={isLoading}
@@ -701,8 +701,8 @@ export function BookingPage() {
 							label="จำนวนรอบจองได้"
 							value={availableBuses?.availableSchedules?.filter((s) => s.canReserve).length || 0}
 							icon={User}
-							gradient="from-orange-600 to-red-600 dark:from-orange-400 dark:to-red-400"
-							iconBg="bg-orange-100 dark:bg-orange-900"
+							colorTheme="orange"
+							iconBg="bg-icon-orange"
 							onClick={() => handleFilterChange("canReserve")}
 							isActive={filterMode === "canReserve"}
 							isLoading={isLoading}
@@ -711,8 +711,8 @@ export function BookingPage() {
 							label="รอบทั้งหมด"
 							value={availableBuses?.totalAvailable || 0}
 							icon={Bus}
-							gradient="from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400"
-							iconBg="bg-purple-100 dark:bg-purple-900"
+							colorTheme="purple"
+							iconBg="bg-icon-purple"
 							onClick={() => handleFilterChange("all")}
 							isActive={filterMode === "all"}
 							isLoading={isLoading}
@@ -734,7 +734,7 @@ export function BookingPage() {
 				})()}`}>
 				<div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
 					<div className="flex items-center gap-2">
-						<h2 className="text-lg font-semibold text-gray-900 dark:text-white">รอบรถที่เปิดจอง</h2>
+						<h2 className="text-lg font-semibold text-primary-bold">รอบรถที่เปิดจอง</h2>
 						{filterMode !== "all" && (
 							<Badge variant="secondary" className="gap-1">
 								{filterMode === "available" && "มีรอบว่าง"}
@@ -935,7 +935,7 @@ export function BookingPage() {
 													<CardTitle className="flex flex-col gap-2 text-base sm:flex-row sm:flex-wrap sm:items-center">
 														<div className="flex items-center gap-2">
 															<Calendar className="h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
-															<span className="font-bold text-gray-900 dark:text-white">{formatDate(group.date)}</span>
+															<span className="font-bold text-primary-bold">{formatDate(group.date)}</span>
 														</div>
 														{getRelativeDay(group.date) && (
 															<Badge
@@ -1341,7 +1341,7 @@ export function BookingPage() {
 																					}`}>
 																					{bookedSchedule.destinationType === 1 ? "ไปแม่ริม" : "กลับเวียงบัว"}
 																				</Badge>
-																				<span className="text-sm font-semibold text-gray-900 dark:text-white">{formatTime(bookedSchedule.departureTime)}</span>
+																				<span className="text-sm font-semibold text-primary-bold">{formatTime(bookedSchedule.departureTime)}</span>
 																			</button>
 																		);
 																	})}
@@ -1482,7 +1482,7 @@ export function BookingPage() {
 																		return (
 																			<div className="flex flex-wrap items-center gap-2 rounded bg-white p-2 dark:bg-gray-900">
 																				<Badge className="bg-blue-600 text-xs hover:bg-blue-700 dark:bg-blue-500">ไปแม่ริม</Badge>
-																				<span className="text-sm font-semibold text-gray-900 dark:text-white">{formatTime(selected.departureTime)}</span>
+																				<span className="text-sm font-semibold text-primary-bold">{formatTime(selected.departureTime)}</span>
 																			</div>
 																		);
 																	})()}
@@ -1502,7 +1502,7 @@ export function BookingPage() {
 																		return (
 																			<div className="flex flex-wrap items-center gap-2 rounded bg-white p-2 dark:bg-gray-900">
 																				<Badge className="bg-purple-600 text-xs hover:bg-purple-700 dark:bg-purple-500">กลับเวียงบัว</Badge>
-																				<span className="text-sm font-semibold text-gray-900 dark:text-white">{formatTime(selected.departureTime)}</span>
+																				<span className="text-sm font-semibold text-primary-bold">{formatTime(selected.departureTime)}</span>
 																			</div>
 																		);
 																	})()}

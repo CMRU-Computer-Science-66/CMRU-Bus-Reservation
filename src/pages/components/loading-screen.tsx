@@ -3,7 +3,7 @@ import { Skeleton } from "../../components/ui/skeleton";
 
 export function LoadingScreen() {
 	return (
-		<div className="relative min-h-screen bg-linear-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-slate-950 dark:via-blue-950 dark:to-indigo-950">
+		<div className="relative min-h-screen bg-app-gradient">
 			<div className="sticky top-0 z-30 border-b border-gray-200 bg-white/80 backdrop-blur-md dark:border-gray-800 dark:bg-gray-900/80">
 				<div className="container mx-auto px-4 py-4 sm:px-6">
 					<div className="flex items-center justify-between gap-4">
@@ -103,7 +103,7 @@ export function LoadingScreen() {
 								<Skeleton className="h-4 w-24" />
 								<Skeleton className="ml-1 h-5 w-12 rounded-full" />
 							</div>
-							<div className="h-px flex-1 bg-gray-200 dark:bg-gray-700"></div>
+							<div className="h-px flex-1 loading-bg-medium"></div>
 							<Skeleton className="h-5 w-12 rounded-full" />
 						</div>
 

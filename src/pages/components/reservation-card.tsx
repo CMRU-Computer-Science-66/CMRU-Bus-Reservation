@@ -171,15 +171,15 @@ export function ReservationCard({
 						<div className="min-w-0 flex-1">
 							<CardTitle className="flex items-center gap-2 text-base sm:text-lg">
 								<MapPin className="h-4 w-4 shrink-0 text-gray-300 dark:text-gray-600" />
-								<div className="h-5 w-20 rounded bg-gray-200 dark:bg-gray-700" />
+								<div className="h-5 w-20 rounded loading-bg-medium" />
 							</CardTitle>
-							<div className="mt-1.5 h-3 w-16 rounded bg-gray-200 dark:bg-gray-700" />
+							<div className="mt-1.5 h-3 w-16 rounded loading-bg-medium" />
 						</div>
-						<div className="h-7 w-20 rounded-full bg-gray-200 dark:bg-gray-700" />
+						<div className="h-7 w-20 rounded-full loading-bg-medium" />
 					</div>
 				</CardHeader>
 
-				<Separator className="dark:bg-gray-800" />
+				<Separator className="separator-dark" />
 
 				<CardContent className="space-y-4">
 					<div className="flex items-center gap-2">
@@ -187,14 +187,14 @@ export function ReservationCard({
 							<Clock className="h-4 w-4 text-gray-300 dark:text-gray-600" />
 						</div>
 						<div className="flex-1">
-							<div className="mb-1 h-3 w-8 rounded bg-gray-200 dark:bg-gray-700" />
-							<div className="h-4 w-12 rounded bg-gray-200 dark:bg-gray-700" />
+							<div className="mb-1 h-3 w-8 rounded loading-bg-medium" />
+							<div className="h-4 w-12 rounded loading-bg-medium" />
 						</div>
 					</div>
 
 					<div className="flex flex-col gap-2 sm:flex-row">
-						<div className="h-11 flex-1 rounded bg-gray-200 dark:bg-gray-700" />
-						<div className="h-11 flex-1 rounded bg-gray-200 dark:bg-gray-700" />
+						<div className="h-11 flex-1 rounded loading-bg-medium" />
+						<div className="h-11 flex-1 rounded loading-bg-medium" />
 					</div>
 				</CardContent>
 			</Card>
@@ -248,7 +248,7 @@ export function ReservationCard({
 					<div className="min-w-0 flex-1">
 						<CardTitle className="flex flex-wrap items-center gap-2 text-base sm:text-lg">
 							<MapPin className="h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
-							<span className="font-bold text-gray-900 dark:text-white">{item.destination.name}</span>
+							<span className="font-bold text-primary-bold">{item.destination.name}</span>
 							{item.ticket.hasQRCode && (
 								<Badge variant="outline" className="gap-1 border-purple-300 bg-purple-50 text-purple-600 dark:border-purple-600 dark:bg-purple-950 dark:text-purple-400">
 									<QrCode className="h-3 w-3" />
@@ -262,7 +262,7 @@ export function ReservationCard({
 				</div>
 			</CardHeader>
 
-			<Separator className="dark:bg-gray-800" />
+			<Separator className="separator-dark" />
 
 			<CardContent className="space-y-4">
 				<div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
@@ -270,7 +270,7 @@ export function ReservationCard({
 						<Clock className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
 					</div>
 					<div className="flex-1">
-						<p className="text-xs font-medium text-gray-500 dark:text-gray-400">เวลา</p>
+						<p className="text-xs font-medium text-secondary-muted">เวลา</p>
 						<p className="text-sm font-semibold">{formatTime(item.departureTime)}</p>
 					</div>
 					{timeLeft && (
@@ -284,7 +284,7 @@ export function ReservationCard({
 				</div>
 
 				{item.ticket.hasQRCode && (
-					<div className="flex justify-center rounded-lg bg-gray-50 p-4 dark:bg-gray-800">
+					<div className="flex justify-center rounded-lg bg-gray-50 p-4 separator-dark">
 						{qrLoading ? (
 							<div className="flex h-48 w-48 items-center justify-center">
 								<Loader2 className="h-8 w-8 animate-spin text-gray-400" />
@@ -309,7 +309,7 @@ export function ReservationCard({
 						) : (
 							<div className="flex h-48 w-48 flex-col items-center justify-center gap-2">
 								<QrCode className="h-16 w-16 text-gray-400" />
-								{qrImageError && <p className="text-center text-xs text-gray-500 dark:text-gray-400">ไม่สามารถโหลด QR Code ได้</p>}
+								{qrImageError && <p className="text-center text-xs text-secondary-muted">ไม่สามารถโหลด QR Code ได้</p>}
 							</div>
 						)}
 					</div>
@@ -408,7 +408,7 @@ export function ReservationCard({
 						<div className="flex w-full items-center justify-between">
 							<div className="flex flex-col">
 								<h3 className="text-lg font-semibold">QR Code สำหรับขึ้นรถ</h3>
-								{qrCountdown > 0 && <p className="text-xs text-gray-500 dark:text-gray-400">รีโหลดอัตโนมัติใน {qrCountdown} วินาที</p>}
+								{qrCountdown > 0 && <p className="text-xs text-secondary-muted">รีโหลดอัตโนมัติใน {qrCountdown} วินาที</p>}
 							</div>
 							<Button
 								onClick={() => {
@@ -423,7 +423,7 @@ export function ReservationCard({
 							</Button>
 						</div>
 						<div className="relative">
-							<div className="flex h-80 w-80 items-center justify-center rounded-lg bg-gray-100 sm:h-96 sm:w-96 dark:bg-gray-800">
+							<div className="flex h-80 w-80 items-center justify-center rounded-lg bg-gray-100 sm:h-96 sm:w-96 separator-dark">
 								{qrLoading ? (
 									<Loader2 className="h-12 w-12 animate-spin text-gray-400" />
 								) : qrCodeUrl && !qrImageError ? (
@@ -432,11 +432,11 @@ export function ReservationCard({
 									<QrCode className="h-20 w-20 text-gray-400" />
 								)}
 							</div>
-							{qrImageError && !qrLoading && <p className="mt-2 text-center text-sm text-gray-500 dark:text-gray-400">ไม่สามารถโหลด QR Code ได้</p>}
+							{qrImageError && !qrLoading && <p className="mt-2 text-center text-sm text-secondary-muted">ไม่สามารถโหลด QR Code ได้</p>}
 						</div>
 						<div className="text-center">
 							<p className="text-base font-semibold text-gray-800 dark:text-gray-200">{item.destination.name}</p>
-							<p className="text-sm text-gray-600 dark:text-gray-400">เวลาออกเดินทาง: {formatTime(item.departureTime)}</p>
+							<p className="text-sm text-secondary">เวลาออกเดินทาง: {formatTime(item.departureTime)}</p>
 						</div>
 					</div>
 				</DialogContent>

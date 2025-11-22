@@ -121,3 +121,125 @@
 		@apply bg-background text-foreground;
 	}
 }
+
+@layer utilities {
+	.bg-app-gradient {
+		@apply bg-linear-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-slate-950 dark:via-blue-950 dark:to-indigo-950;
+	}
+
+	.bg-header-gradient {
+		@apply bg-linear-to-br from-blue-600 to-indigo-600;
+	}
+
+	.bg-button-primary {
+		@apply bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 dark:from-blue-500 dark:to-indigo-500;
+	}
+
+	.bg-button-success {
+		@apply bg-linear-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 dark:from-green-500 dark:to-emerald-500;
+	}
+
+	.text-gradient-blue {
+		@apply bg-linear-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent;
+	}
+
+	.text-gradient-blue-active {
+		@apply bg-linear-to-r from-blue-700 to-indigo-700 bg-clip-text text-transparent;
+	}
+
+	.text-gradient-green {
+		@apply bg-linear-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent;
+	}
+
+	.text-gradient-green-active {
+		@apply bg-linear-to-r from-green-700 to-emerald-700 bg-clip-text text-transparent;
+	}
+
+	.text-gradient-purple {
+		@apply bg-linear-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent;
+	}
+
+	.text-gradient-purple-active {
+		@apply bg-linear-to-r from-purple-700 to-pink-700 bg-clip-text text-transparent;
+	}
+
+	.text-gradient-red {
+		@apply bg-linear-to-r from-red-600 to-orange-600 bg-clip-text text-transparent;
+	}
+
+	.text-gradient-red-active {
+		@apply bg-linear-to-r from-red-700 to-orange-700 bg-clip-text text-transparent;
+	}
+
+	.bg-icon-blue {
+		@apply bg-blue-100 dark:bg-blue-900;
+	}
+
+	.bg-icon-green {
+		@apply bg-green-100 dark:bg-green-900;
+	}
+
+	.bg-icon-purple {
+		@apply bg-purple-100 dark:bg-purple-900;
+	}
+
+	.bg-icon-red {
+		@apply bg-red-100 dark:bg-red-900;
+	}
+
+	.bg-icon-yellow {
+		@apply bg-yellow-100 dark:bg-yellow-900;
+	}
+
+	.text-icon-blue {
+		@apply text-blue-600 dark:text-blue-400;
+	}
+
+	.text-icon-green {
+		@apply text-green-600 dark:text-green-400;
+	}
+
+	.text-icon-purple {
+		@apply text-purple-600 dark:text-purple-400;
+	}
+
+	.text-icon-red {
+		@apply text-red-600 dark:text-red-400;
+	}
+
+	.text-icon-orange {
+		@apply text-orange-600 dark:text-orange-400;
+	}
+
+	.text-icon-yellow {
+		@apply text-yellow-600 dark:text-yellow-400;
+	}
+
+	.text-secondary {
+		@apply text-gray-600 dark:text-gray-400;
+	}
+
+	.text-secondary-muted {
+		@apply text-gray-500 dark:text-gray-400;
+	}
+
+	.text-primary-bold {
+		@apply text-gray-900 dark:text-white;
+	}
+
+	.hover-red-soft {
+		@apply hover:border-red-300 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950;
+	}
+
+	.separator-dark {
+		@apply dark:bg-gray-800;
+	}
+
+	.loading-bg-light {
+		@apply bg-gray-300 dark:bg-gray-600;
+	}
+
+	.loading-bg-medium {
+		@apply bg-gray-200 dark:bg-gray-700;
+	}
+}

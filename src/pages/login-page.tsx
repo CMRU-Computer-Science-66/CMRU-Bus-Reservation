@@ -57,7 +57,7 @@ export function LoginPage() {
 	};
 
 	return (
-		<div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-linear-to-br from-blue-50 via-indigo-50 to-purple-50 p-4 dark:from-slate-950 dark:via-blue-950 dark:to-indigo-950">
+		<div className="bg-app-gradient relative flex min-h-screen items-center justify-center overflow-hidden p-4">
 			<Helmet>
 				<title>{ROUTE_METADATA["/login"].title}</title>
 				<meta name="description" content={ROUTE_METADATA["/login"].description} />
@@ -73,13 +73,13 @@ export function LoginPage() {
 			<Card className="relative z-10 w-full max-w-md border-0 bg-white/95 shadow-2xl backdrop-blur-md dark:bg-gray-900/95">
 				<CardHeader className="space-y-4 pb-6 text-center">
 					<div className="flex justify-center">
-						<div className="rounded-2xl bg-linear-to-br from-blue-600 to-indigo-600 p-4 shadow-2xl">
+						<div className="bg-header-gradient rounded-2xl p-4 shadow-2xl">
 							<Bus className="h-12 w-12 text-white" />
 						</div>
 					</div>
 					<div className="space-y-2">
-						<CardTitle className="text-3xl font-bold text-gray-900 dark:text-white">ระบบจองรถบัส</CardTitle>
-						<CardDescription className="text-base text-gray-600 dark:text-gray-400">มหาวิทยาลัยราชภัฏเชียงใหม่</CardDescription>
+						<CardTitle className="text-primary-bold text-3xl font-bold">ระบบจองรถบัส</CardTitle>
+						<CardDescription className="text-secondary text-base">มหาวิทยาลัยราชภัฏเชียงใหม่</CardDescription>
 					</div>
 				</CardHeader>
 
@@ -94,7 +94,7 @@ export function LoginPage() {
 
 					<form onSubmit={handleSubmit} className="space-y-5">
 						<div className="space-y-2">
-							<Label htmlFor="username" className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+							<Label htmlFor="username" className="text-secondary text-sm font-semibold">
 								ชื่อผู้ใช้
 							</Label>
 							<div className="relative">
@@ -113,7 +113,7 @@ export function LoginPage() {
 						</div>
 
 						<div className="space-y-2">
-							<Label htmlFor="password" className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+							<Label htmlFor="password" className="text-secondary text-sm font-semibold">
 								รหัสผ่าน
 							</Label>
 							<div className="relative">
@@ -166,7 +166,7 @@ export function LoginPage() {
 						<Button
 							type="submit"
 							disabled={isLoading || !username.trim() || !password.trim()}
-							className="h-13 w-full gap-2 bg-linear-to-r from-blue-600 to-indigo-600 text-base font-semibold shadow-lg transition-all hover:scale-[1.02] hover:from-blue-700 hover:to-indigo-700 hover:shadow-xl active:scale-[0.98] disabled:hover:scale-100 dark:from-blue-500 dark:to-indigo-500">
+							className="bg-button-primary h-13 w-full gap-2 text-base font-semibold shadow-lg transition-all hover:scale-[1.02] hover:shadow-xl active:scale-[0.98] disabled:hover:scale-100">
 							{isLoading ? (
 								<>
 									<Loader2 className="h-5 w-5 animate-spin" />
@@ -181,7 +181,7 @@ export function LoginPage() {
 						</Button>
 					</form>
 
-					<div className="space-y-3 border-t border-gray-200 pt-6 text-center text-sm text-gray-600 dark:border-gray-700 dark:text-gray-400">
+					<div className="text-secondary space-y-3 border-t border-gray-200 pt-6 text-center text-sm dark:border-gray-700">
 						<p>ใช้บัญชี CMRU Account เพื่อเข้าสู่ระบบ</p>
 						{/* <p className="text-xs text-gray-500 dark:text-gray-500">© 2025 สาขาวิทยาการคอมพิวเตอร์ & มหาวิทยาลัยราชภัฏเชียงใหม่</p> */}
 					</div>
